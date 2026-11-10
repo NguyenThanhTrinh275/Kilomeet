@@ -6,8 +6,8 @@ import { View } from 'react-native';
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <View className="flex-1 bg-km-bg">
+    <SafeAreaProvider style={{ flex: 1, backgroundColor: '#0F172A' }}>
+      <View className="flex-1 bg-km-bg" style={{ flex: 1, backgroundColor: '#0F172A' }}>
         <StatusBar style="light" />
         <Slot />
       </View>

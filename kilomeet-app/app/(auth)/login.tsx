@@ -39,10 +39,11 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-km-bg">
+    <SafeAreaView className="flex-1 bg-km-bg" style={{ flex: 1, backgroundColor: '#0F172A' }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1 justify-center px-6"
+        style={{ flex: 1, justifyContent: 'center' }}
       >
         {/* Logo */}
         <View className="items-center mb-10">
