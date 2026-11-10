@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { VoucherCard } from '../../src/components/voucher/VoucherCard';
-import { colors } from '../../src/theme/colors';
-import { useVoucherStore } from '../../src/stores/voucher';
+import { VoucherCard } from '../../../src/components/voucher/VoucherCard';
+import { colors } from '../../../src/theme/colors';
+import { useVoucherStore } from '../../../src/stores/voucher';
 
 export default function VouchersScreen() {
   const [search, setSearch] = useState('');

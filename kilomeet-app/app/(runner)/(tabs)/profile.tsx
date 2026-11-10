@@ -3,11 +3,11 @@ import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuthStore } from '../../src/stores/auth';
-import { useRunnerStore } from '../../src/stores/runner';
-import { colors } from '../../src/theme/colors';
-import { api } from '../../src/api/client';
-import type { Rank, Runner } from '../../src/api/types';
+import { useAuthStore } from '../../../src/stores/auth';
+import { useRunnerStore } from '../../../src/stores/runner';
+import { colors } from '../../../src/theme/colors';
+import { api } from '../../../src/api/client';
+import type { Rank, Runner } from '../../../src/api/types';
 
 const RANK_LABELS: Record<Rank, string> = {
   đồng: 'Đồng',

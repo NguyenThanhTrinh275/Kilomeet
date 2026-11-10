@@ -3,14 +3,14 @@ import { useState, useCallback, useEffect } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { StatsCard } from '../../src/components/runner/StatsCard';
-import { QuestCard } from '../../src/components/runner/QuestCard';
-import { RankProgress } from '../../src/components/runner/RankProgress';
-import { colors } from '../../src/theme/colors';
-import { useAuthStore } from '../../src/stores/auth';
-import { useRunnerStore } from '../../src/stores/runner';
-import { RANK_TOKEN_RETENTION } from '../../src/api/types';
-import type { Runner, Rank } from '../../src/api/types';
+import { StatsCard } from '../../../src/components/runner/StatsCard';
+import { QuestCard } from '../../../src/components/runner/QuestCard';
+import { RankProgress } from '../../../src/components/runner/RankProgress';
+import { colors } from '../../../src/theme/colors';
+import { useAuthStore } from '../../../src/stores/auth';
+import { useRunnerStore } from '../../../src/stores/runner';
+import { RANK_TOKEN_RETENTION } from '../../../src/api/types';
+import type { Runner, Rank } from '../../../src/api/types';
 
 export default function RunnerHome() {
   const [refreshing, setRefreshing] = useState(false);

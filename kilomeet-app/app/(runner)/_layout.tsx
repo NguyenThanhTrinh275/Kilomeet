@@ -1,49 +1,20 @@
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../src/theme/colors';
-
-type TabIcon = React.ComponentProps<typeof Ionicons>['name'];
-
-const tabs: { name: string; title: string; icon: TabIcon }[] = [
-  { name: 'index', title: 'Trang chủ', icon: 'home' },
-  { name: 'run', title: 'Chạy', icon: 'footsteps' },
-  { name: 'vouchers', title: 'Voucher', icon: 'pricetag' },
-  { name: 'groups', title: 'Nhóm', icon: 'people' },
-  { name: 'profile', title: 'Tôi', icon: 'person' },
-];
+import { Stack } from 'expo-router';
 
 export default function RunnerLayout() {
   return (
-    <Tabs
-      backBehavior="history"
+    <Stack
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.bgSecondary,
-          borderTopColor: colors.surfaceBorder,
-          height: 60,
-          paddingBottom: 8,
-        },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarLabelStyle: { fontSize: 11 },
+        contentStyle: { backgroundColor: '#0F172A' },
+        animation: 'slide_from_right',
       }}
     >
-      {tabs.map((tab) => (
-        <Tabs.Screen
-          key={tab.name}
-          name={tab.name}
-          options={{
-            title: tab.title,
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name={tab.icon} size={size} color={typeof color === 'string' ? color : colors.textMuted} />
-            ),
-          }}
-        />
-      ))}
-      {['history', 'badges', 'voucher/[id]'].map((name) => (
-        <Tabs.Screen key={name} name={name} options={{ href: null }} />
-      ))}
-    </Tabs>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="history" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="badges" options={{ headerShown: false }} />
+      <Stack.Screen name="voucher/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="groups/create" options={{ headerShown: false }} />
+      <Stack.Screen name="groups/[id]" options={{ headerShown: false }} />
+    </Stack>
   );
 }

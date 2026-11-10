@@ -5,18 +5,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { colors } from '../../src/theme/colors';
+import { colors } from '../../../src/theme/colors';
 import {
   LatLng,
   totalDistance,
   formatDuration,
   requestLocationPermission,
   haversine,
-} from '../../src/services/location';
-import { useRunnerStore } from '../../src/stores/runner';
-import { MOCK_STORE } from '../../src/api/mock/data';
-import { DAILY_QUEST_KM, STORE_PROXIMITY_M } from '../../src/api/types';
-import type { GpsPoint } from '../../src/api/types';
+} from '../../../src/services/location';
+import { useRunnerStore } from '../../../src/stores/runner';
+import { MOCK_STORE } from '../../../src/api/mock/data';
+import { DAILY_QUEST_KM, STORE_PROXIMITY_M } from '../../../src/api/types';
+import type { GpsPoint } from '../../../src/api/types';
 
 type RunState = 'idle' | 'running' | 'paused' | 'finished';
 
