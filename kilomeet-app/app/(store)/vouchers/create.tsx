@@ -1,13 +1,12 @@
 import { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '../../../src/theme/colors';
-import { RANKS } from '../../../src/api/types';
 import { api } from '../../../src/api/client';
-import { useAuthStore } from '../../../src/stores/auth';
-import type { Rank, Store, VoucherTemplate } from '../../../src/api/types';
+import { RANKS } from '../../../src/api/types';
+import type { Rank, VoucherTemplate } from '../../../src/api/types';
 
 const RANK_LABELS: Record<string, string> = {
   đồng: 'Đồng', bạc: 'Bạc', vàng: 'Vàng',
@@ -41,10 +40,7 @@ export default function CreateVoucherScreen() {
   const [minRank, setMinRank] = useState<Rank>('đồng');
   const [area, setArea] = useState('');
 
-  const inputClass = 'bg-km-bg-secondary text-white rounded-xl px-4 py-3 text-base';
 
-  const [submitting, setSubmitting] = useState(false);
-  const user = useAuthStore((s) => s.user) as Store | null;
 
   const inputClass = 'bg-km-bg-secondary text-white rounded-xl px-4 py-3 text-base';
 

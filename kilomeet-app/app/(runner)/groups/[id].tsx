@@ -1,29 +1,12 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '../../../src/theme/colors';
-import type { GroupRun, GroupMember, Rank } from '../../../src/api/types';
-
-// ─── Mock ───────────────────────────────────────────────────────
-
-const MOCK_GROUP: GroupRun = {
-  id: 'g1',
-  creatorId: 'u1',
-  date: '2026-11-11',
-  timeSlot: '05:30',
-  meetingPoint: { name: 'Công viên Gia Định', latitude: 10.8125, longitude: 106.6789 },
-  distanceKm: 5,
-  rankRange: 'same',
-  status: 'confirmed',
-  maxMembers: 6,
-  members: [
-    { userId: 'u1', userName: 'Minh Anh', rank: 'bạc', confirmed: true, arrived: false, punctuality: 92 },
-    { userId: 'u2', userName: 'Thanh Tùng', rank: 'bạc', confirmed: true, arrived: false, punctuality: 88 },
-    { userId: 'u3', userName: 'Hồng Nhung', rank: 'bạc', confirmed: false, arrived: false, punctuality: 95 },
-  ],
-};
+import type { GroupMember, Rank } from '../../../src/api/types';
+import { useGroupStore } from '../../../src/stores/group';
+import { useAuthStore } from '../../../src/stores/auth';
 
 const RANK_RANGE_LABELS: Record<string, string> = {
   same: 'Cùng hạng',
@@ -98,12 +81,57 @@ function useCountdown(targetTime: string, targetDate: string) {
 export default function GroupDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const group = MOCK_GROUP; // ponytail: fetch by id from store/API
-  const countdown = useCountdown(group.timeSlot, group.date);
+  const user = useAuthStore((s) => s.user);
+  const { currentGroup, isLoading, fetchGroupDetail, joinGroup } = useGroupStore();
 
-  const currentUserId = 'u3'; // ponytail: from auth store
-  const currentMember = group.members.find((m) => m.userId === currentUserId);
+  useEffect(() => {
+    if (id) {
+      fetchGroupDetail(id);
+    }
+  }, [id, fetchGroupDetail]);
+
+  if (isLoading || !currentGroup) {
+    return (
+      <SafeAreaView className="flex-1 bg-km-bg items-center justify-center" edges={['top']}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  const group = currentGroup;
+
+  return <GroupDetailContent group={group} userId={user?.id ?? ''} joinGroup={joinGroup} router={router} />;
+}
+
+function GroupDetailContent({
+  group,
+  userId,
+  joinGroup,
+  router,
+}: {
+  group: NonNullable<ReturnType<typeof useGroupStore.getState>['currentGroup']>;
+  userId: string;
+  joinGroup: (groupId: string) => Promise<void>;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const countdown = useCountdown(group.timeSlot, group.date);
+  const currentMember = group.members.find((m) => m.userId === userId);
   const hasConfirmed = currentMember?.confirmed ?? false;
+
+  const handleJoin = async () => {
+    try {
+      await joinGroup(group.id);
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message);
+    }
+  };
+
+  const handleCancel = () => {
+    Alert.alert('Huỷ tham gia', 'Bạn có chắc muốn huỷ tham gia nhóm chạy này?', [
+      { text: 'Không', style: 'cancel' },
+      { text: 'Huỷ', style: 'destructive', onPress: () => router.back() },
+    ]);
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
@@ -217,7 +245,10 @@ export default function GroupDetailScreen() {
         {/* Action Buttons */}
         <View className="mx-4 flex-row gap-3">
           {!hasConfirmed ? (
-            <TouchableOpacity className="flex-1 bg-km-primary rounded-xl py-4 items-center">
+            <TouchableOpacity
+              className="flex-1 bg-km-primary rounded-xl py-4 items-center"
+              onPress={handleJoin}
+            >
               <Text className="text-km-bg font-bold text-base">Xác nhận tham gia</Text>
             </TouchableOpacity>
           ) : (
@@ -225,7 +256,10 @@ export default function GroupDetailScreen() {
               <TouchableOpacity className="flex-1 bg-km-primary rounded-xl py-4 items-center">
                 <Text className="text-km-bg font-bold text-base">Đã xác nhận ✓</Text>
               </TouchableOpacity>
-              <TouchableOpacity className="flex-1 bg-km-surface rounded-xl py-4 items-center">
+              <TouchableOpacity
+                className="flex-1 bg-km-surface rounded-xl py-4 items-center"
+                onPress={handleCancel}
+              >
                 <Text className="text-red-400 font-bold text-base">Huỷ</Text>
               </TouchableOpacity>
             </>

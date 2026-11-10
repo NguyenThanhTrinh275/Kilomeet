@@ -1,5 +1,5 @@
 // Mock router — maps endpoint strings to mock handlers
-import { mockLogin, mockRegister, mockGetUser } from './auth';
+import { mockLogin, mockRegister, mockGetUser, mockSubscribe } from './auth';
 import { mockStartRun, mockEndRun, mockGetRunHistory } from './runs';
 import { mockGetQuests, mockCompleteQuest } from './quests';
 import { mockGetVouchers, mockBuyVoucher, mockGiftVoucher, mockGetMyVouchers } from './vouchers';
@@ -36,6 +36,7 @@ const POST_ROUTES: Record<string, Handler> = {
   '/store/scan': (b) => mockScanQR(b),
   '/admin/approve-store': (b) => mockApproveStore(b),
   '/admin/season': (b) => mockSeasonControl(b),
+  '/auth/subscribe': () => mockSubscribe(),
 };
 
 const PUT_ROUTES: Record<string, Handler> = {};

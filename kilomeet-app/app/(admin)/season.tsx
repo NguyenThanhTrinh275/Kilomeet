@@ -1,47 +1,133 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '../../src/theme/colors';
+import { api } from '../../src/api/client';
 import { RANKS, RANK_KM_THRESHOLD, RANK_TOKEN_RETENTION } from '../../src/api/types';
+import type { SeasonInfo } from '../../src/api/types';
 
 const RANK_LABELS: Record<string, string> = {
   đồng: 'Đồng', bạc: 'Bạc', vàng: 'Vàng',
   bạch_kim: 'Bạch Kim', kim_cương: 'Kim Cương', cao_thủ: 'Cao Thủ',
 };
 
-// Mock data
-const MOCK_SEASON = {
-  id: 's2',
-  name: 'Mùa 2 — Thu 2026',
-  startDate: '2026-09-01',
-  endDate: '2026-12-31',
-  isActive: true,
-};
-
 export default function SeasonScreen() {
   const router = useRouter();
-  const [season, setSeason] = useState(MOCK_SEASON);
+  const [seasons, setSeasons] = useState<SeasonInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [closeModal, setCloseModal] = useState(false);
   const [newModal, setNewModal] = useState(false);
 
-  const daysLeft = Math.max(0, Math.ceil((new Date(season.endDate).getTime() - Date.now()) / 86_400_000));
+  const fetchSeasons = useCallback(async () => {
+    try {
+      const data = await api.get<SeasonInfo[]>('/admin/seasons');
+      setSeasons(data);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  function handleCloseSeason() {
-    setSeason((s) => ({ ...s, isActive: false }));
-    setCloseModal(false);
+  useEffect(() => { void fetchSeasons(); }, [fetchSeasons]);
+
+  const season = seasons.find((s) => s.isActive) ?? seasons[seasons.length - 1];
+  const daysLeft = season?.endDate
+    ? Math.max(0, Math.ceil((new Date(season.endDate).getTime() - Date.now()) / 86_400_000))
+    : 0;
+
+  async function handleCloseSeason() {
+    setActionLoading(true);
+    try {
+      await api.post<SeasonInfo>('/admin/season', { action: 'end' });
+      setCloseModal(false);
+      setLoading(true);
+      await fetchSeasons();
+    } finally {
+      setActionLoading(false);
+    }
   }
 
-  function handleNewSeason() {
-    setSeason({
-      id: 's3',
-      name: 'Mùa 3 — Xuân 2027',
-      startDate: '2027-01-01',
-      endDate: '2027-04-30',
-      isActive: true,
-    });
-    setNewModal(false);
+  async function handleNewSeason() {
+    setActionLoading(true);
+    try {
+      await api.post<SeasonInfo>('/admin/season', { action: 'start' });
+      setNewModal(false);
+      setLoading(true);
+      await fetchSeasons();
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  if (loading && seasons.length === 0) {
+    return (
+      <SafeAreaView className="flex-1 bg-km-bg items-center justify-center" edges={['top']}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!season) {
+    return (
+      <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
+        <View className="flex-row items-center px-4 pt-4 pb-2">
+          <TouchableOpacity onPress={() => router.back()} className="mr-3">
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text className="text-white text-xl font-bold flex-1">Quản lý mùa</Text>
+        </View>
+        <View className="flex-1 items-center justify-center px-4">
+          <Text className="text-slate-400 text-base mb-4">Chưa có mùa nào</Text>
+          <TouchableOpacity
+            className="bg-km-primary rounded-2xl py-4 px-8 items-center"
+            activeOpacity={0.7}
+            onPress={() => setNewModal(true)}
+          >
+            <Text className="text-white text-base font-bold">Mở mùa mới</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* New Season Modal (when no season exists) */}
+        <Modal visible={newModal} transparent animationType="fade">
+          <View className="flex-1 bg-black/60 items-center justify-center px-6">
+            <View className="bg-km-bg-secondary rounded-2xl p-6 w-full max-w-sm">
+              <View className="items-center mb-4">
+                <Ionicons name="sunny" size={48} color={colors.accent} />
+              </View>
+              <Text className="text-white text-lg font-bold text-center mb-2">
+                Mở mùa mới?
+              </Text>
+              <Text className="text-slate-400 text-sm text-center mb-6">
+                Mùa mới sẽ bắt đầu và runner có thể thăng hạng trở lại.
+              </Text>
+              <View className="flex-row gap-3">
+                <TouchableOpacity
+                  className="flex-1 bg-km-surface rounded-xl py-3 items-center"
+                  onPress={() => setNewModal(false)}
+                  activeOpacity={0.7}
+                >
+                  <Text className="text-white text-sm font-semibold">Huỷ</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className="flex-1 bg-km-primary rounded-xl py-3 items-center"
+                  onPress={() => void handleNewSeason()}
+                  activeOpacity={0.7}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <Text className="text-white text-sm font-bold">Mở mùa</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -75,16 +161,18 @@ export default function SeasonScreen() {
             <Text className="text-slate-400 text-sm w-24">Bắt đầu:</Text>
             <Text className="text-white text-sm">{new Date(season.startDate).toLocaleDateString('vi-VN')}</Text>
           </View>
-          <View className="flex-row mb-1">
-            <Text className="text-slate-400 text-sm w-24">Kết thúc:</Text>
-            <Text className="text-white text-sm">{new Date(season.endDate).toLocaleDateString('vi-VN')}</Text>
-          </View>
-          {season.isActive && (
+          {season.endDate ? (
+            <View className="flex-row mb-1">
+              <Text className="text-slate-400 text-sm w-24">Kết thúc:</Text>
+              <Text className="text-white text-sm">{new Date(season.endDate).toLocaleDateString('vi-VN')}</Text>
+            </View>
+          ) : null}
+          {season.isActive && season.endDate ? (
             <View className="flex-row">
               <Text className="text-slate-400 text-sm w-24">Còn lại:</Text>
               <Text className="text-km-accent text-sm font-semibold">{daysLeft} ngày</Text>
             </View>
-          )}
+          ) : null}
         </View>
 
         {/* Rank Thresholds */}
@@ -209,10 +297,15 @@ export default function SeasonScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 className="flex-1 bg-red-500 rounded-xl py-3 items-center"
-                onPress={handleCloseSeason}
+                onPress={() => void handleCloseSeason()}
                 activeOpacity={0.7}
+                disabled={actionLoading}
               >
-                <Text className="text-white text-sm font-bold">Đóng mùa</Text>
+                {actionLoading ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Text className="text-white text-sm font-bold">Đóng mùa</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -242,10 +335,15 @@ export default function SeasonScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 className="flex-1 bg-km-primary rounded-xl py-3 items-center"
-                onPress={handleNewSeason}
+                onPress={() => void handleNewSeason()}
                 activeOpacity={0.7}
+                disabled={actionLoading}
               >
-                <Text className="text-white text-sm font-bold">Mở mùa</Text>
+                {actionLoading ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Text className="text-white text-sm font-bold">Mở mùa</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

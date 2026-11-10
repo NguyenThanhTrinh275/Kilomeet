@@ -133,15 +133,19 @@ export default function RegisterScreen() {
               </View>
             </View>
 
+
+            {error ? (
+              <Text className="text-red-400 text-sm text-center">{error}</Text>
+            ) : null}
             <TouchableOpacity
               className={`h-14 rounded-xl items-center justify-center mt-2 ${
-                loading ? 'bg-km-primary-dark' : 'bg-km-primary'
+                isLoading ? 'bg-km-primary-dark' : 'bg-km-primary'
               }`}
               onPress={handleRegister}
-              disabled={loading}
+              disabled={isLoading}
             >
               <Text className="text-white text-lg font-semibold">
-                {loading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}
+                {isLoading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}
               </Text>
             </TouchableOpacity>
 

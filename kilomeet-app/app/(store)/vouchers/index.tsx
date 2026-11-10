@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { colors } from '../../../src/theme/colors';
 import { useVoucherStore } from '../../../src/stores/voucher';
 import { useAuthStore } from '../../../src/stores/auth';
-import type { Rank, Store } from '../../../src/api/types';
+import type { Store } from '../../../src/api/types';
 
 const RANK_LABELS: Record<string, string> = {
   đồng: 'Đồng', bạc: 'Bạc', vàng: 'Vàng',

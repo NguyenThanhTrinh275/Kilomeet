@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '../../../src/theme/colors';
 import { GROUP_TIME_SLOTS } from '../../../src/api/types';
+import { useGroupStore } from '../../../src/stores/group';
+import type { RankRange } from '../../../src/api/types';
 
 const DISTANCES = [3, 5, 7, 10] as const;
 const RANK_OPTIONS = [
-  { value: 'same', label: 'Cùng hạng' },
-  { value: 'within1', label: 'Chênh 1 hạng' },
-  { value: 'within2', label: 'Chênh 2 hạng' },
-  { value: 'any', label: 'Mọi hạng' },
+  { value: 'same' as const, label: 'Cùng hạng' },
+  { value: 'within1' as const, label: 'Chênh 1 hạng' },
+  { value: 'within2' as const, label: 'Chênh 2 hạng' },
+  { value: 'any' as const, label: 'Mọi hạng' },
 ] as const;
 
 function Chip({
@@ -37,12 +39,37 @@ function Chip({
 
 export default function CreateGroupScreen() {
   const router = useRouter();
+  const createGroup = useGroupStore((s) => s.createGroup);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [selectedDistance, setSelectedDistance] = useState<number | null>(null);
-  const [selectedRank, setSelectedRank] = useState<string | null>(null);
+  const [selectedRank, setSelectedRank] = useState<RankRange | null>(null);
   const [meetingPoint, setMeetingPoint] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const canSubmit = selectedTime && selectedDistance && selectedRank && meetingPoint.trim();
+  const canSubmit = selectedTime && selectedDistance && selectedRank && meetingPoint.trim() && !submitting;
+
+  const handleSubmit = async () => {
+    if (!selectedTime || !selectedDistance || !selectedRank || !meetingPoint.trim()) return;
+    setSubmitting(true);
+    try {
+      const group = await createGroup({
+        date: new Date().toISOString().slice(0, 10),
+        timeSlot: selectedTime,
+        meetingPoint: {
+          name: meetingPoint.trim(),
+          latitude: 10.773,
+          longitude: 106.660,
+        },
+        distanceKm: selectedDistance,
+        rankRange: selectedRank,
+      });
+      router.replace(`/(runner)/groups/${group.id}`);
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
@@ -116,13 +143,10 @@ export default function CreateGroupScreen() {
         <TouchableOpacity
           className={`mt-8 rounded-xl py-4 items-center ${canSubmit ? 'bg-km-primary' : 'bg-km-surface'}`}
           disabled={!canSubmit}
-          onPress={() => {
-            // ponytail: call API to create group, navigate to detail
-            router.back();
-          }}
+          onPress={handleSubmit}
         >
           <Text className={`font-bold text-base ${canSubmit ? 'text-km-bg' : 'text-slate-500'}`}>
-            Tạo nhóm
+            {submitting ? 'Đang tạo...' : 'Tạo nhóm'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
