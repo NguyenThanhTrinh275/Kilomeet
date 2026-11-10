@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,7 +11,12 @@ import {
   totalDistance,
   formatDuration,
   requestLocationPermission,
+  haversine,
 } from '../../src/services/location';
+import { useRunnerStore } from '../../src/stores/runner';
+import { MOCK_STORE } from '../../src/api/mock/data';
+import { DAILY_QUEST_KM, STORE_PROXIMITY_M } from '../../src/api/types';
+import type { GpsPoint } from '../../src/api/types';
 
 type RunState = 'idle' | 'running' | 'paused' | 'finished';
 
@@ -21,12 +26,16 @@ export default function RunScreen() {
   const [distance, setDistance] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [currentPos, setCurrentPos] = useState<LatLng | null>(null);
+  const [questReward, setQuestReward] = useState<number | null>(null);
 
   const mapRef = useRef<MapView>(null);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(0);
   const pausedElapsedRef = useRef(0);
+  const runIdRef = useRef<string | null>(null);
+
+  const { startRun: storeStartRun, endRun, quests, completeQuest } = useRunnerStore();
 
   // Request permission + get initial position
   useEffect(() => {
@@ -39,7 +48,7 @@ export default function RunScreen() {
     })();
     return () => {
       watchRef.current?.remove();
-      clearInterval(timerRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
@@ -70,11 +79,14 @@ export default function RunScreen() {
     setRoute([]);
     setDistance(0);
     setElapsed(0);
+    setQuestReward(null);
+    const run = await storeStartRun();
+    runIdRef.current = run.id;
     await startTracking();
     timerRef.current = setInterval(() => {
       setElapsed(pausedElapsedRef.current + (Date.now() - startTimeRef.current));
     }, 1000);
-  }, [startTracking]);
+  }, [startTracking, storeStartRun]);
 
   const pauseRun = useCallback(() => {
     setState('paused');
@@ -92,18 +104,51 @@ export default function RunScreen() {
     }, 1000);
   }, [startTracking]);
 
-  const finishRun = useCallback(() => {
+  const finishRun = useCallback(async () => {
     setState('finished');
     watchRef.current?.remove();
-    clearInterval(timerRef.current);
-  }, []);
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    const finalDistance = totalDistance(route);
+    const durationMinutes = Math.round(elapsed / 60000);
+
+    // Check store proximity
+    const storePos: LatLng = { latitude: MOCK_STORE.latitude, longitude: MOCK_STORE.longitude };
+    const passedStoreIds: string[] = [];
+    for (const point of route) {
+      if (haversine(point, storePos) * 1000 <= STORE_PROXIMITY_M) {
+        passedStoreIds.push(MOCK_STORE.id);
+        break;
+      }
+    }
+
+    // Convert route to GpsPoint[]
+    const gpsRoute: GpsPoint[] = route.map((p) => ({
+      latitude: p.latitude,
+      longitude: p.longitude,
+      timestamp: new Date().toISOString(),
+    }));
+
+    if (runIdRef.current) {
+      await endRun(runIdRef.current, finalDistance, durationMinutes, gpsRoute, passedStoreIds);
+
+      // Auto-complete daily quest if distance >= DAILY_QUEST_KM
+      if (finalDistance >= DAILY_QUEST_KM) {
+        const dailyQuest = quests.find((q) => q.type === 'daily' && q.status === 'active');
+        if (dailyQuest) {
+          await completeQuest(dailyQuest.id);
+          setQuestReward(dailyQuest.rewardTokens);
+        }
+      }
+    }
+  }, [route, elapsed, endRun, quests, completeQuest]);
 
   const pace = elapsed > 0 && distance > 0
     ? (() => {
-        const minPerKm = (elapsed / 60000) / distance;
-        const m = Math.floor(minPerKm);
-        const s = Math.round((minPerKm - m) * 60);
-        return `${m}:${s.toString().padStart(2, '0')}`;
+        const minPerKm = elapsed / 60000 / distance;
+        const mins = Math.floor(minPerKm);
+        const secs = Math.round((minPerKm - mins) * 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
       })()
     : '--:--';
 
@@ -239,10 +284,10 @@ export default function RunScreen() {
                       <Text className="text-slate-400 text-xs">Thời gian</Text>
                     </View>
                   </View>
-                  {distance >= 2 && (
+                  {questReward != null && (
                     <View className="mt-3 bg-km-primary/10 rounded-xl p-3">
                       <Text className="text-km-primary text-center font-semibold">
-                        ✓ Nhiệm vụ ngày hoàn thành — +10 token
+                        ✓ Nhiệm vụ ngày hoàn thành — +{questReward} token
                       </Text>
                     </View>
                   )}
