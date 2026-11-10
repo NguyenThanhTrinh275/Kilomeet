@@ -11,31 +11,39 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const login = useAuthStore((s) => s.login);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const error = useAuthStore((s) => s.error);
+  const user = useAuthStore((s) => s.user);
+  const getHomeRoute = useAuthStore((s) => s.getHomeRoute);
 
-  const handleLogin = async () => {
-    setLoading(true);
-    try {
-      await login(email || 'lan@demo.com', password || 'demo123');
-      setLoading(false);
-      if (email.includes('store') || email === 'quanfuji@demo.com') {
-        router.replace('/(store)');
-      } else if (email.includes('admin') || email === 'admin@demo.com') {
-        router.replace('/(admin)');
-      } else {
-        router.replace('/(runner)');
-      }
-    } catch {
-      setLoading(false);
-      router.replace('/(runner)');
-    }
+  const navigateByRole = () => {
+    const role = user?.role;
+    if (role === 'store') router.replace('/(store)');
+    else if (role === 'admin') router.replace('/(admin)');
+    else router.replace('/(runner)');
   };
 
-  const quickLogin = (email: string) => {
-    setEmail(email);
-    setPassword('demo123');
+  const handleLogin = async (loginEmail?: string, loginPassword?: string) => {
+    const e = loginEmail || email || 'lan@demo.com';
+    const p = loginPassword || password || 'demo123';
+    try {
+      await login(e, p);
+    } catch {
+      // error is set in store, displayed below
+      return;
+    }
+    // Route based on user role from store (checked after login resolves)
+    const store = useAuthStore.getState();
+    const role = store.user?.role;
+    if (role === 'store') router.replace('/(store)');
+    else if (role === 'admin') router.replace('/(admin)');
+    else router.replace('/(runner)');
+  };
+
+  const quickLogin = (demoEmail: string) => {
+    handleLogin(demoEmail, 'demo123');
   };
 
   return (
@@ -92,13 +100,18 @@ export default function LoginScreen() {
             </View>
           </View>
 
+          {/* Error display */}
+          {error ? (
+            <Text className="text-red-400 text-sm text-center">{error}</Text>
+          ) : null}
+
           <TouchableOpacity
-            className={`h-14 rounded-xl items-center justify-center mt-2 ${loading ? 'bg-km-primary-dark' : 'bg-km-primary'}`}
-            onPress={handleLogin}
-            disabled={loading}
+            className={`h-14 rounded-xl items-center justify-center mt-2 ${isLoading ? 'bg-km-primary-dark' : 'bg-km-primary'}`}
+            onPress={() => handleLogin()}
+            disabled={isLoading}
           >
             <Text className="text-white text-lg font-semibold">
-              {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+              {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </Text>
           </TouchableOpacity>
 

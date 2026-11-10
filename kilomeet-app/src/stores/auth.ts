@@ -51,10 +51,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   getHomeRoute: () => {
     const role = get().user?.role;
     const routes: Record<UserRole, string> = {
-      runner: '/(tabs)/home',
-      member: '/(tabs)/home',
-      store: '/(store)/dashboard',
-      admin: '/(admin)/dashboard',
+      runner: '/(runner)',
+      member: '/(runner)',
+      store: '/(store)',
+      admin: '/(admin)',
     };
     return routes[role ?? 'runner'];
   },
