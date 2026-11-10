@@ -39,9 +39,7 @@ export default function CreateVoucherScreen() {
   const [expiryDate, setExpiryDate] = useState('');
   const [minRank, setMinRank] = useState<Rank>('đồng');
   const [area, setArea] = useState('');
-
-
-
+  const [submitting, setSubmitting] = useState(false);
   const inputClass = 'bg-km-bg-secondary text-white rounded-xl px-4 py-3 text-base';
 
   const handleCreate = useCallback(async () => {

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '../../../src/theme/colors';
-import type { GroupMember, Rank } from '../../../src/api/types';
+import type { GroupRun, GroupMember, Rank } from '../../../src/api/types';
 import { useGroupStore } from '../../../src/stores/group';
 import { useAuthStore } from '../../../src/stores/auth';
 
@@ -109,7 +109,7 @@ function GroupDetailContent({
   joinGroup,
   router,
 }: {
-  group: NonNullable<ReturnType<typeof useGroupStore.getState>['currentGroup']>;
+  group: GroupRun;
   userId: string;
   joinGroup: (groupId: string) => Promise<void>;
   router: ReturnType<typeof useRouter>;
