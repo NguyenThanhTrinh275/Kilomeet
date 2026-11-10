@@ -1,21 +1,15 @@
 import { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { CameraView } from 'expo-camera';
 import { colors } from '../../src/theme/colors';
+import { api } from '../../src/api/client';
 
 type ScanResult = {
   voucherTitle: string;
-  holderName: string;
-  value: string;
-};
-
-const MOCK_RESULT: ScanResult = {
-  voucherTitle: 'Giảm 20% cà phê',
-  holderName: 'Nguyễn Văn A',
-  value: '50 token',
+  feeVnd: number;
 };
 
 type ScanState = 'scanning' | 'scanned' | 'confirmed';
@@ -26,12 +20,17 @@ export default function ScanScreen() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const processingRef = useRef(false);
 
-  const handleBarCodeScanned = ({ data }: { data: string }) => {
+  const handleBarCodeScanned = async ({ data }: { data: string }) => {
     if (processingRef.current) return;
     processingRef.current = true;
-    // ponytail: mock — parse QR data from API when wired
-    setResult(MOCK_RESULT);
-    setState('scanned');
+    try {
+      const res = await api.post<{ success: boolean; voucherTitle: string; feeVnd: number }>('/store/scan', { qrCode: data });
+      setResult({ voucherTitle: res.voucherTitle, feeVnd: res.feeVnd });
+      setState('scanned');
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message || 'QR không hợp lệ hoặc đã sử dụng');
+      processingRef.current = false;
+    }
   };
 
   const handleConfirm = () => {
@@ -94,20 +93,12 @@ export default function ScanScreen() {
                 <Text className="text-white text-base font-semibold">{result.voucherTitle}</Text>
               </View>
 
-              <View className="mb-3">
-                <Text className="text-slate-400 text-xs">Người dùng</Text>
-                <Text className="text-white text-base font-semibold">{result.holderName}</Text>
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-slate-400 text-xs">Giá trị</Text>
-                <Text className="text-white text-base font-semibold">{result.value}</Text>
-              </View>
-
               {/* Fee notice */}
               <View className="bg-km-warning/10 rounded-xl p-3 flex-row items-center mb-6">
                 <Ionicons name="information-circle" size={20} color={colors.warning} />
-                <Text className="text-km-warning text-sm ml-2 font-semibold">Phí: 5.000đ</Text>
+                <Text className="text-km-warning text-sm ml-2 font-semibold">
+                  Phí: {result.feeVnd.toLocaleString('vi-VN')}đ
+                </Text>
               </View>
 
               <View className="flex-row">
@@ -141,7 +132,11 @@ export default function ScanScreen() {
               <Text className="text-slate-400 text-base text-center">
                 Voucher đã được xác nhận sử dụng
               </Text>
-              <Text className="text-km-warning text-sm mt-2 font-semibold">Phí: 5.000đ</Text>
+              {result && (
+                <Text className="text-km-warning text-sm mt-2 font-semibold">
+                  Phí: {result.feeVnd.toLocaleString('vi-VN')}đ
+                </Text>
+              )}
             </View>
           </View>
         )}

@@ -1,33 +1,83 @@
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import QRCode from 'react-native-qrcode-svg';
 import { colors } from '../../../src/theme/colors';
-
-// ponytail: mock — will use store lookup when API ready
-const VOUCHER_DATA: Record<string, {
-  storeName: string; title: string; description: string;
-  originalPrice: number; discountedPrice?: number;
-  questDescription?: string; questCompleted: boolean;
-  minRank: string; expiresAt: string; storeAddress: string;
-}> = {
-  v1: {
-    storeName: 'Cà Phê Bách Khoa',
-    title: 'Giảm 20% nước uống',
-    description: 'Áp dụng cho tất cả các loại nước uống tại quán. Không áp dụng combo.',
-    originalPrice: 500, discountedPrice: 250,
-    questDescription: 'Chạy ngang qua quán (cách quán dưới 50m)',
-    questCompleted: true,
-    minRank: 'bạc', expiresAt: '2026-12-31',
-    storeAddress: '268 Lý Thường Kiệt, Q.10, TP.HCM',
-  },
-};
+import { useVoucherStore } from '../../../src/stores/voucher';
+import { useRunnerStore } from '../../../src/stores/runner';
+import { RANK_INDEX } from '../../../src/api/types';
+import type { Rank, VoucherTemplate, OwnedVoucher } from '../../../src/api/types';
 
 export default function VoucherDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const voucher = VOUCHER_DATA[id] || VOUCHER_DATA.v1;
-  const hasDiscount = voucher.discountedPrice != null && voucher.discountedPrice < voucher.originalPrice;
-  const price = hasDiscount ? voucher.discountedPrice! : voucher.originalPrice;
+  const { templates, myVouchers, buyVoucher, giftVoucher, fetchMyVouchers } = useVoucherStore();
+  const { tokenBalance, rank } = useRunnerStore();
+
+  // Find as template or owned voucher
+  const ownedVoucher = myVouchers.find((v) => v.id === id);
+  const template: VoucherTemplate | undefined =
+    templates.find((t) => t.id === id) ?? ownedVoucher?.template;
+
+  if (!template) {
+    return (
+      <SafeAreaView className="flex-1 bg-km-bg items-center justify-center" edges={['top']}>
+        <Text className="text-slate-400">Không tìm thấy voucher</Text>
+        <TouchableOpacity onPress={() => router.back()} className="mt-4">
+          <Text className="text-km-primary">Quay lại</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  const questCompleted = ownedVoucher?.questCompletedAt != null;
+  const hasQuestDiscount = template.questDiscountPercent > 0 && template.questDescription;
+  const discountedPrice = hasQuestDiscount
+    ? Math.round(template.priceTokens * (1 - template.questDiscountPercent / 100))
+    : null;
+  const price = questCompleted && discountedPrice != null ? discountedPrice : template.priceTokens;
+
+  const handleBuy = async () => {
+    // Check rank requirement
+    if (RANK_INDEX[rank] < RANK_INDEX[template.minRank]) {
+      Alert.alert('Không đủ hạng', `Cần hạng ${template.minRank} trở lên để mua voucher này.`);
+      return;
+    }
+    // Check token balance
+    if (tokenBalance < price) {
+      Alert.alert('Không đủ token', `Bạn cần ${price} token nhưng chỉ có ${tokenBalance}.`);
+      return;
+    }
+    try {
+      await buyVoucher(template.id, questCompleted);
+      await fetchMyVouchers();
+      Alert.alert('Thành công', 'Đã mua voucher! Xem trong mục "Của tôi".');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Không thể mua voucher';
+      Alert.alert('Lỗi', msg);
+    }
+  };
+
+  const handleGift = () => {
+    if (!ownedVoucher) {
+      Alert.alert('Thông báo', 'Bạn cần mua voucher trước khi tặng.');
+      return;
+    }
+    Alert.prompt(
+      'Tặng voucher',
+      'Nhập ID người nhận:',
+      async (recipientId) => {
+        if (!recipientId?.trim()) return;
+        try {
+          await giftVoucher(ownedVoucher.id, recipientId.trim());
+          Alert.alert('Thành công', 'Đã tặng voucher!');
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : 'Không thể tặng voucher';
+          Alert.alert('Lỗi', msg);
+        }
+      },
+    );
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
@@ -47,28 +97,28 @@ export default function VoucherDetailScreen() {
               <Ionicons name="storefront" size={22} color={colors.accent} />
             </View>
             <View className="flex-1">
-              <Text className="text-white font-semibold text-base">{voucher.storeName}</Text>
-              <Text className="text-slate-400 text-xs">{voucher.storeAddress}</Text>
+              <Text className="text-white font-semibold text-base">{template.storeName}</Text>
+              <Text className="text-slate-400 text-xs">Hết hạn: {template.expiresAt}</Text>
             </View>
           </View>
 
-          <Text className="text-white text-xl font-bold mb-2">{voucher.title}</Text>
-          <Text className="text-slate-400 text-sm">{voucher.description}</Text>
+          <Text className="text-white text-xl font-bold mb-2">{template.title}</Text>
+          <Text className="text-slate-400 text-sm">{template.description}</Text>
         </View>
 
         {/* Quest */}
-        {voucher.questDescription && (
+        {template.questDescription && (
           <View className="bg-km-bg-secondary rounded-2xl p-5 mb-4">
             <Text className="text-white font-semibold mb-3">Nhiệm vụ giảm giá</Text>
             <View className="flex-row items-center">
               <Ionicons
-                name={voucher.questCompleted ? 'checkmark-circle' : 'flag-outline'}
+                name={questCompleted ? 'checkmark-circle' : 'flag-outline'}
                 size={20}
-                color={voucher.questCompleted ? colors.success : colors.textMuted}
+                color={questCompleted ? colors.success : colors.textMuted}
               />
-              <Text className="text-slate-400 text-sm ml-2 flex-1">{voucher.questDescription}</Text>
+              <Text className="text-slate-400 text-sm ml-2 flex-1">{template.questDescription}</Text>
             </View>
-            {voucher.questCompleted && (
+            {questCompleted && (
               <View className="mt-3 bg-km-primary/10 rounded-lg p-2">
                 <Text className="text-km-primary text-xs text-center font-semibold">
                   ✓ Đã hoàn thành — Bạn được mua với giá giảm!
@@ -82,24 +132,45 @@ export default function VoucherDetailScreen() {
         <View className="bg-km-bg-secondary rounded-2xl p-5 mb-4">
           <Text className="text-white font-semibold mb-3">Giá</Text>
           <View className="flex-row items-baseline">
-            {hasDiscount && (
-              <Text className="text-slate-500 text-lg line-through mr-3">{voucher.originalPrice} token</Text>
+            {discountedPrice != null && (
+              <Text className="text-slate-500 text-lg line-through mr-3">{template.priceTokens} token</Text>
             )}
             <Text className="text-km-accent text-3xl font-bold">{price}</Text>
             <Text className="text-slate-400 text-base ml-1">token</Text>
           </View>
-          <Text className="text-slate-500 text-xs mt-2">Hết hạn: {voucher.expiresAt}</Text>
+          <Text className="text-slate-500 text-xs mt-2">Còn lại: {template.remaining}/{template.totalSupply}</Text>
         </View>
 
-        {/* Actions */}
-        <TouchableOpacity className="h-14 bg-km-primary rounded-2xl items-center justify-center mb-3">
-          <Text className="text-white text-lg font-semibold">Mua voucher — {price} token</Text>
-        </TouchableOpacity>
+        {/* QR Code for owned vouchers */}
+        {ownedVoucher && ownedVoucher.status === 'owned' && (
+          <View className="bg-km-bg-secondary rounded-2xl p-5 mb-4 items-center">
+            <Text className="text-white font-semibold mb-4">Mã QR voucher</Text>
+            <View className="bg-white p-4 rounded-xl">
+              <QRCode value={ownedVoucher.qrCode} size={200} />
+            </View>
+            <Text className="text-slate-400 text-xs mt-3">Đưa mã này cho cửa hàng để sử dụng</Text>
+          </View>
+        )}
 
-        <TouchableOpacity className="h-14 bg-km-surface rounded-2xl items-center justify-center flex-row">
-          <Ionicons name="gift-outline" size={20} color={colors.textSecondary} />
-          <Text className="text-slate-300 text-base font-semibold ml-2">Tặng sau khi mua</Text>
-        </TouchableOpacity>
+        {/* Actions */}
+        {!ownedVoucher && (
+          <TouchableOpacity
+            className="h-14 bg-km-primary rounded-2xl items-center justify-center mb-3"
+            onPress={handleBuy}
+          >
+            <Text className="text-white text-lg font-semibold">Mua voucher — {price} token</Text>
+          </TouchableOpacity>
+        )}
+
+        {ownedVoucher && ownedVoucher.status === 'owned' && (
+          <TouchableOpacity
+            className="h-14 bg-km-surface rounded-2xl items-center justify-center flex-row"
+            onPress={handleGift}
+          >
+            <Ionicons name="gift-outline" size={20} color={colors.textSecondary} />
+            <Text className="text-slate-300 text-base font-semibold ml-2">Tặng voucher</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

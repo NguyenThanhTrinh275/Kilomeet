@@ -1,42 +1,15 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '../../src/theme/colors';
+import { api } from '../../src/api/client';
 import type { PendingStore } from '../../src/api/types';
 
 type StoreTab = 'pending' | 'approved' | 'rejected';
 
 type StoreItem = PendingStore & { status: StoreTab };
-
-const MOCK_STORES: StoreItem[] = [
-  {
-    id: '1', email: 'cafe@sunrise.vn', storeName: 'Café Sunrise',
-    storeAddress: '123 Nguyễn Huệ, Q1, TP.HCM', latitude: 10.77, longitude: 106.7,
-    appliedAt: '2026-11-01', status: 'pending',
-  },
-  {
-    id: '2', email: 'phobien@mail.vn', storeName: 'Phở Biển',
-    storeAddress: '45 Lê Lợi, Q1, TP.HCM', latitude: 10.78, longitude: 106.69,
-    appliedAt: '2026-11-03', status: 'pending',
-  },
-  {
-    id: '3', email: 'juice@green.vn', storeName: 'Green Juice Bar',
-    storeAddress: '78 Trần Hưng Đạo, Q5, TP.HCM', latitude: 10.75, longitude: 106.68,
-    appliedAt: '2026-10-28', status: 'pending',
-  },
-  {
-    id: '4', email: 'bbq@fire.vn', storeName: 'BBQ Fire House',
-    storeAddress: '200 Cách Mạng Tháng 8, Q3, TP.HCM', latitude: 10.78, longitude: 106.68,
-    appliedAt: '2026-10-20', status: 'approved',
-  },
-  {
-    id: '5', email: 'bad@spam.vn', storeName: 'Cửa Hàng Lạ',
-    storeAddress: '999 ???, Q.Tân Phú', latitude: 10.79, longitude: 106.63,
-    appliedAt: '2026-10-15', status: 'rejected',
-  },
-];
 
 const TABS: { key: StoreTab; label: string }[] = [
   { key: 'pending', label: 'Chờ duyệt' },
@@ -47,21 +20,47 @@ const TABS: { key: StoreTab; label: string }[] = [
 export default function StoresScreen() {
   const router = useRouter();
   const [tab, setTab] = useState<StoreTab>('pending');
-  const [stores, setStores] = useState(MOCK_STORES);
+  const [stores, setStores] = useState<StoreItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [modal, setModal] = useState<{ store: StoreItem; action: 'approve' | 'reject' } | null>(null);
+
+  const fetchStores = useCallback(async () => {
+    try {
+      const pending = await api.get<PendingStore[]>('/admin/pending-stores');
+      setStores(pending.map((s) => ({ ...s, status: 'pending' as const })));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void fetchStores(); }, [fetchStores]);
 
   const filtered = stores.filter((s) => s.status === tab);
 
-  function confirmAction() {
+  async function confirmAction() {
     if (!modal) return;
-    setStores((prev) =>
-      prev.map((s) =>
-        s.id === modal.store.id
-          ? { ...s, status: modal.action === 'approve' ? 'approved' as const : 'rejected' as const }
-          : s,
-      ),
+    setActionLoading(true);
+    try {
+      await api.post('/admin/approve-store', {
+        storeId: modal.store.id,
+        approved: modal.action === 'approve',
+      });
+      setModal(null);
+      // Refetch to get updated list
+      setLoading(true);
+      await fetchStores();
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  if (loading && stores.length === 0) {
+    return (
+      <SafeAreaView className="flex-1 bg-km-bg items-center justify-center" edges={['top']}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </SafeAreaView>
     );
-    setModal(null);
   }
 
   return (
@@ -200,12 +199,17 @@ export default function StoresScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 className={`flex-1 rounded-xl py-3 items-center ${modal?.action === 'approve' ? 'bg-km-primary' : 'bg-red-500'}`}
-                onPress={confirmAction}
+                onPress={() => void confirmAction()}
                 activeOpacity={0.7}
+                disabled={actionLoading}
               >
-                <Text className="text-white text-sm font-bold">
-                  {modal?.action === 'approve' ? 'Duyệt' : 'Từ chối'}
-                </Text>
+                {actionLoading ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Text className="text-white text-sm font-bold">
+                    {modal?.action === 'approve' ? 'Duyệt' : 'Từ chối'}
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

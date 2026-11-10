@@ -1,5 +1,5 @@
 // Mock — Auth handlers
-import type { AuthResponse, AnyUser } from '../types';
+import type { AuthResponse, AnyUser, Runner } from '../types';
 import { ACCOUNTS, setCurrentUser, getCurrentUser } from './data';
 
 export function mockLogin(body: unknown): AuthResponse {
@@ -39,4 +39,15 @@ export function mockGetUser(): AnyUser {
   const user = getCurrentUser();
   if (!user) throw new Error('Not authenticated');
   return user;
+}
+
+export function mockSubscribe(): { success: boolean } {
+  const user = getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+  if (!('isMember' in user)) throw new Error('Chỉ người chạy mới đăng ký hội viên');
+  // user is Runner here (guarded by isMember check) — mutate in-place for mock persistence
+  const runner = user as Runner;
+  runner.isMember = true;
+  runner.role = 'member';
+  return { success: true };
 }

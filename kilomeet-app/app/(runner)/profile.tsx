@@ -1,25 +1,13 @@
-import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
-import { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/auth';
+import { useRunnerStore } from '../../src/stores/runner';
 import { colors } from '../../src/theme/colors';
-import type { Rank } from '../../src/api/types';
-
-// ponytail: hardcoded mock — swap with Zustand runner store when API ready
-const MOCK = {
-  name: 'Nguyễn Văn Minh',
-  email: 'minh@kilomeet.vn',
-  rank: 'vàng' as Rank,
-  walletAddress: '0x1a2B3c4D5e6F7890aBcDeF1234567890AbCdEf12',
-  totalKm: 342.8,
-  totalRuns: 47,
-  bestStreak: 12,
-  seasonBadges: 3,
-  isMember: false,
-  memberExpiry: '2027-03-15',
-  punctuality: 92,
-};
+import { api } from '../../src/api/client';
+import type { Rank, Runner } from '../../src/api/types';
 
 const RANK_LABELS: Record<Rank, string> = {
   đồng: 'Đồng',
@@ -31,8 +19,8 @@ const RANK_LABELS: Record<Rank, string> = {
 };
 
 const MEMBER_BENEFITS = [
-  'Ghép nhóm chạy tự động',
-  'Nhận thưởng token khi chạy nhóm',
+  'Ghép nhóm chạy tự động gần nhà',
+  'Được ghép nhóm chạy chung gần nhà',
   'Badge hội viên trên hồ sơ',
   'Ưu tiên sự kiện & giải chạy',
 ];
@@ -51,10 +39,54 @@ function getInitials(name: string) {
 }
 
 export default function ProfileScreen() {
+  const user = useAuthStore((s) => s.user) as Runner | null;
   const logout = useAuthStore((s) => s.logout);
+  const runs = useRunnerStore((s) => s.runs);
+  const tokenBalance = useRunnerStore((s) => s.tokenBalance);
+  const fetchRuns = useRunnerStore((s) => s.fetchRuns);
   const [notificationsOn, setNotificationsOn] = useState(true);
+  const [subscribing, setSubscribing] = useState(false);
 
-  const rankColor = colors.rank[MOCK.rank];
+  useEffect(() => {
+    fetchRuns();
+  }, []);
+
+  if (!user) return null;
+
+  const rank = user.rank;
+  const rankColor = colors.rank[rank];
+  const totalKm = runs.reduce((sum, r) => sum + r.distanceKm, 0);
+
+  const handleSubscribe = () => {
+    Alert.alert(
+      'Đăng ký Hội viên',
+      'Xác nhận đăng ký gói Hội viên 39.000đ/tháng?',
+      [
+        { text: 'Huỷ', style: 'cancel' },
+        {
+          text: 'Đăng ký',
+          onPress: async () => {
+            setSubscribing(true);
+            try {
+              await api.post('/auth/subscribe');
+              // Update local auth state
+              const updated = { ...user, isMember: true, role: 'member' as const };
+              useAuthStore.setState({ user: updated });
+              Alert.alert('Thành công', 'Bạn đã là Hội viên KILOMeet!');
+            } catch (e) {
+              Alert.alert('Lỗi', (e as Error).message);
+            }
+            setSubscribing(false);
+          },
+        },
+      ],
+    );
+  };
+
+  const handleLogout = () => {
+    logout();
+    router.replace('/(auth)/login');
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
@@ -66,11 +98,11 @@ export default function ProfileScreen() {
             style={{ backgroundColor: rankColor }}
           >
             <Text className="text-2xl font-bold" style={{ color: colors.bgPrimary }}>
-              {getInitials(MOCK.name)}
+              {getInitials(user.name)}
             </Text>
           </View>
-          <Text className="text-white text-xl font-bold">{MOCK.name}</Text>
-          <Text className="text-km-secondary text-sm mt-1">{MOCK.email}</Text>
+          <Text className="text-white text-xl font-bold">{user.name}</Text>
+          <Text className="text-km-secondary text-sm mt-1">{user.email}</Text>
 
           <View className="flex-row items-center mt-2 gap-2">
             <View
@@ -78,13 +110,13 @@ export default function ProfileScreen() {
               style={{ backgroundColor: `${rankColor}20` }}
             >
               <Text className="text-xs font-semibold" style={{ color: rankColor }}>
-                {RANK_LABELS[MOCK.rank]}
+                {RANK_LABELS[rank]}
               </Text>
             </View>
             <View className="flex-row items-center px-3 py-1 rounded-full bg-km-surface">
               <Ionicons name="wallet-outline" size={12} color={colors.textSecondary} />
               <Text className="text-km-secondary text-xs ml-1">
-                {truncateAddress(MOCK.walletAddress)}
+                {truncateAddress(user.walletAddress)}
               </Text>
             </View>
           </View>
@@ -94,16 +126,16 @@ export default function ProfileScreen() {
         <View className="mx-4 p-4 rounded-2xl bg-km-surface-dark mb-4">
           <Text className="text-white text-base font-semibold mb-3">Thống kê</Text>
           <View className="flex-row justify-between">
-            <StatItem label="Tổng km" value={`${MOCK.totalKm}`} icon="map-outline" />
-            <StatItem label="Lần chạy" value={`${MOCK.totalRuns}`} icon="footsteps-outline" />
-            <StatItem label="Streak" value={`${MOCK.bestStreak}`} icon="flame-outline" />
-            <StatItem label="Badges" value={`${MOCK.seasonBadges}`} icon="ribbon-outline" />
+            <StatItem label="Tổng km" value={`${Math.round(totalKm * 10) / 10}`} icon="map-outline" />
+            <StatItem label="Lần chạy" value={`${runs.length}`} icon="footsteps-outline" />
+            <StatItem label="Token" value={`${tokenBalance}`} icon="diamond-outline" />
+            <StatItem label="Hạng" value={RANK_LABELS[rank]} icon="ribbon-outline" />
           </View>
         </View>
 
         {/* ── Membership ── */}
         <View className="mx-4 p-4 rounded-2xl bg-km-surface-dark mb-4">
-          {MOCK.isMember ? (
+          {user.isMember ? (
             <>
               <View className="flex-row items-center mb-2">
                 <Ionicons name="star" size={18} color={colors.accent} />
@@ -111,12 +143,12 @@ export default function ProfileScreen() {
               </View>
               <View className="flex-row justify-between">
                 <View>
-                  <Text className="text-km-secondary text-xs">Hết hạn</Text>
-                  <Text className="text-white text-sm">{MOCK.memberExpiry}</Text>
+                  <Text className="text-km-secondary text-xs">Đúng giờ</Text>
+                  <Text className="text-white text-sm">{user.punctuality}%</Text>
                 </View>
                 <View>
-                  <Text className="text-km-secondary text-xs">Đúng giờ</Text>
-                  <Text className="text-white text-sm">{MOCK.punctuality}%</Text>
+                  <Text className="text-km-secondary text-xs">Token</Text>
+                  <Text className="text-white text-sm">{tokenBalance}</Text>
                 </View>
               </View>
             </>
@@ -135,9 +167,11 @@ export default function ProfileScreen() {
                 className="py-3 rounded-xl items-center"
                 style={{ backgroundColor: colors.primary }}
                 activeOpacity={0.8}
+                onPress={handleSubscribe}
+                disabled={subscribing}
               >
                 <Text className="text-km-inverse font-bold text-sm">
-                  Đăng ký Hội viên — 39.000đ/tháng
+                  {subscribing ? 'Đang xử lý...' : 'Đăng ký Hội viên — 39.000đ/tháng'}
                 </Text>
               </TouchableOpacity>
             </>
@@ -161,23 +195,15 @@ export default function ProfileScreen() {
           </View>
 
           {/* Language */}
-          <SettingsRow
-            icon="language-outline"
-            label="Ngôn ngữ"
-            value="Tiếng Việt"
-          />
+          <SettingsRow icon="language-outline" label="Ngôn ngữ" value="Tiếng Việt" />
 
           {/* About */}
-          <SettingsRow
-            icon="information-circle-outline"
-            label="Về KILOMeet"
-            value="v1.0.0"
-          />
+          <SettingsRow icon="information-circle-outline" label="Về KILOMeet" value="v1.0.0" />
 
           {/* Logout */}
           <TouchableOpacity
             className="flex-row items-center px-4 py-3.5"
-            onPress={logout}
+            onPress={handleLogout}
             activeOpacity={0.7}
           >
             <Ionicons name="log-out-outline" size={20} color={colors.error} />
@@ -196,8 +222,8 @@ type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 function StatItem({ label, value, icon }: { label: string; value: string; icon: IoniconsName }) {
   return (
     <View className="items-center flex-1">
-      <Ionicons name={icon} size={20} color={colors.primary} />
-      <Text className="text-white text-lg font-bold mt-1">{value}</Text>
+      <Ionicons name={icon} size={20} color={colors.textSecondary} />
+      <Text className="text-white text-base font-bold mt-1">{value}</Text>
       <Text className="text-km-secondary text-xs">{label}</Text>
     </View>
   );
@@ -210,10 +236,7 @@ function SettingsRow({ icon, label, value }: { icon: IoniconsName; label: string
         <Ionicons name={icon} size={20} color={colors.textSecondary} />
         <Text className="text-white text-sm ml-3">{label}</Text>
       </View>
-      <View className="flex-row items-center">
-        <Text className="text-km-secondary text-sm mr-1">{value}</Text>
-        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-      </View>
+      <Text className="text-km-secondary text-sm">{value}</Text>
     </View>
   );
 }

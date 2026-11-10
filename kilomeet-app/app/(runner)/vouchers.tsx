@@ -1,69 +1,48 @@
-import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
-import { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { VoucherCard } from '../../src/components/voucher/VoucherCard';
 import { colors } from '../../src/theme/colors';
-
-// ponytail: mock vouchers — swap with Zustand store when API layer ready
-const MOCK_VOUCHERS = [
-  {
-    id: 'v1',
-    storeName: 'Cà Phê Bách Khoa',
-    title: 'Giảm 20% nước uống',
-    originalPrice: 500,
-    discountedPrice: 250,
-    questDescription: 'Chạy ngang qua quán',
-    questCompleted: true,
-    minRank: 'bạc',
-  },
-  {
-    id: 'v2',
-    storeName: 'Trà Sữa TocoToco',
-    title: 'Mua 1 tặng 1',
-    originalPrice: 800,
-    discountedPrice: 400,
-    questDescription: 'Chạy ngang qua quán',
-    questCompleted: false,
-    minRank: 'vàng',
-  },
-  {
-    id: 'v3',
-    storeName: 'Bánh Mì Huỳnh Hoa',
-    title: 'Giảm 15.000đ',
-    originalPrice: 300,
-    questDescription: undefined,
-    questCompleted: false,
-    minRank: 'đồng',
-  },
-  {
-    id: 'v4',
-    storeName: 'GYM Fitness 24/7',
-    title: '1 buổi tập miễn phí',
-    originalPrice: 1200,
-    discountedPrice: 600,
-    questDescription: 'Chạy ngang qua phòng tập',
-    questCompleted: false,
-    minRank: 'bạch_kim',
-  },
-  {
-    id: 'v5',
-    storeName: 'Highlands Coffee',
-    title: 'Giảm 30% Phin Sữa Đá',
-    originalPrice: 400,
-    discountedPrice: 200,
-    questDescription: 'Chạy ngang qua quán',
-    questCompleted: true,
-    minRank: 'bạc',
-  },
-];
+import { useVoucherStore } from '../../src/stores/voucher';
 
 export default function VouchersScreen() {
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'all' | 'mine'>('all');
 
-  const filtered = MOCK_VOUCHERS.filter(
+  const { templates, myVouchers, isLoading, fetchTemplates, fetchMyVouchers } = useVoucherStore();
+
+  useEffect(() => {
+    fetchTemplates();
+    fetchMyVouchers();
+  }, [fetchTemplates, fetchMyVouchers]);
+
+  const items = tab === 'all'
+    ? templates.map((t) => ({
+        id: t.id,
+        storeName: t.storeName,
+        title: t.title,
+        originalPrice: t.priceTokens,
+        discountedPrice: t.questDiscountPercent > 0
+          ? Math.round(t.priceTokens * (1 - t.questDiscountPercent / 100))
+          : undefined,
+        questDescription: t.questDescription ?? undefined,
+        questCompleted: false,
+        minRank: t.minRank,
+      }))
+    : myVouchers.map((v) => ({
+        id: v.id,
+        storeName: v.template.storeName,
+        title: v.template.title,
+        originalPrice: v.template.priceTokens,
+        discountedPrice: v.paidTokens < v.template.priceTokens ? v.paidTokens : undefined,
+        questDescription: v.template.questDescription ?? undefined,
+        questCompleted: v.questCompletedAt != null,
+        minRank: v.template.minRank,
+      }));
+
+  const filtered = items.filter(
     (v) => v.storeName.toLowerCase().includes(search.toLowerCase()) ||
            v.title.toLowerCase().includes(search.toLowerCase()),
   );
@@ -104,18 +83,28 @@ export default function VouchersScreen() {
 
       {/* Voucher list */}
       <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 100 }}>
-        {filtered.map((v) => (
-          <VoucherCard
-            key={v.id}
-            {...v}
-            onPress={() => router.push(`/(runner)/voucher/${v.id}`)}
-          />
-        ))}
-        {filtered.length === 0 && (
-          <View className="items-center py-12">
-            <Ionicons name="pricetag-outline" size={48} color={colors.textMuted} />
-            <Text className="text-slate-400 mt-3">Không tìm thấy voucher</Text>
-          </View>
+        {isLoading ? (
+          <ActivityIndicator color={colors.accent} className="mt-12" />
+        ) : (
+          <>
+            {filtered.map((v) => (
+              <VoucherCard
+                key={v.id}
+                {...v}
+                onPress={() => router.push(
+                  tab === 'mine'
+                    ? `/(runner)/voucher/${v.id}?owned=1`
+                    : `/(runner)/voucher/${v.id}`,
+                )}
+              />
+            ))}
+            {filtered.length === 0 && (
+              <View className="items-center py-12">
+                <Ionicons name="pricetag-outline" size={48} color={colors.textMuted} />
+                <Text className="text-slate-400 mt-3">Không tìm thấy voucher</Text>
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>

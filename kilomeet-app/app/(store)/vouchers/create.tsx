@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { useState, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '../../../src/theme/colors';
 import { RANKS } from '../../../src/api/types';
-import type { Rank } from '../../../src/api/types';
+import { api } from '../../../src/api/client';
+import { useAuthStore } from '../../../src/stores/auth';
+import type { Rank, Store, VoucherTemplate } from '../../../src/api/types';
 
 const RANK_LABELS: Record<string, string> = {
   đồng: 'Đồng', bạc: 'Bạc', vàng: 'Vàng',
@@ -41,13 +43,38 @@ export default function CreateVoucherScreen() {
 
   const inputClass = 'bg-km-bg-secondary text-white rounded-xl px-4 py-3 text-base';
 
-  const handleCreate = () => {
+  const [submitting, setSubmitting] = useState(false);
+  const user = useAuthStore((s) => s.user) as Store | null;
+
+  const inputClass = 'bg-km-bg-secondary text-white rounded-xl px-4 py-3 text-base';
+
+  const handleCreate = useCallback(async () => {
     if (!title || !priceTokens || !quantity || !discountPercent) {
       Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
-    Alert.alert('Thành công', 'Voucher đã được tạo!', [{ text: 'OK', onPress: () => router.back() }]);
-  };
+    setSubmitting(true);
+    try {
+      await api.post<VoucherTemplate>('/store/vouchers', {
+        title,
+        description,
+        priceTokens: Number(priceTokens),
+        discountPercent: Number(discountPercent),
+        questDescription: questType || null,
+        questDiscountPercent: questDiscount ? Number(questDiscount) : 0,
+        totalSupply: Number(quantity),
+        minRank,
+        expiresAt: expiryDate
+          ? new Date(expiryDate.split('/').reverse().join('-')).toISOString()
+          : new Date(Date.now() + 90 * 86400000).toISOString(),
+      });
+      router.back();
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message || 'Không thể tạo voucher');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [title, description, priceTokens, discountPercent, questType, questDiscount, quantity, minRank, expiryDate, router]);
 
   return (
     <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>

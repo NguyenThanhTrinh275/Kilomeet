@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/theme/colors';
-
+import { useAuthStore } from '../../src/stores/auth';
 type Role = 'runner' | 'store';
 
 export default function RegisterScreen() {
@@ -12,14 +12,21 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('runner');
-  const [loading, setLoading] = useState(false);
+  const register = useAuthStore((s) => s.register);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const error = useAuthStore((s) => s.error);
 
   const handleRegister = async () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      router.replace('/(runner)');
-    }, 500);
+    if (!name || !email || !password) return;
+    try {
+      await register(email, name, password);
+    } catch {
+      return;
+    }
+    const user = useAuthStore.getState().user;
+    if (user?.role === 'store') router.replace('/(store)');
+    else if (user?.role === 'admin') router.replace('/(admin)');
+    else router.replace('/(runner)');
   };
 
   return (

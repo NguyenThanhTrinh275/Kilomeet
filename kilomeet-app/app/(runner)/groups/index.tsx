@@ -1,76 +1,13 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '../../../src/theme/colors';
 import { GroupCard } from '../../../src/components/group/GroupCard';
-import type { GroupRun, GroupMember } from '../../../src/api/types';
-
-const MOCK_GROUPS: GroupRun[] = [
-  {
-    id: 'g1',
-    creatorId: 'u1',
-    date: '2026-11-11',
-    timeSlot: '05:30',
-    meetingPoint: { name: 'Công viên Gia Định', latitude: 10.8125, longitude: 106.6789 },
-    distanceKm: 5,
-    rankRange: 'same',
-    status: 'open',
-    maxMembers: 6,
-    members: [
-      { userId: 'u1', userName: 'Minh Anh', rank: 'bạc', confirmed: true, arrived: false, punctuality: 92 },
-      { userId: 'u2', userName: 'Thanh Tùng', rank: 'bạc', confirmed: true, arrived: false, punctuality: 88 },
-    ],
-  },
-  {
-    id: 'g2',
-    creatorId: 'u3',
-    date: '2026-11-11',
-    timeSlot: '06:00',
-    meetingPoint: { name: 'Hồ Con Rùa', latitude: 10.7815, longitude: 106.6952 },
-    distanceKm: 3,
-    rankRange: 'within1',
-    status: 'open',
-    maxMembers: 4,
-    members: [
-      { userId: 'u3', userName: 'Hồng Nhung', rank: 'vàng', confirmed: true, arrived: false, punctuality: 95 },
-    ],
-  },
-  {
-    id: 'g3',
-    creatorId: 'u5',
-    date: '2026-11-11',
-    timeSlot: '17:30',
-    meetingPoint: { name: 'Thảo Cầm Viên', latitude: 10.7875, longitude: 106.7053 },
-    distanceKm: 7,
-    rankRange: 'any',
-    status: 'open',
-    maxMembers: 6,
-    members: [
-      { userId: 'u5', userName: 'Quốc Bảo', rank: 'kim_cương', confirmed: true, arrived: false, punctuality: 97 },
-      { userId: 'u6', userName: 'Phương Linh', rank: 'đồng', confirmed: false, arrived: false, punctuality: 78 },
-      { userId: 'u7', userName: 'Đức Huy', rank: 'vàng', confirmed: true, arrived: false, punctuality: 90 },
-    ],
-  },
-  {
-    id: 'g4',
-    creatorId: 'u8',
-    date: '2026-11-11',
-    timeSlot: '19:00',
-    meetingPoint: { name: 'Landmark 81 Park', latitude: 10.7952, longitude: 106.7219 },
-    distanceKm: 10,
-    rankRange: 'within2',
-    status: 'open',
-    maxMembers: 6,
-    members: [
-      { userId: 'u8', userName: 'Khánh Vy', rank: 'bạch_kim', confirmed: true, arrived: false, punctuality: 94 },
-      { userId: 'u9', userName: 'Trọng Nhân', rank: 'vàng', confirmed: true, arrived: false, punctuality: 86 },
-      { userId: 'u10', userName: 'Mai Linh', rank: 'bạch_kim', confirmed: false, arrived: false, punctuality: 91 },
-      { userId: 'u11', userName: 'Hoàng Nam', rank: 'bạc', confirmed: true, arrived: false, punctuality: 83 },
-    ],
-  },
-];
+import { useGroupStore } from '../../../src/stores/group';
+import { useAuthStore } from '../../../src/stores/auth';
+import type { Runner } from '../../../src/api/types';
 
 const RANK_RANGE_LABELS: Record<string, string> = {
   same: 'Cùng hạng',
@@ -82,12 +19,57 @@ const RANK_RANGE_LABELS: Record<string, string> = {
 export default function GroupsScreen() {
   const router = useRouter();
   const [search, setSearch] = useState('');
+  const user = useAuthStore((s) => s.user);
+  const { groups, isLoading, fetchGroups } = useGroupStore();
 
-  const filtered = MOCK_GROUPS.filter(
+  const runner = user?.role === 'runner' || user?.role === 'member' ? (user as Runner) : null;
+  const isMember = runner?.isMember ?? false;
+
+  useEffect(() => {
+    if (isMember) {
+      fetchGroups();
+    }
+  }, [isMember, fetchGroups]);
+
+  // Non-member paywall
+  if (!isMember) {
+    return (
+      <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
+        <View className="flex-1 items-center justify-center px-8">
+          <Ionicons name="lock-closed-outline" size={64} color={colors.primary} />
+          <Text className="text-white text-xl font-bold mt-4 text-center">
+            Tính năng dành cho Hội viên
+          </Text>
+          <Text className="text-slate-400 text-sm mt-2 text-center">
+            Nâng cấp Hội viên để tham gia nhóm chạy, ghép nhóm tự động và nhiều quyền lợi hấp dẫn khác.
+          </Text>
+          <TouchableOpacity
+            className="bg-km-primary rounded-xl py-4 px-8 mt-6"
+            onPress={() => router.push('/(runner)/profile')}
+          >
+            <Text className="text-km-bg font-bold text-base">
+              Đăng ký Hội viên — 39.000đ/tháng
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const filtered = groups.filter(
     (g) =>
       g.meetingPoint.name.toLowerCase().includes(search.toLowerCase()) ||
       g.timeSlot.includes(search),
   );
+
+  const handleAutoMatch = () => {
+    Alert.alert('Ghép tự động', 'Đang tìm nhóm phù hợp...', [
+      {
+        text: 'OK',
+        onPress: () => fetchGroups(),
+      },
+    ]);
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
@@ -121,7 +103,10 @@ export default function GroupsScreen() {
             <Ionicons name="add-circle-outline" size={20} color={colors.textInverse} />
             <Text className="text-km-bg font-semibold ml-2">Tự lập nhóm</Text>
           </TouchableOpacity>
-          <TouchableOpacity className="flex-1 bg-km-accent rounded-xl py-3 items-center flex-row justify-center">
+          <TouchableOpacity
+            className="flex-1 bg-km-accent rounded-xl py-3 items-center flex-row justify-center"
+            onPress={handleAutoMatch}
+          >
             <Ionicons name="shuffle-outline" size={20} color={colors.white} />
             <Text className="text-white font-semibold ml-2">Ghép tự động</Text>
           </TouchableOpacity>
@@ -129,7 +114,11 @@ export default function GroupsScreen() {
       </View>
 
       {/* Group List */}
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : filtered.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
           <Ionicons name="people-outline" size={64} color={colors.textMuted} />
           <Text className="text-slate-400 text-base mt-4 text-center">

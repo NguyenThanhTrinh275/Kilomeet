@@ -1,8 +1,8 @@
-import { View, Text, TouchableOpacity, Dimensions, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, Image, FlatList } from 'react-native';
 import { useState, useRef } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FlatList } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -28,17 +28,22 @@ export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
+  const completeOnboarding = async () => {
+    await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+    router.replace('/(auth)/login');
+  };
+
   const handleNext = () => {
     if (currentIndex < slides.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
       setCurrentIndex(currentIndex + 1);
     } else {
-      router.replace('/(auth)/login');
+      completeOnboarding();
     }
   };
 
   const handleSkip = () => {
-    router.replace('/(auth)/login');
+    completeOnboarding();
   };
 
   return (
