@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/theme/colors';
+import { AppLogo } from '../../src/components/common/AppLogo';
+import { useAuthStore } from '../../src/stores/auth';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -11,13 +13,24 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const login = useAuthStore((s) => s.login);
+
   const handleLogin = async () => {
     setLoading(true);
-    // ponytail: mock login — swap with real auth when backend ready
-    setTimeout(() => {
+    try {
+      await login(email || 'lan@demo.com', password || 'demo123');
+      setLoading(false);
+      if (email.includes('store') || email === 'quanfuji@demo.com') {
+        router.replace('/(store)');
+      } else if (email.includes('admin') || email === 'admin@demo.com') {
+        router.replace('/(admin)');
+      } else {
+        router.replace('/(runner)');
+      }
+    } catch {
       setLoading(false);
       router.replace('/(runner)');
-    }, 500);
+    }
   };
 
   const quickLogin = (email: string) => {
@@ -32,10 +45,8 @@ export default function LoginScreen() {
         className="flex-1 justify-center px-6"
       >
         {/* Logo */}
-        <View className="items-center mb-12">
-          <View className="w-20 h-20 rounded-2xl bg-km-primary items-center justify-center mb-4">
-            <Text className="text-white text-3xl font-extrabold">K</Text>
-          </View>
+        <View className="items-center mb-10">
+          <AppLogo size="lg" style={{ marginBottom: 16 }} />
           <Text className="text-white text-3xl font-bold">KILOMeet</Text>
           <Text className="text-slate-400 text-base mt-1">Chạy bộ theo mùa</Text>
         </View>

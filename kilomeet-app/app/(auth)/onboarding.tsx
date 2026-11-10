@@ -1,30 +1,26 @@
-import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { useState, useRef } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { FlatList } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 const slides = [
   {
-    icon: 'footsteps' as const,
+    image: require('../../assets/images/onboarding_1.jpg'),
     title: 'Chạy bộ mỗi ngày',
     description: 'Hoàn thành nhiệm vụ chạy hàng ngày và hàng tuần để kiếm token và leo hạng.',
-    color: '#22C55E',
   },
   {
-    icon: 'pricetag' as const,
+    image: require('../../assets/images/onboarding_2.jpg'),
     title: 'Kiếm token & voucher',
     description: 'Dùng token mua voucher giảm giá tại các cửa hàng đối tác. Chạy ngang quán để được giảm thêm!',
-    color: '#F97316',
   },
   {
-    icon: 'people' as const,
+    image: require('../../assets/images/onboarding_3.jpg'),
     title: 'Chạy cùng nhóm',
     description: 'Đăng ký Hội viên để được ghép nhóm chạy chung với những người gần bạn.',
-    color: '#818CF8',
   },
 ];
 
@@ -63,14 +59,12 @@ export default function OnboardingScreen() {
         keyExtractor={(_, i) => i.toString()}
         renderItem={({ item }) => (
           <View style={{ width }} className="items-center justify-center px-8">
-            {/* Icon circle */}
-            <View
-              className="w-40 h-40 rounded-full items-center justify-center mb-10"
-              style={{ backgroundColor: item.color + '20' }}
-            >
-              <Ionicons name={item.icon} size={64} color={item.color} />
-            </View>
-
+            <Image
+              source={item.image}
+              style={{ width: width * 0.75, height: width * 0.75, borderRadius: 24 }}
+              className="mb-8"
+              resizeMode="cover"
+            />
             <Text className="text-white text-2xl font-bold text-center mb-4">
               {item.title}
             </Text>

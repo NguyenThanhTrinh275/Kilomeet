@@ -11,7 +11,7 @@ export function AppLogo({ size = 'md', style }: Props) {
   const px = SIZES[size];
   return (
     <Image
-      source={require('../../../assets/images/app_icon.png')}
+      source={require('../../../assets/images/app_icon.jpg')}
       style={[{ width: px, height: px, borderRadius: px / 5 }, style]}
       resizeMode="contain"
     />

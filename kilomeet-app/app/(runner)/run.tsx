@@ -112,7 +112,7 @@ export default function RunScreen() {
       {/* Map */}
       <MapView
         ref={mapRef}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         initialRegion={
           currentPos
             ? { ...currentPos, latitudeDelta: 0.01, longitudeDelta: 0.01 }

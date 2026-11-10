@@ -1,9 +1,9 @@
 import { View, Image, Text, type ImageSourcePropType } from 'react-native';
 
 const ILLUSTRATIONS: Record<EmptyStateType, ImageSourcePropType> = {
-  runs: require('../../../assets/images/empty_runs.png'),
-  vouchers: require('../../../assets/images/empty_vouchers.png'),
-  groups: require('../../../assets/images/empty_groups.png'),
+  runs: require('../../../assets/images/empty_runs.jpg'),
+  vouchers: require('../../../assets/images/empty_vouchers.jpg'),
+  groups: require('../../../assets/images/empty_groups.jpg'),
 };
 
 type EmptyStateType = 'runs' | 'vouchers' | 'groups';

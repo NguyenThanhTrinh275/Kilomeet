@@ -35,7 +35,7 @@ export default function RunnerLayout() {
           options={{
             title: tab.title,
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name={tab.icon} size={size} color={color} />
+              <Ionicons name={tab.icon} size={size} color={typeof color === 'string' ? color : colors.textMuted} />
             ),
           }}
         />
