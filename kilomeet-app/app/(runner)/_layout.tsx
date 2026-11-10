@@ -40,6 +40,18 @@ export default function RunnerLayout() {
           }}
         />
       ))}
+      <Tabs.Screen
+        name="history"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="badges"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

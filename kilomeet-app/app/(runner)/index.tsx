@@ -98,13 +98,21 @@ export default function RunnerHome() {
         </View>
 
         {/* Start Run CTA */}
-        <View className="px-5 mb-5">
+        {/* Start Run & History CTAs */}
+        <View className="px-5 mb-5 gap-3">
           <TouchableOpacity
             className="h-16 bg-km-primary rounded-2xl flex-row items-center justify-center"
             onPress={() => router.push('/(runner)/run')}
           >
             <Ionicons name="play-circle" size={28} color={colors.white} />
             <Text className="text-white text-lg font-bold ml-3">Bắt đầu chạy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="h-12 bg-km-bg-secondary rounded-2xl flex-row items-center justify-center"
+            onPress={() => router.push('/(runner)/history')}
+          >
+            <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
+            <Text className="text-white font-semibold ml-2">Lịch sử chạy</Text>
           </TouchableOpacity>
         </View>
 
