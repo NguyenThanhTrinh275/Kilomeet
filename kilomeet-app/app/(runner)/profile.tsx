@@ -180,6 +180,18 @@ export default function ProfileScreen() {
 
         {/* ── Settings ── */}
         <View className="mx-4 rounded-2xl bg-km-surface-dark overflow-hidden">
+          {/* Huy hiệu mùa */}
+          <TouchableOpacity
+            className="flex-row items-center justify-between px-4 py-3.5 border-b border-km-border"
+            onPress={() => router.push('/(runner)/badges')}
+            activeOpacity={0.7}
+          >
+            <View className="flex-row items-center">
+              <Ionicons name="ribbon-outline" size={20} color={colors.textSecondary} />
+              <Text className="text-white text-sm ml-3">Huy hiệu mùa</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
           {/* Notifications toggle */}
           <View className="flex-row items-center justify-between px-4 py-3.5 border-b border-km-border">
             <View className="flex-row items-center">
