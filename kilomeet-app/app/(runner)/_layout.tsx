@@ -8,13 +8,14 @@ const tabs: { name: string; title: string; icon: TabIcon }[] = [
   { name: 'index', title: 'Trang chủ', icon: 'home' },
   { name: 'run', title: 'Chạy', icon: 'footsteps' },
   { name: 'vouchers', title: 'Voucher', icon: 'pricetag' },
-  { name: 'groups/index', title: 'Nhóm', icon: 'people' },
+  { name: 'groups', title: 'Nhóm', icon: 'people' },
   { name: 'profile', title: 'Tôi', icon: 'person' },
 ];
 
 export default function RunnerLayout() {
   return (
     <Tabs
+      backBehavior="history"
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -40,18 +41,9 @@ export default function RunnerLayout() {
           }}
         />
       ))}
-      <Tabs.Screen
-        name="history"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="badges"
-        options={{
-          href: null,
-        }}
-      />
+      {['history', 'badges', 'voucher/[id]'].map((name) => (
+        <Tabs.Screen key={name} name={name} options={{ href: null }} />
+      ))}
     </Tabs>
   );
 }
