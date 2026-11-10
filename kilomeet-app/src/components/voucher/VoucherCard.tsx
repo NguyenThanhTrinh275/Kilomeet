@@ -23,7 +23,7 @@ export function VoucherCard({
   storeName, title, originalPrice, discountedPrice,
   questDescription, questCompleted, minRank, onPress,
 }: Props) {
-  const hasDiscount = discountedPrice != null && discountedPrice < originalPrice;
+  const hasDiscount = Boolean(questCompleted && discountedPrice != null && discountedPrice < originalPrice);
 
   return (
     <TouchableOpacity
@@ -58,16 +58,17 @@ export function VoucherCard({
 
         {/* Quest info */}
         {questDescription && (
-          <View className="flex-row items-center mb-3 bg-km-surface/50 rounded-lg p-2">
+          <View className={`flex-row items-center mb-3 rounded-lg p-2.5 ${questCompleted ? 'bg-km-primary/10 border border-km-primary/30' : 'bg-km-surface/40'}`}>
             <Ionicons
               name={questCompleted ? 'checkmark-circle' : 'flag-outline'}
               size={16}
-              color={questCompleted ? colors.success : colors.textMuted}
+              color={questCompleted ? colors.primary : colors.textMuted}
             />
-            <Text className="text-slate-400 text-xs ml-2 flex-1">{questDescription}</Text>
+            <Text className={`text-xs ml-2 flex-1 ${questCompleted ? 'text-km-primary font-semibold' : 'text-slate-400'}`}>
+              {questCompleted ? `✓ Đã hoàn thành: ${questDescription}` : questDescription}
+            </Text>
           </View>
         )}
-
         {/* Price */}
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">

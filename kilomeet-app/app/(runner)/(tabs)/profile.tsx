@@ -7,6 +7,7 @@ import { useAuthStore } from '../../../src/stores/auth';
 import { useRunnerStore } from '../../../src/stores/runner';
 import { colors } from '../../../src/theme/colors';
 import { api } from '../../../src/api/client';
+import { RankBadge } from '../../../src/components/common/RankBadge';
 import type { Rank, Runner } from '../../../src/api/types';
 
 const RANK_LABELS: Record<Rank, string> = {
@@ -20,22 +21,14 @@ const RANK_LABELS: Record<Rank, string> = {
 
 const MEMBER_BENEFITS = [
   'Ghép nhóm chạy tự động gần nhà',
-  'Được ghép nhóm chạy chung gần nhà',
-  'Badge hội viên trên hồ sơ',
-  'Ưu tiên sự kiện & giải chạy',
+  'Xem vị trí nhóm chạy trực tiếp trên bản đồ',
+  'Huy hiệu Hội viên VIP trên hồ sơ',
+  'Ưu tiên tham gia sự kiện và giải chạy',
 ];
 
 function truncateAddress(addr: string) {
+  if (!addr) return '';
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-}
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .slice(-2)
-    .join('')
-    .toUpperCase();
 }
 
 export default function ProfileScreen() {
@@ -49,34 +42,34 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     fetchRuns();
-  }, []);
+  }, [fetchRuns]);
 
   if (!user) return null;
 
-  const rank = user.rank;
-  const rankColor = colors.rank[rank];
+  const rank = user.rank || 'đồng';
+  const rankColor = colors.rank[rank] || colors.primary;
   const totalKm = runs.reduce((sum, r) => sum + r.distanceKm, 0);
 
   const handleSubscribe = () => {
     Alert.alert(
       'Đăng ký Hội viên',
-      'Xác nhận đăng ký gói Hội viên 39.000đ/tháng?',
+      'Xác nhận đăng ký gói Hội viên 39.000đ/tháng để mở tính năng Ghép nhóm chạy?',
       [
         { text: 'Huỷ', style: 'cancel' },
         {
-          text: 'Đăng ký',
+          text: 'Xác nhận (39.000đ)',
           onPress: async () => {
             setSubscribing(true);
             try {
               await api.post('/auth/subscribe');
-              // Update local auth state
               const updated = { ...user, isMember: true, role: 'member' as const };
               useAuthStore.setState({ user: updated });
-              Alert.alert('Thành công', 'Bạn đã là Hội viên KILOMeet!');
+              Alert.alert('Thành công 🎉', 'Bạn đã là Hội viên KILOMeet! Vào tab "Nhóm" để ghép chạy.');
             } catch (e) {
               Alert.alert('Lỗi', (e as Error).message);
+            } finally {
+              setSubscribing(false);
             }
-            setSubscribing(false);
           },
         },
       ],
@@ -84,142 +77,238 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    logout();
-    router.replace('/(auth)/login');
+    Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất tài khoản?', [
+      { text: 'Huỷ', style: 'cancel' },
+      {
+        text: 'Đăng xuất',
+        style: 'destructive',
+        onPress: () => {
+          logout();
+          router.replace('/(auth)/login');
+        },
+      },
+    ]);
   };
 
   return (
     <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* ── Header ── */}
-        <View className="items-center px-6 pt-6 pb-4">
-          <View
-            className="w-20 h-20 rounded-full items-center justify-center mb-3"
-            style={{ backgroundColor: rankColor }}
-          >
-            <Text className="text-2xl font-bold" style={{ color: colors.bgPrimary }}>
-              {getInitials(user.name)}
-            </Text>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 60 }}>
+        {/* ── User Header Card ── */}
+        <View className="items-center px-6 pt-5 pb-6">
+          <View className="mb-3 relative">
+            <RankBadge rank={rank} size="lg" />
+            {user.isMember && (
+              <View className="absolute -top-1 -right-1 w-6 h-6 bg-km-accent rounded-full items-center justify-center border-2 border-km-bg">
+                <Ionicons name="star" size={12} color="white" />
+              </View>
+            )}
           </View>
-          <Text className="text-white text-xl font-bold">{user.name}</Text>
-          <Text className="text-km-secondary text-sm mt-1">{user.email}</Text>
 
-          <View className="flex-row items-center mt-2 gap-2">
+          <Text className="text-white text-2xl font-bold">{user.name}</Text>
+          <Text className="text-slate-400 text-sm mt-0.5">{user.email}</Text>
+
+          <View className="flex-row items-center mt-3 gap-2">
             <View
-              className="px-3 py-1 rounded-full"
-              style={{ backgroundColor: `${rankColor}20` }}
+              className="px-3 py-1 rounded-full border"
+              style={{
+                backgroundColor: `${rankColor}15`,
+                borderColor: `${rankColor}50`,
+              }}
             >
-              <Text className="text-xs font-semibold" style={{ color: rankColor }}>
-                {RANK_LABELS[rank]}
+              <Text className="text-xs font-bold" style={{ color: rankColor }}>
+                Hạng {RANK_LABELS[rank]}
               </Text>
             </View>
-            <View className="flex-row items-center px-3 py-1 rounded-full bg-km-surface">
-              <Ionicons name="wallet-outline" size={12} color={colors.textSecondary} />
-              <Text className="text-km-secondary text-xs ml-1">
+
+            {user.isMember && (
+              <View className="px-3 py-1 rounded-full bg-km-accent/15 border border-km-accent/40">
+                <Text className="text-km-accent text-xs font-bold">Hội viên VIP</Text>
+              </View>
+            )}
+
+            <View className="flex-row items-center px-3 py-1 rounded-full bg-km-bg-secondary border border-slate-700">
+              <Ionicons name="wallet-outline" size={13} color={colors.textSecondary} />
+              <Text className="text-slate-300 text-xs ml-1.5 font-mono">
                 {truncateAddress(user.walletAddress)}
               </Text>
             </View>
           </View>
         </View>
 
-        {/* ── Stats ── */}
-        <View className="mx-4 p-4 rounded-2xl bg-km-surface-dark mb-4">
-          <Text className="text-white text-base font-semibold mb-3">Thống kê</Text>
+        {/* ── Stats Card ── */}
+        <View className="mx-4 p-5 rounded-2xl bg-km-bg-secondary border border-slate-800 mb-4 shadow-sm">
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-white text-base font-bold">Thành tích mùa này</Text>
+            <TouchableOpacity onPress={() => router.push('/(runner)/history')}>
+              <Text className="text-km-primary text-xs font-semibold">Xem chi tiết →</Text>
+            </TouchableOpacity>
+          </View>
+
           <View className="flex-row justify-between">
-            <StatItem label="Tổng km" value={`${Math.round(totalKm * 10) / 10}`} icon="map-outline" />
-            <StatItem label="Lần chạy" value={`${runs.length}`} icon="footsteps-outline" />
-            <StatItem label="Token" value={`${tokenBalance}`} icon="diamond-outline" />
-            <StatItem label="Hạng" value={RANK_LABELS[rank]} icon="ribbon-outline" />
+            <StatItem
+              label="Tổng km"
+              value={`${Math.round(totalKm * 10) / 10}`}
+              unit="km"
+              icon="map"
+              iconColor={colors.primary}
+            />
+            <StatItem
+              label="Buổi chạy"
+              value={`${runs.length}`}
+              unit="buổi"
+              icon="footsteps"
+              iconColor={colors.info}
+            />
+            <StatItem
+              label="Token ví"
+              value={`${tokenBalance}`}
+              unit="token"
+              icon="diamond"
+              iconColor={colors.accent}
+            />
+            <StatItem
+              label="Hạng hiện tại"
+              value={RANK_LABELS[rank]}
+              unit=""
+              icon="ribbon"
+              iconColor={rankColor}
+            />
           </View>
         </View>
 
-        {/* ── Membership ── */}
-        <View className="mx-4 p-4 rounded-2xl bg-km-surface-dark mb-4">
+        {/* ── Membership Card ── */}
+        <View className="mx-4 p-5 rounded-2xl bg-km-bg-secondary border border-slate-800 mb-4 shadow-sm">
           {user.isMember ? (
-            <>
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="star" size={18} color={colors.accent} />
-                <Text className="text-white text-base font-semibold ml-2">Hội viên</Text>
-              </View>
-              <View className="flex-row justify-between">
-                <View>
-                  <Text className="text-km-secondary text-xs">Đúng giờ</Text>
-                  <Text className="text-white text-sm">{user.punctuality}%</Text>
+            <View>
+              <View className="flex-row items-center justify-between mb-3">
+                <View className="flex-row items-center">
+                  <View className="w-8 h-8 rounded-full bg-km-accent/20 items-center justify-center mr-2.5">
+                    <Ionicons name="star" size={16} color={colors.accent} />
+                  </View>
+                  <View>
+                    <Text className="text-white text-base font-bold">Gói Hội viên KILOMeet</Text>
+                    <Text className="text-km-primary text-xs">Đang hoạt động</Text>
+                  </View>
                 </View>
-                <View>
-                  <Text className="text-km-secondary text-xs">Token</Text>
-                  <Text className="text-white text-sm">{tokenBalance}</Text>
+                <View className="px-2.5 py-1 rounded-md bg-km-primary/10 border border-km-primary/30">
+                  <Text className="text-km-primary text-xs font-bold">VIP</Text>
                 </View>
               </View>
-            </>
+
+              <View className="bg-km-bg rounded-xl p-3.5 flex-row justify-around border border-slate-800 mt-1">
+                <View className="items-center">
+                  <Text className="text-slate-400 text-xs mb-0.5">Độ đúng hẹn</Text>
+                  <Text className="text-white text-base font-bold">{user.punctuality}%</Text>
+                </View>
+                <View className="w-[1px] bg-slate-800" />
+                <View className="items-center">
+                  <Text className="text-slate-400 text-xs mb-0.5">Ghép nhóm</Text>
+                  <Text className="text-km-primary text-base font-bold">Không giới hạn</Text>
+                </View>
+              </View>
+            </View>
           ) : (
-            <>
-              <Text className="text-white text-base font-semibold mb-2">Hội viên KILOMeet</Text>
-              <View className="mb-3">
-                {MEMBER_BENEFITS.map((b) => (
-                  <View key={b} className="flex-row items-center mb-1.5">
+            <View>
+              <View className="flex-row items-start justify-between mb-3">
+                <View>
+                  <Text className="text-white text-base font-bold">Đăng ký Hội viên</Text>
+                  <Text className="text-slate-400 text-xs mt-0.5">Mở khoá tính năng ghép nhóm chạy chung</Text>
+                </View>
+                <Text className="text-km-accent text-base font-bold">39.000đ<Text className="text-xs text-slate-400">/tháng</Text></Text>
+              </View>
+
+              <View className="mb-4 bg-km-bg/70 rounded-xl p-3.5 border border-slate-800/80">
+                {MEMBER_BENEFITS.map((benefit, i) => (
+                  <View key={i} className="flex-row items-center py-1">
                     <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-                    <Text className="text-km-secondary text-sm ml-2">{b}</Text>
+                    <Text className="text-slate-300 text-xs ml-2.5 flex-1">{benefit}</Text>
                   </View>
                 ))}
               </View>
+
               <TouchableOpacity
-                className="py-3 rounded-xl items-center"
-                style={{ backgroundColor: colors.primary }}
+                className="h-12 rounded-xl items-center justify-center bg-km-primary"
                 activeOpacity={0.8}
                 onPress={handleSubscribe}
                 disabled={subscribing}
               >
-                <Text className="text-km-inverse font-bold text-sm">
-                  {subscribing ? 'Đang xử lý...' : 'Đăng ký Hội viên — 39.000đ/tháng'}
+                <Text className="text-slate-900 font-bold text-sm">
+                  {subscribing ? 'Đang kích hoạt...' : 'Kích hoạt Hội viên ngay — 39.000đ'}
                 </Text>
               </TouchableOpacity>
-            </>
+            </View>
           )}
         </View>
 
-        {/* ── Settings ── */}
-        <View className="mx-4 rounded-2xl bg-km-surface-dark overflow-hidden">
+        {/* ── Settings & Links Card ── */}
+        <View className="mx-4 rounded-2xl bg-km-bg-secondary border border-slate-800 overflow-hidden mb-4 shadow-sm">
+          {/* Lịch sử chạy */}
+          <TouchableOpacity
+            className="flex-row items-center justify-between px-4 py-4 border-b border-slate-800/80"
+            onPress={() => router.push('/(runner)/history')}
+            activeOpacity={0.7}
+          >
+            <View className="flex-row items-center">
+              <View className="w-8 h-8 rounded-lg bg-blue-500/10 items-center justify-center">
+                <Ionicons name="time" size={18} color="#38BDF8" />
+              </View>
+              <Text className="text-white text-sm font-medium ml-3">Lịch sử chạy bộ</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+
           {/* Huy hiệu mùa */}
           <TouchableOpacity
-            className="flex-row items-center justify-between px-4 py-3.5 border-b border-km-border"
+            className="flex-row items-center justify-between px-4 py-4 border-b border-slate-800/80"
             onPress={() => router.push('/(runner)/badges')}
             activeOpacity={0.7}
           >
             <View className="flex-row items-center">
-              <Ionicons name="ribbon-outline" size={20} color={colors.textSecondary} />
-              <Text className="text-white text-sm ml-3">Huy hiệu mùa</Text>
+              <View className="w-8 h-8 rounded-lg bg-amber-500/10 items-center justify-center">
+                <Ionicons name="ribbon" size={18} color="#FBBF24" />
+              </View>
+              <Text className="text-white text-sm font-medium ml-3">Huy hiệu mùa giải</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
+
           {/* Notifications toggle */}
-          <View className="flex-row items-center justify-between px-4 py-3.5 border-b border-km-border">
+          <View className="flex-row items-center justify-between px-4 py-3.5 border-b border-slate-800/80">
             <View className="flex-row items-center">
-              <Ionicons name="notifications-outline" size={20} color={colors.textSecondary} />
-              <Text className="text-white text-sm ml-3">Thông báo</Text>
+              <View className="w-8 h-8 rounded-lg bg-emerald-500/10 items-center justify-center">
+                <Ionicons name="notifications" size={18} color={colors.primary} />
+              </View>
+              <Text className="text-white text-sm font-medium ml-3">Thông báo nhắc chạy</Text>
             </View>
             <Switch
               value={notificationsOn}
               onValueChange={setNotificationsOn}
-              trackColor={{ false: colors.bgTertiary, true: colors.primary }}
+              trackColor={{ false: '#334155', true: colors.primary }}
               thumbColor={colors.white}
             />
           </View>
 
-          {/* Language */}
-          <SettingsRow icon="language-outline" label="Ngôn ngữ" value="Tiếng Việt" />
-
-          {/* About */}
-          <SettingsRow icon="information-circle-outline" label="Về KILOMeet" value="v1.0.0" />
+          {/* Version info */}
+          <View className="flex-row items-center justify-between px-4 py-3.5 border-b border-slate-800/80">
+            <View className="flex-row items-center">
+              <View className="w-8 h-8 rounded-lg bg-slate-700/30 items-center justify-center">
+                <Ionicons name="information-circle" size={18} color={colors.textSecondary} />
+              </View>
+              <Text className="text-white text-sm font-medium ml-3">Phiên bản</Text>
+            </View>
+            <Text className="text-slate-400 text-xs font-mono">v1.0.0 (Avalanche)</Text>
+          </View>
 
           {/* Logout */}
           <TouchableOpacity
-            className="flex-row items-center px-4 py-3.5"
+            className="flex-row items-center px-4 py-4"
             onPress={handleLogout}
             activeOpacity={0.7}
           >
-            <Ionicons name="log-out-outline" size={20} color={colors.error} />
-            <Text className="text-sm ml-3" style={{ color: colors.error }}>
+            <View className="w-8 h-8 rounded-lg bg-red-500/10 items-center justify-center">
+              <Ionicons name="log-out" size={18} color={colors.error} />
+            </View>
+            <Text className="text-red-400 text-sm font-medium ml-3">
               Đăng xuất
             </Text>
           </TouchableOpacity>
@@ -229,26 +318,32 @@ export default function ProfileScreen() {
   );
 }
 
-type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
-
-function StatItem({ label, value, icon }: { label: string; value: string; icon: IoniconsName }) {
+function StatItem({
+  label,
+  value,
+  unit,
+  icon,
+  iconColor,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  iconColor: string;
+}) {
   return (
     <View className="items-center flex-1">
-      <Ionicons name={icon} size={20} color={colors.textSecondary} />
-      <Text className="text-white text-base font-bold mt-1">{value}</Text>
-      <Text className="text-km-secondary text-xs">{label}</Text>
-    </View>
-  );
-}
-
-function SettingsRow({ icon, label, value }: { icon: IoniconsName; label: string; value: string }) {
-  return (
-    <View className="flex-row items-center justify-between px-4 py-3.5 border-b border-km-border">
-      <View className="flex-row items-center">
-        <Ionicons name={icon} size={20} color={colors.textSecondary} />
-        <Text className="text-white text-sm ml-3">{label}</Text>
+      <View
+        className="w-9 h-9 rounded-full items-center justify-center mb-1.5"
+        style={{ backgroundColor: `${iconColor}15` }}
+      >
+        <Ionicons name={icon} size={18} color={iconColor} />
       </View>
-      <Text className="text-km-secondary text-sm">{value}</Text>
+      <Text className="text-white text-base font-bold">
+        {value}
+        {unit ? <Text className="text-xs text-slate-400 font-normal"> {unit}</Text> : null}
+      </Text>
+      <Text className="text-slate-400 text-xs mt-0.5 text-center">{label}</Text>
     </View>
   );
 }

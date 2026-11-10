@@ -6,12 +6,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { VoucherCard } from '../../../src/components/voucher/VoucherCard';
 import { colors } from '../../../src/theme/colors';
 import { useVoucherStore } from '../../../src/stores/voucher';
+import { useRunnerStore } from '../../../src/stores/runner';
 
 export default function VouchersScreen() {
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'all' | 'mine'>('all');
 
   const { templates, myVouchers, isLoading, fetchTemplates, fetchMyVouchers } = useVoucherStore();
+  const runs = useRunnerStore((s) => s.runs);
+  const passedStoreIds = runs.flatMap((r) => r.passedStoreIds || []);
 
   useEffect(() => {
     fetchTemplates();
@@ -28,7 +31,7 @@ export default function VouchersScreen() {
           ? Math.round(t.priceTokens * (1 - t.questDiscountPercent / 100))
           : undefined,
         questDescription: t.questDescription ?? undefined,
-        questCompleted: false,
+        questCompleted: passedStoreIds.includes(t.storeId),
         minRank: t.minRank,
       }))
     : myVouchers.map((v) => ({

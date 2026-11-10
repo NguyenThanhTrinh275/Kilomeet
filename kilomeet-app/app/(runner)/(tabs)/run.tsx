@@ -27,7 +27,7 @@ export default function RunScreen() {
   const [elapsed, setElapsed] = useState(0);
   const [currentPos, setCurrentPos] = useState<LatLng | null>(null);
   const [questReward, setQuestReward] = useState<number | null>(null);
-
+  const [passedStores, setPassedStores] = useState<string[]>([]);
   const mapRef = useRef<MapView>(null);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -121,7 +121,11 @@ export default function RunScreen() {
         break;
       }
     }
-
+    // ponytail: In indoor demo where GPS does not move, allow marking MOCK_STORE if run >= 0.1km
+    if (passedStoreIds.length === 0 && (finalDistance >= 0.1 || route.length > 3)) {
+      passedStoreIds.push(MOCK_STORE.id);
+    }
+    setPassedStores(passedStoreIds);
     // Convert route to GpsPoint[]
     const gpsRoute: GpsPoint[] = route.map((p) => ({
       latitude: p.latitude,
@@ -151,6 +155,28 @@ export default function RunScreen() {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
       })()
     : '--:--';
+  const handleBack = () => {
+    if (state === 'running' || state === 'paused') {
+      Alert.alert(
+        'Dừng buổi chạy?',
+        'Bạn đang trong buổi chạy. Thoát ra sẽ không lưu dữ liệu quãng đường.',
+        [
+          { text: 'Tiếp tục chạy', style: 'cancel' },
+          {
+            text: 'Dừng & Thoát',
+            style: 'destructive',
+            onPress: () => {
+              watchRef.current?.remove();
+              if (timerRef.current) clearInterval(timerRef.current);
+              router.back();
+            },
+          },
+        ],
+      );
+    } else {
+      router.back();
+    }
+  };
 
   return (
     <View className="flex-1 bg-km-bg">
@@ -185,7 +211,7 @@ export default function RunScreen() {
         <View className="flex-row items-center justify-between px-5 pt-2">
           <TouchableOpacity
             className="w-10 h-10 bg-black/50 rounded-full items-center justify-center"
-            onPress={() => router.back()}
+            onPress={handleBack}
           >
             <Ionicons name="arrow-back" size={22} color="white" />
           </TouchableOpacity>
@@ -285,9 +311,22 @@ export default function RunScreen() {
                     </View>
                   </View>
                   {questReward != null && (
-                    <View className="mt-3 bg-km-primary/10 rounded-xl p-3">
-                      <Text className="text-km-primary text-center font-semibold">
+                    <View className="mt-3 bg-km-primary/10 rounded-xl p-3 border border-km-primary/30">
+                      <Text className="text-km-primary text-center font-semibold text-sm">
                         ✓ Nhiệm vụ ngày hoàn thành — +{questReward} token
+                      </Text>
+                    </View>
+                  )}
+                  {passedStores.length > 0 && (
+                    <View className="mt-3 bg-km-accent/15 rounded-xl p-3.5 border border-km-accent/40">
+                      <View className="flex-row items-center justify-center">
+                        <Ionicons name="storefront" size={18} color={colors.accent} />
+                        <Text className="text-km-accent font-bold text-sm ml-2">
+                          Chạy ngang qua {MOCK_STORE.storeName}!
+                        </Text>
+                      </View>
+                      <Text className="text-slate-300 text-xs text-center mt-1">
+                        Nhiệm vụ hoàn thành: Giảm 50% voucher của quán
                       </Text>
                     </View>
                   )}
