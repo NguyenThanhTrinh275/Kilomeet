@@ -1,9 +1,9 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Polyline, Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { colors } from '../../../src/theme/colors';
 import {
@@ -17,6 +17,19 @@ import { useRunnerStore } from '../../../src/stores/runner';
 import { MOCK_STORE } from '../../../src/api/mock/data';
 import { DAILY_QUEST_KM, STORE_PROXIMITY_M } from '../../../src/api/types';
 import type { GpsPoint } from '../../../src/api/types';
+import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/text';
+import { Card } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type RunState = 'idle' | 'running' | 'paused' | 'finished';
 
@@ -28,6 +41,7 @@ export default function RunScreen() {
   const [currentPos, setCurrentPos] = useState<LatLng | null>(null);
   const [questReward, setQuestReward] = useState<number | null>(null);
   const [passedStores, setPassedStores] = useState<string[]>([]);
+  const [exitOpen, setExitOpen] = useState(false);
   const mapRef = useRef<MapView>(null);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -37,7 +51,6 @@ export default function RunScreen() {
 
   const { startRun: storeStartRun, endRun, quests, completeQuest } = useRunnerStore();
 
-  // Request permission + get initial position
   useEffect(() => {
     (async () => {
       const ok = await requestLocationPermission();
@@ -48,7 +61,7 @@ export default function RunScreen() {
     })();
     return () => {
       watchRef.current?.remove();
-      if (timerRef.current) clearInterval(timerRef.current);
+      clearInterval(timerRef.current ?? undefined);
     };
   }, []);
 
@@ -91,7 +104,7 @@ export default function RunScreen() {
   const pauseRun = useCallback(() => {
     setState('paused');
     watchRef.current?.remove();
-    if (timerRef.current) clearInterval(timerRef.current);
+    clearInterval(timerRef.current ?? undefined);
     pausedElapsedRef.current += Date.now() - startTimeRef.current;
   }, []);
 
@@ -107,12 +120,11 @@ export default function RunScreen() {
   const finishRun = useCallback(async () => {
     setState('finished');
     watchRef.current?.remove();
-    if (timerRef.current) clearInterval(timerRef.current);
+    clearInterval(timerRef.current ?? undefined);
 
     const finalDistance = totalDistance(route);
     const durationMinutes = Math.round(elapsed / 60000);
 
-    // Check store proximity
     const storePos: LatLng = { latitude: MOCK_STORE.latitude, longitude: MOCK_STORE.longitude };
     const passedStoreIds: string[] = [];
     for (const point of route) {
@@ -126,7 +138,6 @@ export default function RunScreen() {
       passedStoreIds.push(MOCK_STORE.id);
     }
     setPassedStores(passedStoreIds);
-    // Convert route to GpsPoint[]
     const gpsRoute: GpsPoint[] = route.map((p) => ({
       latitude: p.latitude,
       longitude: p.longitude,
@@ -136,7 +147,6 @@ export default function RunScreen() {
     if (runIdRef.current) {
       await endRun(runIdRef.current, finalDistance, durationMinutes, gpsRoute, passedStoreIds);
 
-      // Auto-complete daily quest if distance >= DAILY_QUEST_KM
       if (finalDistance >= DAILY_QUEST_KM) {
         const dailyQuest = quests.find((q) => q.type === 'daily' && q.status === 'active');
         if (dailyQuest) {
@@ -155,32 +165,24 @@ export default function RunScreen() {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
       })()
     : '--:--';
+
   const handleBack = () => {
     if (state === 'running' || state === 'paused') {
-      Alert.alert(
-        'Dừng buổi chạy?',
-        'Bạn đang trong buổi chạy. Thoát ra sẽ không lưu dữ liệu quãng đường.',
-        [
-          { text: 'Tiếp tục chạy', style: 'cancel' },
-          {
-            text: 'Dừng & Thoát',
-            style: 'destructive',
-            onPress: () => {
-              watchRef.current?.remove();
-              if (timerRef.current) clearInterval(timerRef.current);
-              router.back();
-            },
-          },
-        ],
-      );
+      setExitOpen(true);
     } else {
       router.back();
     }
   };
 
+  const confirmExit = () => {
+    setExitOpen(false);
+    watchRef.current?.remove();
+    clearInterval(timerRef.current ?? undefined);
+    router.back();
+  };
+
   return (
     <View className="flex-1 bg-km-bg">
-      {/* Map */}
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFill}
@@ -191,134 +193,101 @@ export default function RunScreen() {
         }
         showsUserLocation
         showsMyLocationButton={false}
-        customMapStyle={darkMapStyle}
-      >
-        {route.length > 1 && (
-          <Polyline
-            coordinates={route}
-            strokeColor={colors.primary}
-            strokeWidth={4}
-          />
-        )}
-        {route.length > 0 && (
-          <Marker coordinate={route[0]} pinColor={colors.primary} title="Xuất phát" />
-        )}
+        customMapStyle={darkMapStyle}>
+        {route.length > 1 && <Polyline coordinates={route} strokeColor={colors.primary} strokeWidth={4} />}
+        {route.length > 0 && <Marker coordinate={route[0]} pinColor={colors.primary} title="Xuất phát" />}
       </MapView>
 
-      {/* Stats overlay */}
       <SafeAreaView className="flex-1" edges={['top']}>
-        {/* Top bar */}
         <View className="flex-row items-center justify-between px-5 pt-2">
           <TouchableOpacity
             className="w-10 h-10 bg-black/50 rounded-full items-center justify-center"
-            onPress={handleBack}
-          >
+            onPress={handleBack}>
             <Ionicons name="arrow-back" size={22} color="white" />
           </TouchableOpacity>
           {state !== 'idle' && (
             <View className="bg-black/50 rounded-full px-4 py-2">
-              <Text className="text-white font-mono text-lg font-bold">
-                {formatDuration(elapsed)}
-              </Text>
+              <Text className="text-white font-mono text-lg font-bold">{formatDuration(elapsed)}</Text>
             </View>
           )}
           <View className="w-10" />
         </View>
 
-        {/* Bottom stats + controls */}
         <View className="mt-auto">
           {state !== 'idle' && (
-            <View className="mx-5 mb-4 bg-km-bg-secondary/95 rounded-2xl p-5 flex-row justify-around">
+            <Card className="mx-5 mb-4 bg-km-bg-secondary/95 p-5 flex-row justify-around">
               <View className="items-center">
                 <Text className="text-white text-2xl font-bold">{distance.toFixed(2)}</Text>
-                <Text className="text-slate-400 text-xs">km</Text>
+                <Text className="text-muted-foreground text-xs">km</Text>
               </View>
               <View className="items-center">
                 <Text className="text-white text-2xl font-bold">{pace}</Text>
-                <Text className="text-slate-400 text-xs">min/km</Text>
+                <Text className="text-muted-foreground text-xs">min/km</Text>
               </View>
               <View className="items-center">
-                <Text className="text-white text-2xl font-bold">
-                  {formatDuration(elapsed)}
-                </Text>
-                <Text className="text-slate-400 text-xs">thời gian</Text>
+                <Text className="text-white text-2xl font-bold">{formatDuration(elapsed)}</Text>
+                <Text className="text-muted-foreground text-xs">thời gian</Text>
               </View>
-            </View>
+            </Card>
           )}
 
-          {/* Controls */}
           <View className="mx-5 mb-8">
             {state === 'idle' && (
-              <TouchableOpacity
-                className="h-16 bg-km-primary rounded-2xl items-center justify-center flex-row"
-                onPress={startRun}
-              >
-                <Ionicons name="play" size={28} color="white" />
-                <Text className="text-white text-lg font-bold ml-2">Bắt đầu chạy</Text>
-              </TouchableOpacity>
+              <Button size="lg" className="h-16 rounded-2xl" onPress={startRun}>
+                <Ionicons name="play" size={26} color={colors.textInverse} />
+                <Text className="text-lg">Bắt đầu chạy</Text>
+              </Button>
             )}
 
             {state === 'running' && (
               <View className="flex-row gap-3">
-                <TouchableOpacity
-                  className="flex-1 h-16 bg-km-surface rounded-2xl items-center justify-center flex-row"
-                  onPress={pauseRun}
-                >
-                  <Ionicons name="pause" size={24} color="white" />
-                  <Text className="text-white font-semibold ml-2">Tạm dừng</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  className="h-16 w-16 bg-red-500 rounded-2xl items-center justify-center"
-                  onPress={finishRun}
-                >
-                  <Ionicons name="stop" size={24} color="white" />
-                </TouchableOpacity>
+                <Button variant="secondary" className="flex-1 h-16 rounded-2xl" onPress={pauseRun}>
+                  <Ionicons name="pause" size={22} color="white" />
+                  <Text>Tạm dừng</Text>
+                </Button>
+                <Button variant="destructive" className="h-16 w-16 rounded-2xl" onPress={finishRun}>
+                  <Ionicons name="stop" size={22} color="white" />
+                </Button>
               </View>
             )}
 
             {state === 'paused' && (
               <View className="flex-row gap-3">
-                <TouchableOpacity
-                  className="flex-1 h-16 bg-km-primary rounded-2xl items-center justify-center flex-row"
-                  onPress={resumeRun}
-                >
-                  <Ionicons name="play" size={24} color="white" />
-                  <Text className="text-white font-semibold ml-2">Tiếp tục</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  className="h-16 w-16 bg-red-500 rounded-2xl items-center justify-center"
-                  onPress={finishRun}
-                >
-                  <Ionicons name="stop" size={24} color="white" />
-                </TouchableOpacity>
+                <Button className="flex-1 h-16 rounded-2xl" onPress={resumeRun}>
+                  <Ionicons name="play" size={22} color={colors.textInverse} />
+                  <Text>Tiếp tục</Text>
+                </Button>
+                <Button variant="destructive" className="h-16 w-16 rounded-2xl" onPress={finishRun}>
+                  <Ionicons name="stop" size={22} color="white" />
+                </Button>
               </View>
             )}
 
             {state === 'finished' && (
-              <View>
-                <View className="bg-km-bg-secondary rounded-2xl p-5 mb-4">
-                  <Text className="text-km-primary text-lg font-bold text-center mb-2">
+              <View className="gap-4">
+                <Card className="p-5 gap-3">
+                  <Text className="text-km-primary text-lg font-bold text-center">
                     🎉 Buổi chạy hoàn thành!
                   </Text>
                   <View className="flex-row justify-around">
                     <View className="items-center">
                       <Text className="text-white text-xl font-bold">{distance.toFixed(2)} km</Text>
-                      <Text className="text-slate-400 text-xs">Quãng đường</Text>
+                      <Text className="text-muted-foreground text-xs">Quãng đường</Text>
                     </View>
                     <View className="items-center">
                       <Text className="text-white text-xl font-bold">{formatDuration(elapsed)}</Text>
-                      <Text className="text-slate-400 text-xs">Thời gian</Text>
+                      <Text className="text-muted-foreground text-xs">Thời gian</Text>
                     </View>
                   </View>
                   {questReward != null && (
-                    <View className="mt-3 bg-km-primary/10 rounded-xl p-3 border border-km-primary/30">
+                    <View className="bg-km-primary/10 rounded-xl p-3 border border-km-primary/30">
                       <Text className="text-km-primary text-center font-semibold text-sm">
                         ✓ Nhiệm vụ ngày hoàn thành — +{questReward} token
                       </Text>
                     </View>
                   )}
                   {passedStores.length > 0 && (
-                    <View className="mt-3 bg-km-accent/15 rounded-xl p-3.5 border border-km-accent/40">
+                    <View className="bg-km-accent/15 rounded-xl p-3.5 border border-km-accent/40">
                       <View className="flex-row items-center justify-center">
                         <Ionicons name="storefront" size={18} color={colors.accent} />
                         <Text className="text-km-accent font-bold text-sm ml-2">
@@ -330,23 +299,38 @@ export default function RunScreen() {
                       </Text>
                     </View>
                   )}
-                </View>
-                <TouchableOpacity
-                  className="h-14 bg-km-primary rounded-2xl items-center justify-center"
-                  onPress={() => router.back()}
-                >
-                  <Text className="text-white text-lg font-semibold">Về trang chủ</Text>
-                </TouchableOpacity>
+                </Card>
+                <Button size="lg" className="rounded-2xl" onPress={() => router.back()}>
+                  <Text>Về trang chủ</Text>
+                </Button>
               </View>
             )}
           </View>
         </View>
       </SafeAreaView>
+
+      <AlertDialog open={exitOpen} onOpenChange={setExitOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dừng buổi chạy?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn đang trong buổi chạy. Thoát ra sẽ không lưu dữ liệu quãng đường.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="flex-1">
+              <Text>Tiếp tục chạy</Text>
+            </AlertDialogCancel>
+            <AlertDialogAction variant="destructive" className="flex-1" onPress={confirmExit}>
+              <Text>Dừng & Thoát</Text>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </View>
   );
 }
 
-// Minimal dark map style
 const darkMapStyle = [
   { elementType: 'geometry', stylers: [{ color: '#1E293B' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#94A3B8' }] },

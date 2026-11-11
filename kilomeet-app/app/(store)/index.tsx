@@ -103,9 +103,9 @@ export default function StoreDashboardScreen() {
 
         {/* Pending approval banner */}
         {!approved && (
-          <View className="bg-km-warning/10 rounded-xl p-4 mb-4 flex-row items-center">
+          <View className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4 flex-row items-center">
             <Ionicons name="time-outline" size={24} color={colors.warning} />
-            <Text className="text-km-warning text-sm ml-3 flex-1 font-semibold">
+            <Text className="text-amber-400 text-sm ml-3 flex-1 font-semibold">
               Tài khoản đang chờ duyệt. Bạn chưa thể tạo voucher hoặc quét QR.
             </Text>
           </View>
@@ -172,7 +172,7 @@ export default function StoreDashboardScreen() {
                 </View>
                 <View className="items-end">
                   <Text className="text-slate-400 text-xs">{formatTime(u.usedAt)}</Text>
-                  <Text className="text-km-warning text-xs mt-0.5">-5.000đ</Text>
+                  <Text className="text-amber-400 text-xs mt-0.5">-5.000đ</Text>
                 </View>
               </View>
             ))}

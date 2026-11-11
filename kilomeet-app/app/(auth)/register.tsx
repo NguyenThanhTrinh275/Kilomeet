@@ -1,23 +1,41 @@
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { AlertCircle } from 'lucide-react-native';
 import { colors } from '../../src/theme/colors';
 import { useAuthStore } from '../../src/stores/auth';
+import { FormInput } from '@/components/ui/form-input';
+import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/text';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
 type Role = 'runner' | 'store';
 
+const registerSchema = z.object({
+  name: z.string().trim().min(2, 'Nhập tối thiểu 2 ký tự'),
+  email: z.string().trim().email('Email không hợp lệ'),
+  password: z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự'),
+});
+
+type RegisterForm = z.infer<typeof registerSchema>;
+
 export default function RegisterScreen() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('runner');
   const register = useAuthStore((s) => s.register);
   const isLoading = useAuthStore((s) => s.isLoading);
   const error = useAuthStore((s) => s.error);
 
-  const handleRegister = async () => {
-    if (!name || !email || !password) return;
+  const { control, handleSubmit } = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { name: '', email: '', password: '' },
+  });
+
+  const onSubmit = handleSubmit(async ({ email, name, password }) => {
     try {
       await register(email, name, password);
     } catch {
@@ -27,14 +45,13 @@ export default function RegisterScreen() {
     if (user?.role === 'store') router.replace('/(store)');
     else if (user?.role === 'admin') router.replace('/(admin)');
     else router.replace('/(runner)');
-  };
+  });
 
   return (
     <SafeAreaView className="flex-1 bg-km-bg">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
+        className="flex-1">
         <ScrollView className="flex-1 px-6" contentContainerStyle={{ justifyContent: 'center', flexGrow: 1 }}>
           {/* Header */}
           <View className="flex-row items-center mb-8">
@@ -46,7 +63,7 @@ export default function RegisterScreen() {
 
           {/* Role Selector */}
           <View className="mb-6">
-            <Text className="text-slate-400 text-sm mb-3">Bạn là</Text>
+            <Text className="text-muted-foreground text-sm mb-3">Bạn là</Text>
             <View className="flex-row gap-3">
               <TouchableOpacity
                 className={`flex-1 h-16 rounded-xl items-center justify-center border ${
@@ -54,8 +71,7 @@ export default function RegisterScreen() {
                     ? 'bg-km-primary/10 border-km-primary'
                     : 'bg-km-bg-secondary border-km-surface-light'
                 }`}
-                onPress={() => setRole('runner')}
-              >
+                onPress={() => setRole('runner')}>
                 <Ionicons
                   name="footsteps"
                   size={20}
@@ -72,8 +88,7 @@ export default function RegisterScreen() {
                     ? 'bg-km-accent/10 border-km-accent'
                     : 'bg-km-bg-secondary border-km-surface-light'
                 }`}
-                onPress={() => setRole('store')}
-              >
+                onPress={() => setRole('store')}>
                 <Ionicons
                   name="storefront"
                   size={20}
@@ -88,71 +103,50 @@ export default function RegisterScreen() {
 
           {/* Form */}
           <View className="gap-4">
-            <View>
-              <Text className="text-slate-400 text-sm mb-2">Họ tên</Text>
-              <View className="flex-row items-center bg-km-bg-secondary rounded-xl px-4 h-14 border border-km-surface-light">
-                <Ionicons name="person-outline" size={20} color={colors.textMuted} />
-                <TextInput
-                  className="flex-1 text-white text-base ml-3"
-                  placeholder="Nguyễn Văn A"
-                  placeholderTextColor={colors.textMuted}
-                  value={name}
-                  onChangeText={setName}
-                />
-              </View>
-            </View>
+            <FormInput
+              control={control}
+              name="name"
+              label="Họ tên"
+              placeholder="Nguyễn Văn A"
+              inputClassName="h-14"
+              leftIcon={<Ionicons name="person-outline" size={20} color={colors.textMuted} />}
+            />
 
-            <View>
-              <Text className="text-slate-400 text-sm mb-2">Email</Text>
-              <View className="flex-row items-center bg-km-bg-secondary rounded-xl px-4 h-14 border border-km-surface-light">
-                <Ionicons name="mail-outline" size={20} color={colors.textMuted} />
-                <TextInput
-                  className="flex-1 text-white text-base ml-3"
-                  placeholder="email@example.com"
-                  placeholderTextColor={colors.textMuted}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-            </View>
+            <FormInput
+              control={control}
+              name="email"
+              label="Email"
+              placeholder="email@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              inputClassName="h-14"
+              leftIcon={<Ionicons name="mail-outline" size={20} color={colors.textMuted} />}
+            />
 
-            <View>
-              <Text className="text-slate-400 text-sm mb-2">Mật khẩu</Text>
-              <View className="flex-row items-center bg-km-bg-secondary rounded-xl px-4 h-14 border border-km-surface-light">
-                <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />
-                <TextInput
-                  className="flex-1 text-white text-base ml-3"
-                  placeholder="Tối thiểu 6 ký tự"
-                  placeholderTextColor={colors.textMuted}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                />
-              </View>
-            </View>
-
+            <FormInput
+              control={control}
+              name="password"
+              label="Mật khẩu"
+              placeholder="Tối thiểu 6 ký tự"
+              secureTextEntry
+              inputClassName="h-14"
+              leftIcon={<Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />}
+            />
 
             {error ? (
-              <Text className="text-red-400 text-sm text-center">{error}</Text>
+              <Alert icon={AlertCircle} variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             ) : null}
-            <TouchableOpacity
-              className={`h-14 rounded-xl items-center justify-center mt-2 ${
-                isLoading ? 'bg-km-primary-dark' : 'bg-km-primary'
-              }`}
-              onPress={handleRegister}
-              disabled={isLoading}
-            >
-              <Text className="text-white text-lg font-semibold">
-                {isLoading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}
-              </Text>
-            </TouchableOpacity>
+
+            <Button size="lg" className="mt-2" onPress={() => void onSubmit()} disabled={isLoading}>
+              <Text>{isLoading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}</Text>
+            </Button>
 
             {/* Wallet note */}
             <View className="flex-row items-center bg-km-bg-secondary rounded-xl p-4 mt-2">
               <Ionicons name="wallet-outline" size={20} color={colors.primary} />
-              <Text className="text-slate-400 text-xs ml-3 flex-1">
+              <Text className="text-muted-foreground text-xs ml-3 flex-1">
                 Ví Avalanche sẽ được tạo tự động khi đăng ký. Bạn không cần chuẩn bị gì thêm.
               </Text>
             </View>

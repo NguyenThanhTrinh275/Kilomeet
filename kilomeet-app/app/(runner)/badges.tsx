@@ -1,11 +1,17 @@
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Info } from 'lucide-react-native';
 import { useAuthStore } from '../../src/stores/auth';
 import { colors } from '../../src/theme/colors';
 import { RankBadge } from '../../src/components/common/RankBadge';
 import type { Rank, Runner } from '../../src/api/types';
+import { Text } from '@/components/ui/text';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const RANK_LABELS: Record<Rank, string> = {
   đồng: 'Đồng',
@@ -35,65 +41,81 @@ export default function BadgesScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
-      {/* ── Header ── */}
+      {/* Header */}
       <View className="flex-row items-center px-4 py-3">
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text className="text-white text-lg font-bold ml-3">Huy hiệu mùa</Text>
+        <Text className="text-white text-xl font-bold ml-3">Huy hiệu mùa</Text>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* ── Current Season ── */}
-        <View className="mx-4 p-4 rounded-2xl bg-km-surface-dark mb-4">
-          <Text className="text-white text-base font-semibold mb-3">Mùa 3/2026</Text>
+      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Current Season */}
+        <Card className="p-5 mb-4 gap-3">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-white text-base font-bold">Mùa 3/2026</Text>
+            <Badge variant="default">
+              <Text>Hiện tại</Text>
+            </Badge>
+          </View>
           {currentBadge ? (
-            <View className="items-center py-4">
+            <View className="items-center py-4 gap-2">
               <RankBadge rank={currentBadge} size="lg" />
-              <Text
-                className="text-sm font-semibold mt-2"
-                style={{ color: colors.rank[currentBadge] }}
-              >
-                {RANK_LABELS[currentBadge]}
-              </Text>
+              <Badge
+                variant="outline"
+                style={{
+                  backgroundColor: `${colors.rank[currentBadge]}20`,
+                  borderColor: `${colors.rank[currentBadge]}60`,
+                }}>
+                <Text style={{ color: colors.rank[currentBadge] }}>
+                  {RANK_LABELS[currentBadge]}
+                </Text>
+              </Badge>
             </View>
           ) : (
-            <Text className="text-km-muted text-sm py-4 text-center">
-              Chưa đạt huy hiệu mùa này
-            </Text>
-          )}
-        </View>
-
-        {/* ── Past Seasons ── */}
-        <View className="mx-4 p-4 rounded-2xl bg-km-surface-dark mb-4">
-          <Text className="text-white text-base font-semibold mb-3">Các mùa trước</Text>
-          {PAST_SEASONS.map((s) => (
-            <View
-              key={s.season}
-              className="flex-row items-center py-3 border-b border-km-border last:border-b-0"
-            >
-              <RankBadge rank={s.highestRank} size="md" />
-              <View className="ml-3 flex-1">
-                <Text className="text-white text-sm font-semibold">{s.season}</Text>
-                <Text className="text-km-secondary text-xs">{s.period}</Text>
-              </View>
-              <Text
-                className="text-sm font-semibold"
-                style={{ color: colors.rank[s.highestRank] }}
-              >
-                {RANK_LABELS[s.highestRank]}
+            <View className="items-center py-6 bg-km-bg/60 rounded-xl border border-slate-800 gap-2">
+              <Ionicons name="ribbon-outline" size={32} color={colors.textSecondary} />
+              <Text className="text-slate-300 text-sm text-center">
+                Chưa đạt huy hiệu mùa này
               </Text>
             </View>
-          ))}
-        </View>
+          )}
+        </Card>
 
-        {/* ── Info Note ── */}
-        <View className="mx-4 flex-row items-start p-3 rounded-xl bg-km-surface-dark">
-          <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
-          <Text className="text-km-muted text-xs ml-2 flex-1">
+        {/* Past Seasons */}
+        <Card className="p-5 mb-4 gap-2">
+          <Text className="text-white text-base font-bold mb-1">Các mùa trước</Text>
+          {PAST_SEASONS.map((s, idx) => {
+            const rankColor = colors.rank[s.highestRank];
+            return (
+              <View key={s.season}>
+                <View className="flex-row items-center py-3">
+                  <RankBadge rank={s.highestRank} size="md" />
+                  <View className="ml-3 flex-1">
+                    <Text className="text-white text-sm font-semibold">{s.season}</Text>
+                    <Text className="text-slate-400 text-xs mt-0.5">{s.period}</Text>
+                  </View>
+                  <Badge
+                    variant="outline"
+                    style={{
+                      backgroundColor: `${rankColor}20`,
+                      borderColor: `${rankColor}50`,
+                    }}>
+                    <Text style={{ color: rankColor }}>{RANK_LABELS[s.highestRank]}</Text>
+                  </Badge>
+                </View>
+                {idx < PAST_SEASONS.length - 1 ? <Separator /> : null}
+              </View>
+            );
+          })}
+        </Card>
+
+        {/* Info Note */}
+        <Alert icon={Info}>
+          <AlertDescription className="text-slate-300">
             Huy hiệu ghi lại hạng cao nhất bạn đạt được mỗi mùa. Thành tích không mất khi reset.
-          </Text>
-        </View>
+          </AlertDescription>
+        </Alert>
       </ScrollView>
     </SafeAreaView>
   );
