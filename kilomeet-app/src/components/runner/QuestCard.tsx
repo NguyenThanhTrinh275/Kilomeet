@@ -1,5 +1,9 @@
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { colors } from '../../theme/colors';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Text } from '@/components/ui/text';
+import { Progress } from '@/components/ui/progress';
 
 type Props = {
   type: 'daily' | 'weekly';
@@ -16,35 +20,24 @@ export function QuestCard({ type, title, requirement, reward, progress, target, 
   const typeColor = type === 'daily' ? colors.primary : colors.accent;
 
   return (
-    <View className="bg-km-bg-secondary rounded-2xl p-4 mb-3">
-      <View className="flex-row items-center justify-between mb-2">
-        <View className="flex-row items-center">
-          <View
-            className="px-2 py-1 rounded-md mr-2"
-            style={{ backgroundColor: typeColor + '20' }}
-          >
-            <Text className="text-xs font-semibold" style={{ color: typeColor }}>
-              {type === 'daily' ? 'NGÀY' : 'TUẦN'}
-            </Text>
-          </View>
+    <Card className="mb-3 gap-2.5">
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center gap-2">
+          <Badge variant={type === 'daily' ? 'default' : 'accent'}>
+            <Text>{type === 'daily' ? 'NGÀY' : 'TUẦN'}</Text>
+          </Badge>
           <Text className="text-white font-semibold">{title}</Text>
         </View>
         {completed && (
-          <View className="bg-km-primary/20 px-2 py-1 rounded-md">
-            <Text className="text-km-primary text-xs font-semibold">✓ Hoàn thành</Text>
-          </View>
+          <Badge variant="default">
+            <Text>✓ Hoàn thành</Text>
+          </Badge>
         )}
       </View>
 
-      <Text className="text-slate-400 text-sm mb-3">{requirement}</Text>
+      <Text className="text-muted-foreground text-sm">{requirement}</Text>
 
-      {/* Progress bar */}
-      <View className="h-2 bg-km-surface rounded-full overflow-hidden mb-2">
-        <View
-          className="h-full rounded-full"
-          style={{ width: `${progressPct}%`, backgroundColor: typeColor }}
-        />
-      </View>
+      <Progress value={progressPct} indicatorColor={typeColor} />
 
       <View className="flex-row justify-between">
         <Text className="text-slate-500 text-xs">
@@ -52,6 +45,6 @@ export function QuestCard({ type, title, requirement, reward, progress, target, 
         </Text>
         <Text className="text-km-accent text-xs font-semibold">+{reward} token</Text>
       </View>
-    </View>
+    </Card>
   );
 }
