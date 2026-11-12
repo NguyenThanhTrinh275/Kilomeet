@@ -1,0 +1,454 @@
+// KILOMeet — lược đồ DB. Hạng lưu số 0–5 (đồng..cao_thủ), chỉ đổi sang chuỗi ở lớp API.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  runner
+  member
+  store
+  admin
+}
+
+enum StoreStatus {
+  pending
+  approved
+  rejected
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  name          String
+  role          Role
+  /// Chỉ số dẫn xuất ví HD (m/44'/60'/0'/0/<walletIndex>)
+  walletIndex   Int      @unique @default(autoincrement()) @map("wallet_index")
+  walletAddress String   @unique @map("wallet_address")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  runner RunnerProfile?
+  store  Store?
+
+  runs              Run[]
+  quests            Quest[]
+  ledger            TokenLedger[]
+  weeklyResults     WeeklyResult[]
+  seasonBadges      SeasonBadge[]
+  questClaims       VoucherQuestClaim[]
+  ownedVouchers     OwnedVoucher[]      @relation("owner")
+  boughtVouchers    OwnedVoucher[]      @relation("buyer")
+  voucherTemplates  VoucherTemplate[]
+  createdGroups     Group[]
+  groupMembers      GroupMember[]
+  groupLocations    GroupLocation[]
+  autoMatchRequests AutoMatchRequest[]
+  notifications     Notification[]
+
+  @@map("users")
+}
+
+model RunnerProfile {
+  userId            String    @id @map("user_id")
+  rankIdx           Int       @default(0) @map("rank_idx")
+  tokenBalance      Int       @default(0) @map("token_balance")
+  kmThisWeek        Float     @default(0) @map("km_this_week")
+  /// Thứ Hai (YYYY-MM-DD, giờ VN) của tuần mà kmThisWeek đang tính. Khác tuần hiện tại → coi như 0.
+  kmWeekStart       String    @default("") @map("km_week_start")
+  isMember          Boolean   @default(false) @map("is_member")
+  memberUntil       DateTime? @map("member_until") @db.Timestamptz(3)
+  area              String?
+  punctuality       Int       @default(100)
+  seasonBadgeIdx    Int?      @map("season_badge_idx")
+  skipWeekAvailable Boolean   @default(true) @map("skip_week_available")
+  groupBanUntil     DateTime? @map("group_ban_until") @db.Timestamptz(3)
+  noShowCount       Int       @default(0) @map("no_show_count")
+  /// Số nhóm đã xác nhận tham gia và số lần tới đúng giờ → punctuality.
+  groupsJoined      Int       @default(0) @map("groups_joined")
+  groupsOnTime      Int       @default(0) @map("groups_on_time")
+  /// Vị trí gần nhất (điểm xuất phát buổi chạy gần nhất) để lọc nhóm trong ~3 km.
+  homeLat           Float?    @map("home_lat")
+  homeLng           Float?    @map("home_lng")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("runner_profiles")
+}
+
+model Store {
+  userId       String      @id @map("user_id")
+  storeName    String      @map("store_name")
+  storeAddress String      @map("store_address")
+  lat          Float
+  lng          Float
+  status       StoreStatus @default(pending)
+  appliedAt    DateTime    @default(now()) @map("applied_at") @db.Timestamptz(3)
+  totalUsages  Int         @default(0) @map("total_usages")
+  totalFeesVnd Int         @default(0) @map("total_fees_vnd")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("stores")
+}
+
+/// Cấu hình bền qua restart, ví dụ clock_offset_ms.
+model AppSetting {
+  key   String @id
+  value String
+
+  @@map("app_settings")
+}
+
+enum OutboxStatus {
+  pending
+  sent
+  done
+  failed
+}
+
+/// Lệnh chain ghi cùng transaction nghiệp vụ; job gửi sau và lưu txHash.
+model ChainOutbox {
+  id        String       @id @default(cuid())
+  /// Thứ tự gửi (createdAt có thể trùng mili giây)
+  seq       Int          @default(autoincrement())
+  op        String
+  payload   Json
+  /// Bản ghi nghiệp vụ gây ra lệnh này (vd. "badge:<id>", "quest:<id>") để tra txHash.
+  ref       String?
+  status    OutboxStatus @default(pending)
+  txHash    String?      @map("tx_hash")
+  attempts  Int          @default(0)
+  lastError String?      @map("last_error")
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([status, seq])
+  @@index([ref])
+  @@map("chain_outbox")
+}
+
+model Season {
+  id        String    @id
+  name      String
+  /// YYYY-MM-DD
+  startDate String    @map("start_date")
+  endDate   String    @map("end_date")
+  isActive  Boolean   @default(false) @map("is_active")
+  endedAt   DateTime? @map("ended_at") @db.Timestamptz(3)
+
+  weeklyResults WeeklyResult[]
+  badges        SeasonBadge[]
+
+  @@map("seasons")
+}
+
+model WeeklyResult {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  seasonId   String?  @map("season_id")
+  /// Thứ Hai của tuần (YYYY-MM-DD, giờ VN)
+  weekStart  String   @map("week_start")
+  km         Float
+  levelIdx   Int      @map("level_idx")
+  rankBefore Int      @map("rank_before")
+  rankAfter  Int      @map("rank_after")
+  skipUsed   Boolean  @default(false) @map("skip_used")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  season Season? @relation(fields: [seasonId], references: [id])
+
+  @@unique([userId, weekStart])
+  @@map("weekly_results")
+}
+
+model Run {
+  id              String    @id @default(cuid())
+  userId          String    @map("user_id")
+  distanceKm      Float     @default(0) @map("distance_km")
+  durationMinutes Float     @default(0) @map("duration_minutes")
+  avgPaceMinPerKm Float     @default(0) @map("avg_pace")
+  route           Json      @default("[]")
+  startedAt       DateTime  @map("started_at") @db.Timestamptz(3)
+  endedAt         DateTime? @map("ended_at") @db.Timestamptz(3)
+  passedStoreIds  String[]  @default([]) @map("passed_store_ids")
+  /// Quán được chọn nhận giảm giá cho buổi chạy này (tối đa 1).
+  claimedStoreId  String?   @map("claimed_store_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startedAt(sort: Desc)])
+  @@map("runs")
+}
+
+enum QuestType {
+  daily
+  weekly
+}
+
+enum QuestStatus {
+  active
+  completed
+  expired
+}
+
+model Quest {
+  /// quest-daily-<user>-<YYYY-MM-DD> / quest-weekly-<user>-<weekStart>
+  id           String      @id
+  userId       String      @map("user_id")
+  type         QuestType
+  periodKey    String      @map("period_key")
+  targetKm     Float       @map("target_km")
+  progressKm   Float       @default(0) @map("progress_km")
+  rewardTokens Int         @map("reward_tokens")
+  status       QuestStatus @default(active)
+  expiresAt    DateTime    @map("expires_at") @db.Timestamptz(3)
+  completedAt  DateTime?   @map("completed_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, periodKey])
+  @@map("quests")
+}
+
+model TokenLedger {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  delta     Int
+  /// quest | buy | season_reset | seed
+  reason    String
+  refId     String   @map("ref_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Lưới an toàn: DB từ chối phát thưởng 2 lần cho cùng một việc.
+  @@unique([userId, reason, refId])
+  @@map("token_ledger")
+}
+
+model VoucherTemplate {
+  id                   String   @id @default(cuid())
+  storeId              String   @map("store_id")
+  title                String
+  description          String   @default("")
+  priceTokens          Int      @map("price_tokens")
+  discountPercent      Int      @map("discount_percent")
+  questDescription     String?  @map("quest_description")
+  questDiscountPercent Int      @default(0) @map("quest_discount_percent")
+  totalSupply          Int      @map("total_supply")
+  remaining            Int
+  minRankIdx           Int      @default(0) @map("min_rank_idx")
+  area                 String?
+  expiresAt            DateTime @map("expires_at") @db.Timestamptz(3)
+  imageUrl             String?  @map("image_url")
+  /// tokenId trên hợp đồng Voucher (ERC-1155)
+  /// id loại voucher trên hợp đồng Voucher; null cho tới khi job chain-outbox tạo xong (createVoucherType)
+  chainTokenId         Int?     @unique @map("chain_token_id")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  store  User           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  owned  OwnedVoucher[]
+
+  @@index([storeId])
+  @@map("voucher_templates")
+}
+
+/// Ghi nhận "đã chạy ngang quán" → quyền giảm giá 7 ngày, dùng cho đúng 1 mẫu voucher.
+model VoucherQuestClaim {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  storeId           String   @map("store_id")
+  runId             String   @unique @map("run_id")
+  claimedAt         DateTime @map("claimed_at") @db.Timestamptz(3)
+  usedForTemplateId String?  @map("used_for_template_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, storeId])
+  /// Mỗi người chỉ được giảm giá 1 lần cho mỗi mẫu voucher (quyết định #10).
+  @@unique([userId, usedForTemplateId])
+  @@map("voucher_quest_claims")
+}
+
+enum OwnedVoucherStatus {
+  owned
+  gifted
+  used
+  expired
+}
+
+model OwnedVoucher {
+  id               String             @id @default(cuid())
+  templateId       String             @map("template_id")
+  ownerId          String             @map("owner_id")
+  buyerId          String             @map("buyer_id")
+  status           OwnedVoucherStatus @default(owned)
+  purchasedAt      DateTime           @map("purchased_at") @db.Timestamptz(3)
+  questCompletedAt DateTime?          @map("quest_completed_at") @db.Timestamptz(3)
+  paidTokens       Int                @map("paid_tokens")
+  discounted       Boolean            @default(false)
+  giftedFrom       String?            @map("gifted_from")
+  usedAt           DateTime?          @map("used_at") @db.Timestamptz(3)
+  qrCode           String             @unique @map("qr_code")
+
+  template VoucherTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  owner    User            @relation("owner", fields: [ownerId], references: [id], onDelete: Cascade)
+  buyer    User            @relation("buyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  usage    VoucherUsage?
+
+  @@index([ownerId])
+  @@map("owned_vouchers")
+}
+
+model VoucherUsage {
+  id             String   @id @default(cuid())
+  ownedVoucherId String   @unique @map("owned_voucher_id")
+  storeId        String   @map("store_id")
+  userId         String   @map("user_id")
+  usedAt         DateTime @map("used_at") @db.Timestamptz(3)
+  feeVnd         Int      @map("fee_vnd")
+
+  ownedVoucher OwnedVoucher @relation(fields: [ownedVoucherId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, usedAt(sort: Desc)])
+  @@map("voucher_usages")
+}
+
+model SeasonBadge {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  seasonId       String   @map("season_id")
+  highestRankIdx Int      @map("highest_rank_idx")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  season Season @relation(fields: [seasonId], references: [id])
+
+  @@unique([userId, seasonId])
+  @@map("season_badges")
+}
+
+enum RankRange {
+  same
+  within1
+  within2
+  any
+}
+
+enum GroupStatus {
+  open
+  confirmed
+  in_progress
+  completed
+  cancelled
+}
+
+model Group {
+  id             String      @id @default(cuid())
+  creatorId      String      @map("creator_id")
+  /// YYYY-MM-DD + HH:mm giờ VN; startsAt là thời điểm tuyệt đối tương ứng.
+  date           String
+  timeSlot       String      @map("time_slot")
+  startsAt       DateTime    @map("starts_at") @db.Timestamptz(3)
+  meetingName    String      @map("meeting_name")
+  meetingLat     Float       @map("meeting_lat")
+  meetingLng     Float       @map("meeting_lng")
+  distanceKm     Float       @map("distance_km")
+  rankRange      RankRange   @map("rank_range")
+  minPunctuality Int         @default(0) @map("min_punctuality")
+  status         GroupStatus @default(open)
+  maxMembers     Int         @default(6) @map("max_members")
+  autoMatched    Boolean     @default(false) @map("auto_matched")
+  /// Mốc timeline đã xử lý gần nhất (T-2h, T-1h, ...), để job idempotent.
+  milestone      String      @default("")
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  creator   User            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  members   GroupMember[]
+  locations GroupLocation[]
+
+  @@index([status, startsAt])
+  @@map("groups")
+}
+
+model GroupMember {
+  groupId   String    @map("group_id")
+  userId    String    @map("user_id")
+  rankRange RankRange @map("rank_range")
+  confirmed Boolean   @default(false)
+  arrived   Boolean   @default(false)
+  arrivedAt DateTime? @map("arrived_at") @db.Timestamptz(3)
+  absent    Boolean   @default(false)
+  joinedAt  DateTime  @map("joined_at") @db.Timestamptz(3)
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+  @@map("group_members")
+}
+
+model GroupLocation {
+  groupId   String   @map("group_id")
+  userId    String   @map("user_id")
+  lat       Float
+  lng       Float
+  updatedAt DateTime @map("updated_at") @db.Timestamptz(3)
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+  @@map("group_locations")
+}
+
+enum AutoMatchStatus {
+  pending
+  matched
+  expired
+  cancelled
+}
+
+model AutoMatchRequest {
+  id         String          @id @default(cuid())
+  userId     String          @map("user_id")
+  date       String
+  timeSlots  String[]        @map("time_slots")
+  distanceKm Float           @map("distance_km")
+  rankRange  RankRange       @map("rank_range")
+  lat        Float
+  lng        Float
+  status     AutoMatchStatus @default(pending)
+  groupId    String?         @map("group_id")
+  createdAt  DateTime        @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, date])
+  @@map("auto_match_requests")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  type      String
+  title     String
+  body      String
+  /// Khoá chống gửi trùng (vd. group-<id>-T-1h)
+  dedupeKey String   @map("dedupe_key")
+  read      Boolean  @default(false)
+  createdAt DateTime @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("notifications")
+}
