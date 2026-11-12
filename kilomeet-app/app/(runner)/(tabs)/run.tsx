@@ -11,12 +11,12 @@ import {
   totalDistance,
   formatDuration,
   requestLocationPermission,
-  haversine,
 } from '../../../src/services/location';
-import { useRunnerStore } from '../../../src/stores/runner';
-import { MOCK_STORE } from '../../../src/api/mock/data';
-import { DAILY_QUEST_KM, STORE_PROXIMITY_M } from '../../../src/api/types';
+import { useRunnerStore, type PassedStore } from '../../../src/stores/runner';
+import { useAuthStore } from '../../../src/stores/auth';
+import { DEMO_ENABLED, DEMO_ROUTES } from '../../../src/demo/routes';
 import type { GpsPoint } from '../../../src/api/types';
+import { toast } from 'sonner-native';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
@@ -32,15 +32,21 @@ import {
 } from '@/components/ui/alert-dialog';
 
 type RunState = 'idle' | 'running' | 'paused' | 'finished';
+/** Điểm GPS kèm thời điểm thật (BE dùng để lọc đoạn đi xe > 25 km/h). */
+type TrackPoint = LatLng & { timestamp: string };
 
 export default function RunScreen() {
   const [state, setState] = useState<RunState>('idle');
-  const [route, setRoute] = useState<LatLng[]>([]);
+  const [route, setRoute] = useState<TrackPoint[]>([]);
   const [distance, setDistance] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [currentPos, setCurrentPos] = useState<LatLng | null>(null);
   const [questReward, setQuestReward] = useState<number | null>(null);
-  const [passedStores, setPassedStores] = useState<string[]>([]);
+  const [passedStores, setPassedStores] = useState<PassedStore[]>([]);
+  const [claimedStoreId, setClaimedStoreId] = useState<string | null>(null);
+  const [claiming, setClaiming] = useState(false);
+  const [finalRunId, setFinalRunId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
   const mapRef = useRef<MapView>(null);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
@@ -49,7 +55,8 @@ export default function RunScreen() {
   const pausedElapsedRef = useRef(0);
   const runIdRef = useRef<string | null>(null);
 
-  const { startRun: storeStartRun, endRun, quests, completeQuest } = useRunnerStore();
+  const { startRun: storeStartRun, endRun, fetchQuests, fetchPassedStores, claimStore } = useRunnerStore();
+  const refreshMe = useAuthStore((s) => s.refreshMe);
 
   useEffect(() => {
     (async () => {
@@ -72,7 +79,7 @@ export default function RunScreen() {
         const pos = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
         setCurrentPos(pos);
         setRoute((prev) => {
-          const next = [...prev, pos];
+          const next = [...prev, { ...pos, timestamp: new Date(loc.timestamp).toISOString() }];
           setDistance(totalDistance(next));
           return next;
         });
@@ -93,6 +100,9 @@ export default function RunScreen() {
     setDistance(0);
     setElapsed(0);
     setQuestReward(null);
+    setPassedStores([]);
+    setClaimedStoreId(null);
+    setFinalRunId(null);
     const run = await storeStartRun();
     runIdRef.current = run.id;
     await startTracking();
@@ -117,45 +127,77 @@ export default function RunScreen() {
     }, 1000);
   }, [startTracking]);
 
+  /** Gửi buổi chạy lên BE; BE tự tính km, quán đi ngang, chấm nhiệm vụ và phát token. */
+  const submitRun = useCallback(
+    async (runId: string, gpsRoute: GpsPoint[], durationMinutes: number) => {
+      setSaving(true);
+      try {
+        const before = useRunnerStore.getState().quests;
+        const run = await endRun(runId, totalDistance(gpsRoute), durationMinutes, gpsRoute, []);
+        setFinalRunId(run.id);
+        setDistance(run.distanceKm);
+        const [after] = await Promise.all([fetchQuests(), refreshMe().catch(() => undefined)]);
+        // Token vừa nhận = tổng thưởng các nhiệm vụ chuyển từ active → completed.
+        const reward = after
+          .filter((q) => q.status === 'completed' && before.find((b) => b.id === q.id)?.status !== 'completed')
+          .reduce((sum, q) => sum + q.rewardTokens, 0);
+        setQuestReward(reward > 0 ? reward : null);
+        if (run.passedStoreIds.length > 0) {
+          setPassedStores(await fetchPassedStores(run.id));
+          setClaimedStoreId(run.claimedStoreId ?? null);
+        }
+      } catch (e) {
+        toast.error('Không lưu được buổi chạy', { description: (e as Error).message });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [endRun, fetchQuests, refreshMe, fetchPassedStores],
+  );
+
   const finishRun = useCallback(async () => {
     setState('finished');
     watchRef.current?.remove();
     clearInterval(timerRef.current ?? undefined);
+    if (!runIdRef.current) return;
+    await submitRun(runIdRef.current, route, Math.round(elapsed / 60000));
+  }, [route, elapsed, submitRun]);
 
-    const finalDistance = totalDistance(route);
-    const durationMinutes = Math.round(elapsed / 60000);
+  /** Demo: phát một buổi chạy ghi sẵn (EXPO_PUBLIC_DEMO=true). */
+  const replayDemo = useCallback(
+    async (name: keyof typeof DEMO_ROUTES) => {
+      const gps = DEMO_ROUTES[name](new Date());
+      setRoute(gps);
+      setDistance(totalDistance(gps));
+      const ms = Date.parse(gps[gps.length - 1]!.timestamp) - Date.parse(gps[0]!.timestamp);
+      setElapsed(ms);
+      setQuestReward(null);
+      setPassedStores([]);
+      setClaimedStoreId(null);
+      setState('finished');
+      mapRef.current?.fitToCoordinates(gps, { edgePadding: { top: 80, right: 40, bottom: 320, left: 40 }, animated: true });
+      const run = await storeStartRun();
+      await submitRun(run.id, gps, Math.round(ms / 60000));
+    },
+    [storeStartRun, submitRun],
+  );
 
-    const storePos: LatLng = { latitude: MOCK_STORE.latitude, longitude: MOCK_STORE.longitude };
-    const passedStoreIds: string[] = [];
-    for (const point of route) {
-      if (haversine(point, storePos) * 1000 <= STORE_PROXIMITY_M) {
-        passedStoreIds.push(MOCK_STORE.id);
-        break;
+  const chooseStore = useCallback(
+    async (storeId: string) => {
+      if (!finalRunId) return;
+      setClaiming(true);
+      try {
+        await claimStore(finalRunId, storeId);
+        setClaimedStoreId(storeId);
+        toast.success('Đã nhận giảm giá', { description: 'Dùng trong 7 ngày cho voucher của quán này.' });
+      } catch (e) {
+        toast.error('Không chọn được quán', { description: (e as Error).message });
+      } finally {
+        setClaiming(false);
       }
-    }
-    // ponytail: In indoor demo where GPS does not move, allow marking MOCK_STORE if run >= 0.1km
-    if (passedStoreIds.length === 0 && (finalDistance >= 0.1 || route.length > 3)) {
-      passedStoreIds.push(MOCK_STORE.id);
-    }
-    setPassedStores(passedStoreIds);
-    const gpsRoute: GpsPoint[] = route.map((p) => ({
-      latitude: p.latitude,
-      longitude: p.longitude,
-      timestamp: new Date().toISOString(),
-    }));
-
-    if (runIdRef.current) {
-      await endRun(runIdRef.current, finalDistance, durationMinutes, gpsRoute, passedStoreIds);
-
-      if (finalDistance >= DAILY_QUEST_KM) {
-        const dailyQuest = quests.find((q) => q.type === 'daily' && q.status === 'active');
-        if (dailyQuest) {
-          await completeQuest(dailyQuest.id);
-          setQuestReward(dailyQuest.rewardTokens);
-        }
-      }
-    }
-  }, [route, elapsed, endRun, quests, completeQuest]);
+    },
+    [finalRunId, claimStore],
+  );
 
   const pace = elapsed > 0 && distance > 0
     ? (() => {
@@ -192,8 +234,7 @@ export default function RunScreen() {
             : { latitude: 10.773, longitude: 106.66, latitudeDelta: 0.05, longitudeDelta: 0.05 }
         }
         showsUserLocation
-        showsMyLocationButton={false}
-        customMapStyle={darkMapStyle}>
+        showsMyLocationButton={false}>
         {route.length > 1 && <Polyline coordinates={route} strokeColor={colors.primary} strokeWidth={4} />}
         {route.length > 0 && <Marker coordinate={route[0]} pinColor={colors.primary} title="Xuất phát" />}
       </MapView>
@@ -217,15 +258,15 @@ export default function RunScreen() {
           {state !== 'idle' && (
             <Card className="mx-5 mb-4 bg-km-bg-secondary/95 p-5 flex-row justify-around">
               <View className="items-center">
-                <Text className="text-white text-2xl font-bold">{distance.toFixed(2)}</Text>
+                <Text className="text-foreground text-2xl font-bold">{distance.toFixed(2)}</Text>
                 <Text className="text-muted-foreground text-xs">km</Text>
               </View>
               <View className="items-center">
-                <Text className="text-white text-2xl font-bold">{pace}</Text>
+                <Text className="text-foreground text-2xl font-bold">{pace}</Text>
                 <Text className="text-muted-foreground text-xs">min/km</Text>
               </View>
               <View className="items-center">
-                <Text className="text-white text-2xl font-bold">{formatDuration(elapsed)}</Text>
+                <Text className="text-foreground text-2xl font-bold">{formatDuration(elapsed)}</Text>
                 <Text className="text-muted-foreground text-xs">thời gian</Text>
               </View>
             </Card>
@@ -233,10 +274,18 @@ export default function RunScreen() {
 
           <View className="mx-5 mb-8">
             {state === 'idle' && (
-              <Button size="lg" className="h-16 rounded-2xl" onPress={startRun}>
-                <Ionicons name="play" size={26} color={colors.textInverse} />
-                <Text className="text-lg">Bắt đầu chạy</Text>
-              </Button>
+              <View className="gap-2">
+                <Button size="lg" className="h-16 rounded-2xl" onPress={startRun}>
+                  <Ionicons name="play" size={26} color={colors.textInverse} />
+                  <Text className="text-lg">Bắt đầu chạy</Text>
+                </Button>
+                {DEMO_ENABLED &&
+                  (Object.keys(DEMO_ROUTES) as (keyof typeof DEMO_ROUTES)[]).map((name) => (
+                    <Button key={name} variant="outline" onPress={() => replayDemo(name)}>
+                      <Text>Phát buổi chạy mẫu · {name}</Text>
+                    </Button>
+                  ))}
+              </View>
             )}
 
             {state === 'running' && (
@@ -271,31 +320,46 @@ export default function RunScreen() {
                   </Text>
                   <View className="flex-row justify-around">
                     <View className="items-center">
-                      <Text className="text-white text-xl font-bold">{distance.toFixed(2)} km</Text>
+                      <Text className="text-foreground text-xl font-bold">{distance.toFixed(2)} km</Text>
                       <Text className="text-muted-foreground text-xs">Quãng đường</Text>
                     </View>
                     <View className="items-center">
-                      <Text className="text-white text-xl font-bold">{formatDuration(elapsed)}</Text>
+                      <Text className="text-foreground text-xl font-bold">{formatDuration(elapsed)}</Text>
                       <Text className="text-muted-foreground text-xs">Thời gian</Text>
                     </View>
                   </View>
+                  {saving && (
+                    <Text className="text-muted-foreground text-center text-sm">Đang lưu buổi chạy…</Text>
+                  )}
                   {questReward != null && (
                     <View className="bg-km-primary/10 rounded-xl p-3 border border-km-primary/30">
                       <Text className="text-km-primary text-center font-semibold text-sm">
-                        ✓ Nhiệm vụ ngày hoàn thành — +{questReward} token
+                        ✓ Hoàn thành nhiệm vụ — +{questReward} token
                       </Text>
                     </View>
                   )}
                   {passedStores.length > 0 && (
-                    <View className="bg-km-accent/15 rounded-xl p-3.5 border border-km-accent/40">
+                    <View className="bg-km-accent/15 rounded-xl p-3.5 border border-km-accent/40 gap-2">
                       <View className="flex-row items-center justify-center">
                         <Ionicons name="storefront" size={18} color={colors.accent} />
                         <Text className="text-km-accent font-bold text-sm ml-2">
-                          Chạy ngang qua {MOCK_STORE.storeName}!
+                          {claimedStoreId
+                            ? `Đã nhận giảm giá ở ${passedStores.find((p) => p.storeId === claimedStoreId)?.storeName ?? ''}`
+                            : `Chạy ngang qua ${passedStores.length} quán — chọn 1 quán nhận giảm giá`}
                         </Text>
                       </View>
-                      <Text className="text-slate-300 text-xs text-center mt-1">
-                        Nhiệm vụ hoàn thành: Giảm 50% voucher của quán
+                      {!claimedStoreId &&
+                        passedStores.map((p) => (
+                          <Button
+                            key={p.storeId}
+                            variant="outline"
+                            disabled={claiming}
+                            onPress={() => chooseStore(p.storeId)}>
+                            <Text>{p.storeName}</Text>
+                          </Button>
+                        ))}
+                      <Text className="text-slate-600 text-xs text-center">
+                        Mỗi buổi chạy chỉ nhận giảm giá cho 1 quán, dùng trong 7 ngày.
                       </Text>
                     </View>
                   )}
@@ -331,11 +395,3 @@ export default function RunScreen() {
   );
 }
 
-const darkMapStyle = [
-  { elementType: 'geometry', stylers: [{ color: '#1E293B' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#94A3B8' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#0F172A' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#334155' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0F172A' }] },
-  { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-];
