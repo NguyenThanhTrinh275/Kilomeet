@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
 import { toast } from 'sonner-native';
+import * as Location from 'expo-location';
 import { colors } from '../../../src/theme/colors';
 import { GroupCard } from '../../../src/components/group/GroupCard';
 import { EmptyState } from '../../../src/components/common/EmptyState';
@@ -27,7 +28,7 @@ export default function GroupsScreen() {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const user = useAuthStore((s) => s.user);
-  const { groups, isLoading, fetchGroups } = useGroupStore();
+  const { groups, isLoading, fetchGroups, autoMatch } = useGroupStore();
 
   const runner = user?.role === 'runner' || user?.role === 'member' ? (user as Runner) : null;
   const isMember = runner?.isMember ?? false;
@@ -43,7 +44,7 @@ export default function GroupsScreen() {
       <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
         <View className="flex-1 items-center justify-center px-8 gap-3">
           <Ionicons name="lock-closed-outline" size={64} color={colors.primary} />
-          <Text className="text-white text-xl font-bold text-center">
+          <Text className="text-foreground text-xl font-bold text-center">
             Tính năng dành cho Hội viên
           </Text>
           <Text className="text-muted-foreground text-sm text-center">
@@ -63,19 +64,38 @@ export default function GroupsScreen() {
       g.timeSlot.includes(search),
   );
 
-  const handleAutoMatch = () => {
-    toast.promise(fetchGroups(), {
-      loading: 'Đang tìm nhóm phù hợp...',
-      success: () => 'Đã tìm thấy nhóm phù hợp quanh bạn!',
-      error: 'Không thể ghép nhóm lúc này',
-    });
+  /**
+   * Ghép tự động: gửi yêu cầu (ngày mai, khung 5:00, 5:30, 6:00, 5 km, chênh tối đa 1 hạng, vị trí hiện tại).
+   * Đủ 3 người gần nhau cùng khung giờ thì BE lập nhóm ngay; chưa đủ thì chờ người khác đăng ký.
+   */
+  const handleAutoMatch = async () => {
+    const id = toast.loading('Đang tìm nhóm phù hợp...');
+    try {
+      let pos = { latitude: 10.7722, longitude: 106.6596 };
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        pos = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+      }
+      const tomorrow = new Date(Date.now() + 7 * 3600_000 + 86_400_000).toISOString().slice(0, 10);
+      const r = await autoMatch({ date: tomorrow, timeSlots: ['05:00', '05:30', '06:00'], distanceKm: 5, rankRange: 'within1', ...pos });
+      await fetchGroups();
+      if (r.status === 'matched' && r.groupId) {
+        toast.success('Đã ghép được nhóm!', { id, description: 'Hãy xác nhận tham gia trước 2 tiếng.' });
+        router.push(`/(runner)/groups/${r.groupId}`);
+      } else {
+        toast.success('Đã gửi yêu cầu ghép nhóm', { id, description: 'Sẽ lập nhóm khi đủ 3 hội viên gần bạn cùng khung giờ.' });
+      }
+    } catch (e) {
+      toast.error('Không thể ghép nhóm lúc này', { id, description: (e as Error).message });
+    }
   };
 
   return (
     <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
       {/* Header */}
       <View className="px-4 pt-2 pb-3 gap-3">
-        <Text className="text-white text-2xl font-bold">Nhóm chạy</Text>
+        <Text className="text-foreground text-2xl font-bold">Nhóm chạy</Text>
 
         {/* Search */}
         <View className="flex-row items-center bg-km-bg-secondary rounded-xl px-4 h-12 border border-border">

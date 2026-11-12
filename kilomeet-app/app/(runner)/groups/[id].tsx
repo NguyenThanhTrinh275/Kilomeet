@@ -6,7 +6,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { toast } from 'sonner-native';
 import { colors } from '../../../src/theme/colors';
 import type { GroupRun, GroupMember, Rank } from '../../../src/api/types';
-import { useGroupStore } from '../../../src/stores/group';
+import { useGroupStore, type MemberLocation } from '../../../src/stores/group';
+import MapView, { Circle, Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { useAuthStore } from '../../../src/stores/auth';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -48,7 +50,7 @@ function MemberAvatar({ member }: { member: GroupMember }) {
           {member.userName.charAt(0)}
         </Text>
       </View>
-      <Text className="text-white text-xs font-medium" numberOfLines={1}>
+      <Text className="text-foreground text-xs font-medium" numberOfLines={1}>
         {member.userName}
       </Text>
       <Text className="text-muted-foreground text-[10px]">{member.punctuality}% đúng giờ</Text>
@@ -61,15 +63,16 @@ function MemberAvatar({ member }: { member: GroupMember }) {
   );
 }
 
-function useCountdown(targetTime: string, targetDate: string) {
+/** Giờ xuất phát tuyệt đối: ưu tiên startsAt của BE, không thì date + slot theo giờ VN. */
+const startsAtOf = (g: GroupRun) => new Date(g.startsAt ?? `${g.date}T${g.timeSlot}:00+07:00`);
+
+function useCountdown(target: Date) {
   const [remaining, setRemaining] = useState('');
+  const t = target.getTime();
 
   useEffect(() => {
     const update = () => {
-      const [h, m] = targetTime.split(':').map(Number);
-      const target = new Date(targetDate);
-      target.setHours(h, m, 0, 0);
-      const diff = target.getTime() - Date.now();
+      const diff = t - Date.now();
       if (diff <= 0) {
         setRemaining('Đã bắt đầu');
         return;
@@ -84,23 +87,34 @@ function useCountdown(targetTime: string, targetDate: string) {
     update();
     const id = setInterval(update, 1_000);
     return () => clearInterval(id);
-  }, [targetTime, targetDate]);
+  }, [t]);
 
   return remaining;
 }
 
+const MILESTONE_ORDER = ['', 'T-2h', 'T-1h', 'T-30m', 'T-10m', 'T', 'T+10m', 'end'];
+const STATUS_LABEL: Record<string, string> = {
+  open: 'Đang nhận người',
+  confirmed: 'Đã chốt nhóm',
+  in_progress: 'Đang chạy',
+  completed: 'Đã kết thúc',
+  cancelled: 'Đã huỷ (không đủ người xác nhận)',
+};
+
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useAuthStore((s) => s.user);
-  const { currentGroup, isLoading, fetchGroupDetail, joinGroup } = useGroupStore();
+  const { currentGroup, isLoading, fetchGroupDetail } = useGroupStore();
 
   useEffect(() => {
-    if (id) {
-      fetchGroupDetail(id);
-    }
+    if (!id) return;
+    fetchGroupDetail(id).catch((e) => toast.error('Không tải được nhóm', { description: (e as Error).message }));
+    // Làm mới trạng thái nhóm mỗi 15 giây (mốc giờ, người đã tới).
+    const t = setInterval(() => fetchGroupDetail(id, true).catch(() => undefined), 15_000);
+    return () => clearInterval(t);
   }, [id, fetchGroupDetail]);
 
-  if (isLoading || !currentGroup) {
+  if ((isLoading && !currentGroup) || !currentGroup || currentGroup.id !== id) {
     return (
       <SafeAreaView className="flex-1 bg-km-bg items-center justify-center" edges={['top']}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -108,52 +122,99 @@ export default function GroupDetailScreen() {
     );
   }
 
-  return (
-    <GroupDetailContent
-      group={currentGroup}
-      userId={user?.id ?? ''}
-      joinGroup={joinGroup}
-    />
-  );
+  return <GroupDetailContent group={currentGroup} userId={user?.id ?? ''} />;
 }
 
-function GroupDetailContent({
-  group,
-  userId,
-  joinGroup,
-}: {
-  group: GroupRun;
-  userId: string;
-  joinGroup: (groupId: string) => Promise<void>;
-}) {
+function GroupDetailContent({ group, userId }: { group: GroupRun; userId: string }) {
   const router = useRouter();
-  const countdown = useCountdown(group.timeSlot, group.date);
+  const { joinGroup, leaveGroup, fetchLocations, shareLocation, fetchGroups } = useGroupStore();
+  const startsAt = startsAtOf(group);
+  const countdown = useCountdown(startsAt);
   const currentMember = group.members.find((m) => m.userId === userId);
   const hasConfirmed = currentMember?.confirmed ?? false;
+  const active = group.status !== 'cancelled' && group.status !== 'completed';
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [locations, setLocations] = useState<MemberLocation[]>([]);
+  const milestoneIdx = MILESTONE_ORDER.indexOf(group.milestone ?? '');
+
+  // Bản đồ thành viên: poll vị trí mỗi 5 giây khi mình trong nhóm.
+  useEffect(() => {
+    if (!currentMember || !active) return;
+    let alive = true;
+    const load = () => fetchLocations(group.id).then((l) => alive && setLocations(l)).catch(() => undefined);
+    load();
+    const t = setInterval(load, 5_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [group.id, currentMember, active, fetchLocations]);
+
+  // Chia sẻ vị trí của mình (BE chỉ nhận từ T−30'; trước đó lỗi được bỏ qua).
+  useEffect(() => {
+    if (!hasConfirmed || !active) return;
+    let sub: Location.LocationSubscription | null = null;
+    let last = 0;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      sub = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, distanceInterval: 10, timeInterval: 5_000 },
+        (loc) => {
+          if (Date.now() - last < 8_000) return;
+          last = Date.now();
+          shareLocation(group.id, loc.coords.latitude, loc.coords.longitude)
+            .then((r) => r.arrived && !currentMember?.arrived && toast.success('Đã check-in tại điểm hội tụ ✓'))
+            .catch(() => undefined);
+        },
+      );
+    })();
+    return () => sub?.remove();
+  }, [group.id, hasConfirmed, active, shareLocation, currentMember?.arrived]);
 
   const handleJoin = async () => {
+    setBusy(true);
     try {
       await joinGroup(group.id);
       toast.success('Đã xác nhận tham gia nhóm');
     } catch (e) {
       toast.error('Không thể tham gia', { description: (e as Error).message });
+    } finally {
+      setBusy(false);
     }
   };
+
+  const handleLeave = async () => {
+    setCancelOpen(false);
+    setBusy(true);
+    try {
+      await leaveGroup(group.id);
+      fetchGroups().catch(() => undefined);
+      toast.success('Đã huỷ tham gia nhóm');
+      router.back();
+    } catch (e) {
+      toast.error('Không thể huỷ', { description: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const meeting = { latitude: group.meetingPoint.latitude, longitude: group.meetingPoint.longitude };
 
   return (
     <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
       <View className="flex-row items-center px-4 pt-2 pb-3">
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
-          <Ionicons name="arrow-back" size={24} color={colors.white} />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text className="text-white text-xl font-bold flex-1">Chi tiết nhóm</Text>
+        <Text className="text-foreground text-xl font-bold flex-1">Chi tiết nhóm</Text>
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
         <Card className="mx-4 items-center mb-4 gap-1">
-          <Text className="text-muted-foreground text-sm">Bắt đầu sau</Text>
-          <Text className="text-white text-4xl font-bold tracking-widest">{countdown}</Text>
+          <Text className="text-muted-foreground text-sm">{STATUS_LABEL[group.status] ?? 'Bắt đầu sau'}</Text>
+          {active && <Text className="text-foreground text-4xl font-bold tracking-widest">{countdown}</Text>}
           <Text className="text-muted-foreground text-xs">
             {group.timeSlot} · {group.date}
           </Text>
@@ -165,24 +226,24 @@ function GroupDetailContent({
               <Ionicons name="location" size={16} color={colors.primary} />
             </View>
             <View className="flex-1">
-              <Text className="text-white font-medium">{group.meetingPoint.name}</Text>
+              <Text className="text-foreground font-medium">{group.meetingPoint.name}</Text>
               <Text className="text-muted-foreground text-xs">Bán kính check-in: 50m</Text>
             </View>
           </View>
           <View className="flex-row">
             <View className="flex-1 flex-row items-center">
               <Ionicons name="walk-outline" size={16} color={colors.textSecondary} />
-              <Text className="text-slate-300 text-sm ml-1">{group.distanceKm} km</Text>
+              <Text className="text-slate-600 text-sm ml-1">{group.distanceKm} km</Text>
             </View>
             <View className="flex-1 flex-row items-center">
               <Ionicons name="trophy-outline" size={16} color={colors.textSecondary} />
-              <Text className="text-slate-300 text-sm ml-1">
+              <Text className="text-slate-600 text-sm ml-1">
                 {RANK_RANGE_LABELS[group.rankRange]}
               </Text>
             </View>
             <View className="flex-1 flex-row items-center">
               <Ionicons name="people-outline" size={16} color={colors.textSecondary} />
-              <Text className="text-slate-300 text-sm ml-1">
+              <Text className="text-slate-600 text-sm ml-1">
                 {group.members.length}/{group.maxMembers}
               </Text>
             </View>
@@ -190,19 +251,36 @@ function GroupDetailContent({
         </Card>
 
         <Card className="mx-4 p-0 overflow-hidden mb-4">
-          {/* ponytail: swap for MapView with meeting point marker + 50m radius circle + member markers */}
-          <View className="h-48 bg-km-surface items-center justify-center">
-            <Ionicons name="map" size={48} color={colors.textMuted} />
-            <Text className="text-slate-500 text-xs mt-2">Bản đồ theo dõi trực tiếp</Text>
-            <View className="absolute bottom-3 right-3 bg-km-primary/20 rounded-lg px-2 py-1 flex-row items-center">
-              <View className="w-2 h-2 rounded-full bg-km-primary mr-1" />
-              <Text className="text-km-primary text-[10px] font-medium">50m</Text>
-            </View>
+          <MapView
+            style={{ height: 220 }}
+            initialRegion={{ ...meeting, latitudeDelta: 0.012, longitudeDelta: 0.012 }}>
+            <Circle center={meeting} radius={50} strokeColor={colors.primary} fillColor={colors.primary + '30'} />
+            <Marker coordinate={meeting} title={group.meetingPoint.name} pinColor={colors.primary} />
+            {locations.map((l) => (
+              <Marker
+                key={l.userId}
+                coordinate={{ latitude: l.latitude, longitude: l.longitude }}
+                title={l.userName}
+                description={l.arrived ? 'Đã tới' : `~${l.etaMinutes} phút nữa tới`}
+                pinColor={l.arrived ? colors.primary : colors.accent}
+              />
+            ))}
+          </MapView>
+          <View className="px-4 py-2">
+            {locations.length === 0 ? (
+              <Text className="text-slate-500 text-xs">Vị trí thành viên hiện từ 30 phút trước giờ xuất phát.</Text>
+            ) : (
+              locations.map((l) => (
+                <Text key={l.userId} className="text-slate-600 text-xs">
+                  {l.userName}: {l.arrived ? 'đã tới ✓' : `còn ~${l.etaMinutes} phút`}
+                </Text>
+              ))
+            )}
           </View>
         </Card>
 
         <View className="mx-4 mb-4">
-          <Text className="text-white font-semibold text-base mb-3">
+          <Text className="text-foreground font-semibold text-base mb-3">
             Thành viên ({group.members.length}/{group.maxMembers})
           </Text>
           <View className="flex-row flex-wrap">
@@ -213,11 +291,10 @@ function GroupDetailContent({
         </View>
 
         <Card className="mx-4 mb-4 gap-0">
-          <Text className="text-white font-semibold text-base mb-3">Lịch trình</Text>
+          <Text className="text-foreground font-semibold text-base mb-3">Lịch trình</Text>
           {STATUS_TIMELINE.map((step, i) => {
             const isLast = i === STATUS_TIMELINE.length - 1;
-            // ponytail: derive active state from real time delta
-            const isActive = i <= 1;
+            const isActive = milestoneIdx >= i + 1;
             return (
               <View key={i} className="flex-row">
                 <View className="items-center mr-3" style={{ width: 24 }}>
@@ -234,7 +311,7 @@ function GroupDetailContent({
                   )}
                 </View>
                 <View className="pb-4">
-                  <Text className={`text-sm font-medium ${isActive ? 'text-white' : 'text-slate-500'}`}>
+                  <Text className={`text-sm font-medium ${isActive ? 'text-foreground' : 'text-slate-500'}`}>
                     {step.label}
                   </Text>
                   <Text className="text-slate-500 text-xs">{step.offset}</Text>
@@ -244,26 +321,29 @@ function GroupDetailContent({
           })}
         </Card>
 
-        <View className="mx-4 flex-row gap-3">
-          {!hasConfirmed ? (
-            <Button size="lg" className="flex-1" onPress={handleJoin}>
-              <Text>Xác nhận tham gia</Text>
-            </Button>
-          ) : (
-            <>
-              <Button size="lg" className="flex-1" disabled>
-                <Text>Đã xác nhận ✓</Text>
+        {active && (
+          <View className="mx-4 flex-row gap-3">
+            {!hasConfirmed ? (
+              <Button size="lg" className="flex-1" onPress={handleJoin} disabled={busy}>
+                <Text>{currentMember ? 'Xác nhận tham gia' : 'Tham gia & xác nhận'}</Text>
               </Button>
-              <Button
-                variant="destructive"
-                size="lg"
-                className="flex-1"
-                onPress={() => setCancelOpen(true)}>
-                <Text>Huỷ</Text>
-              </Button>
-            </>
-          )}
-        </View>
+            ) : (
+              <>
+                <Button size="lg" className="flex-1" disabled>
+                  <Text>{currentMember?.arrived ? 'Đã check-in ✓' : 'Đã xác nhận ✓'}</Text>
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="lg"
+                  className="flex-1"
+                  disabled={busy}
+                  onPress={() => setCancelOpen(true)}>
+                  <Text>Huỷ</Text>
+                </Button>
+              </>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
@@ -271,20 +351,14 @@ function GroupDetailContent({
           <AlertDialogHeader>
             <AlertDialogTitle>Huỷ tham gia</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc muốn huỷ tham gia nhóm chạy này?
+              Huỷ trước 2 tiếng so với giờ xuất phát thì không bị tính vắng. Sau mốc đó sẽ bị ghi vắng.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="flex-1">
               <Text>Không</Text>
             </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              className="flex-1"
-              onPress={() => {
-                setCancelOpen(false);
-                router.back();
-              }}>
+            <AlertDialogAction variant="destructive" className="flex-1" onPress={() => void handleLeave()}>
               <Text>Huỷ tham gia</Text>
             </AlertDialogAction>
           </AlertDialogFooter>
