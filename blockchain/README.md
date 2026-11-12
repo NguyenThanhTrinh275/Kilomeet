@@ -1,64 +1,234 @@
-# KILOMeet – phần Blockchain (Avalanche C-Chain)
+# KILOMeet: lớp Blockchain (Avalanche Fuji)
 
-Gồm 3 hợp đồng Solidity + SDK TypeScript (`sdk/kilomeet.ts`) để backend gọi.
+Thư mục này là **phần blockchain** của KILOMeet: token, voucher và huy hiệu mùa nằm trên Avalanche C-Chain.
+Backend **không cần biết Solidity**. Chỉ cần import một file, `sdk/api.ts`, rồi gọi hàm như gọi một thư viện bình thường.
 
-## Hợp đồng
-| Hợp đồng | Chuẩn | Ghi chú |
-|---|---|---|
-| `RunToken` | ERC-20 (decimals 0) | Không chuyển được. `reward` (phát, idempotent theo rewardId), `burnFrom` (chỉ Voucher), mở/đóng/chốt mùa (cắt token theo hạng) |
-| `Voucher` | ERC-1155 | Mua = đốt token (giảm giá 1 lần/người/voucher), tặng đúng 1 lần, chặn chuyển tự do, `redeem` đốt voucher + ghi phí 5.000đ |
-| `SeasonBadge` | ERC-721 soulbound | Mỗi (user, mùa) 1 huy hiệu, lưu hạng cao nhất |
+```
+Backend của bạn  ──gọi──▶  sdk/api.ts  ──▶  hợp đồng trên Avalanche Fuji
+```
 
-Backend dùng 1 ví **operator** (relayer) ký mọi giao dịch (user không tốn gas). Admin = ví deployer.
+Blockchain đóng vai một **database có luật**: số dư token, voucher, lượt dùng nằm trên chuỗi, và các luật như "voucher không dùng 2 lần" do hợp đồng tự bảo đảm.
 
-## Chạy
+---
+
+## 1. Bắt đầu nhanh
+
 ```bash
 npm install --legacy-peer-deps
-cp .env.example .env        # điền DEPLOYER_PRIVATE_KEY (ví có AVAX Fuji, faucet: https://core.app/tools/testnet-faucet)
-npm test                    # 10 test
-npm run deploy:fuji         # ghi địa chỉ vào deployments/fuji.json
-npm run build:sdk           # xuất ABI -> sdk/abi/
 ```
-Nếu muốn operator khác deployer: đặt `OPERATOR_ADDRESS` trước khi deploy. Sau deploy, operator gọi `startSeason()` để mở mùa 1.
-Thử local: `npx hardhat node` → `npx hardhat run scripts/deploy.ts --network localhost` → `npx ts-node scripts/demo-api.ts` (đặt `CHAIN_NET=localhost`, `RPC_URL=http://127.0.0.1:8545`). Backend chỉ cần import `sdk/api.ts`.
+Tạo file `.env` (copy từ `.env.example`) và điền khóa ví server (xin người phụ trách blockchain, **không commit**):
+```
+OPERATOR_PRIVATE_KEY=0x...
+```
 
-## Backend dùng SDK
+Thử ngay bằng trang demo trực quan (đọc/ghi thẳng lên Fuji):
+```bash
+npm run demo:ui        # rồi mở http://localhost:3000
+```
+
+Gọi từ code backend:
 ```ts
-import { KilomeetChain, Rank } from "./sdk/kilomeet";
-const chain = await new KilomeetChain({
-  rpcUrl: process.env.FUJI_RPC_URL!,
-  operatorPrivateKey: process.env.OPERATOR_PRIVATE_KEY!,
-  addresses: require("./deployments/fuji.json"),
-}).init();
+import * as chain from "./sdk/api";
+
+await chain.giveToken(walletAddress, 10, `daily:${userId}:2026-11-09`);
+console.log(await chain.getToken(walletAddress));   // 10
 ```
 
-| Việc backend cần | Hàm |
+Biến môi trường:
+| Biến | Ý nghĩa | Mặc định |
+|---|---|---|
+| `OPERATOR_PRIVATE_KEY` | Khóa ví server, dùng ký mọi giao dịch (**bắt buộc**) | không có |
+| `CHAIN_NET` | `fuji` / `avalanche` / `localhost` | `fuji` |
+| `RPC_URL` | Địa chỉ nút RPC | RPC công khai của Fuji |
+
+Địa chỉ hợp đồng tự đọc từ `deployments/<CHAIN_NET>.json`, bạn không phải khai báo.
+
+---
+
+## 2. Thông tin mạng Fuji
+
+| | |
 |---|---|
-| Ví mới + gas | `KilomeetChain.createWallet()`, `fundGas(addr)` |
-| Nhiệm vụ đạt → phát token | `rewardMission(addr, amount, rewardKey)`, `rewardMissionBatch([...])` (rewardKey duy nhất, vd `daily:<userId>:<date>`, gọi lại không phát trùng) |
-| Xem token | `getTokenBalance(addr)` |
-| Mở / đóng mùa | `startSeason()`, `endSeason()`, `settleSeason(users)`, **`closeSeason(users)`** (nút "đóng mùa" demo: đóng + cắt token + ghi huy hiệu) |
-| Huy hiệu | `recordBadge`, `recordBadges`, `getBadge` |
-| Duyệt cửa hàng | `approveMerchant(addr)` |
-| Tạo voucher | `createVoucherType({merchant, basePrice, discountPercent, maxSupply, expiry})` → `typeId` |
-| Giá / thông tin | `priceOf(typeId, discounted)`, `getVoucherType(typeId)` |
-| Mua | `purchaseVoucher(buyer, typeId, applyDiscount)` |
-| Tặng | `giftVoucher(from, to, typeId)` |
-| Quét QR | `redeemVoucher(holder, typeId)` → `feeVnd` |
-| Ví voucher | `getWalletVouchers(addr)`, `getVoucherBalance`, `getGiftable` |
-| Phí / đối chiếu | `getMerchantFee(merchant)`, `getRedeemEvents({merchant})`, `onRedeemed(cb)` |
+| Mạng | Avalanche Fuji C-Chain (testnet), chainId `43113` |
+| RPC | `https://api.avax-test.network/ext/bc/C/rpc` |
+| Xem giao dịch | https://testnet.snowtrace.io |
 
-Lỗi revert được dịch thành `err.code` = tên lỗi: `SoldOut`, `Expired`, `DiscountAlreadyUsed`, `AlreadyRewarded`, `NotGiftable`, `NoVoucher`, `SeasonNotActive`, ...
+| Hợp đồng | Địa chỉ |
+|---|---|
+| RunToken (token) | `0x687498bA9E8Bf8eF7B244313cc636157b16b2FdE` |
+| Voucher | `0x5DfE90a1A47B023CDd1429AD278334a7210b9E62` |
+| SeasonBadge (huy hiệu) | `0x8Fab67bc7BfF2c4AD6398c422cF787aFA0e310dd` |
 
-Hạng: `Rank.Dong=0, Bac=1, Vang=2, BachKim=3, KimCuong=4, CaoThu=5`.
+Ví người dùng chỉ cần **địa chỉ** (`0x...`, 42 ký tự). Người dùng **không cần AVAX**: ví server trả phí gas cho mọi giao dịch.
 
-## Việc backend PHẢI tự làm (không nằm trên chuỗi)
-- Chấm nhiệm vụ, tính hạng (lên/tụt/lên nhanh), xác minh GPS nhiệm vụ voucher (<50 m), cửa sổ 7 ngày sau nhiệm vụ.
-- Kiểm tra hạng tối thiểu, khu vực trước `purchaseVoucher`. Giá giảm chỉ truyền `applyDiscount=true` khi nhiệm vụ đã xong.
-- Xác thực QR (nên ký + nonce/hết hạn ngắn) và xác nhận chủ voucher đồng ý tặng trước khi gọi `giftVoucher`/`redeemVoucher`.
-- Tính "hạng lúc hết mùa" và "hạng cao nhất mùa" của từng người để gọi `closeSeason`. Mùa mới: gọi `startSeason()`, rồi tự tụt 2 hạng trong DB.
-- Khóa operator private key trong biến môi trường, không commit.
+---
 
-## Lưu ý
-- Giữ một instance `KilomeetChain` dùng chung (NonceManager quản lý nonce, gửi song song được).
-- Phí 5.000đ chỉ được ghi nhận trên chuỗi (event + `feeAccruedVnd`); việc thu tiền do backend lo.
+## 3. Quy ước chung khi gọi hàm
+
+- Mọi hàm đều `async`. Hàm **ghi** mất khoảng 2 đến 3 giây (chờ chuỗi xác nhận), hàm **đọc** trả ngay.
+- Hàm ghi trả `{ txHash, link }`. `link` mở Snowtrace, dùng để show cho người dùng hoặc giám khảo.
+- Mọi số trả về là `number` hoặc `string` thường, không có `bigint`, nên `JSON.stringify` an toàn.
+- Lỗi: ném `ChainError` có `.code` (tên lỗi, xem mục 5) và `.message` tiếng Việt, hiển thị thẳng cho người dùng được.
+- `wallet` luôn là địa chỉ ví dạng chuỗi `"0x..."`.
+- Hạng là số `0..5`: dùng `chain.RANK.DONG`, `BAC`, `VANG`, `BACH_KIM`, `KIM_CUONG`, `CAO_THU`.
+
+### Khóa chống phát trùng (rất quan trọng)
+`giveToken(wallet, amount, key)` cần một `key` **duy nhất cho mỗi phần thưởng thật**:
+```
+daily:<userId>:2026-11-09      (nhiệm vụ ngày)
+weekly:<userId>:2026-W45       (nhiệm vụ tuần)
+```
+Gọi lại cùng `key` thì chuỗi từ chối với `AlreadyRewarded` (không phát đôi). Nhờ vậy backend retry khi mạng lỗi mà không sợ trả thưởng hai lần. Coi `AlreadyRewarded` là "đã phát rồi", không phải lỗi nghiêm trọng.
+
+---
+
+## 4. Danh sách hàm (`sdk/api.ts`)
+
+### Ví
+| Hàm | Vào | Ra | Làm gì |
+|---|---|---|---|
+| `newWallet()` | không | `{address, privateKey}` | Tạo ví mới (bỏ qua nếu dùng ví nhúng Privy/thirdweb) |
+| `giveGas(wallet)` | ví | `Tx` | Gửi ít AVAX cho ví mới (chỉ cần nếu người dùng tự gửi giao dịch) |
+
+### Token
+| Hàm | Vào | Ra | Làm gì |
+|---|---|---|---|
+| `giveToken(wallet, amount, key)` | ví, số token, khóa duy nhất | `Tx` | **Phát token** khi nhiệm vụ đạt |
+| `giveTokenMany(items)` | `{wallet, amount, key}[]` | `Tx` | Phát cho nhiều người trong 1 giao dịch |
+| `getToken(wallet)` | ví | `number` | Số token hiện có |
+| `wasGiven(key)` | khóa | `boolean` | Phần thưởng này đã phát chưa |
+
+### Mùa và huy hiệu
+| Hàm | Vào | Ra | Làm gì |
+|---|---|---|---|
+| `getSeason()` | không | `{season, active}` | Mùa hiện tại và đang mở không |
+| `openSeason()` | không | `Tx` | Mở mùa mới |
+| `closeSeason(users)` | `{wallet, rankAtEnd, bestRank}[]` | `{season, txs[]}` | **"Đóng mùa"** trong một lệnh: dừng phát token, cắt token vượt mức theo hạng, ghi huy hiệu |
+| `getBadge(wallet, season)` | ví, số mùa | `{rank}` hoặc `null` | Huy hiệu mùa (hạng cao nhất) |
+
+### Cửa hàng và voucher
+| Hàm | Vào | Ra | Làm gì |
+|---|---|---|---|
+| `approveShop(shop)` | ví cửa hàng | `Tx` | Duyệt cửa hàng (bắt buộc trước khi tạo voucher) |
+| `createVoucher({shop, price, discountPercent?, maxSupply, expiry?})` | xem dưới | `{id, txHash, link}` | **Tạo voucher**. Lưu `id` vào DB |
+| `getVoucher(id)` | id | `Voucher` | Thông tin một voucher |
+| `listVouchers()` | không | `Voucher[]` | Tất cả voucher trên chuỗi |
+| `setVoucherOnSale(id, onSale)` | id, bật/tắt | `Tx` | Bật/tắt bán |
+| `getPrice(id, withDiscount)` | id, có giảm không | `number` | Giá phải trả (token) |
+| `buyVoucher(wallet, id, withDiscount)` | ví, id, có giảm giá không | `Tx` | **Mua**: đốt token, cấp voucher |
+| `giftVoucher(from, to, id)` | ví tặng, ví nhận, id | `Tx` | **Tặng** (đúng 1 lần) |
+| `useVoucher(holder, id)` | ví giữ, id | `{feeVnd, txHash, link}` | **Quét QR**: đốt voucher, ghi phí 5.000đ |
+| `listMyVouchers(wallet)` | ví | `{id, amount}[]` | Voucher đang giữ |
+| `countVoucher(wallet, id)` | | `number` | Số voucher loại id |
+| `countGiftable(wallet, id)` | | `number` | Còn tặng được mấy cái |
+| `usedDiscount(wallet, id)` | | `boolean` | Đã dùng lượt giảm giá chưa |
+
+`createVoucher`: `price` (token), `discountPercent` (0 đến 100, nên dùng `CONFIG.voucher.discount.MEDIUM`...), `maxSupply`, `expiry` (`Date` hoặc unix giây, bỏ trống là không hết hạn).
+`Voucher` = `{id, shop, price, discountPercent, maxSupply, sold, expiry, onSale}`.
+
+### Phí cửa hàng
+| Hàm | Vào | Ra | Làm gì |
+|---|---|---|---|
+| `getShopFee(shop)` | ví cửa hàng | `{uses, feeVnd}` | Tổng lượt dùng và phí (đồng) đã ghi sổ |
+| `getShopUses(shop)` | ví cửa hàng | `{voucherId, holder, feeVnd, txHash}[]` | Lịch sử từng lượt dùng, để cửa hàng đối chiếu |
+
+---
+
+## 5. Mã lỗi (`err.code`)
+
+| code | Nghĩa |
+|---|---|
+| `AlreadyRewarded` | Phần thưởng này đã phát |
+| `SeasonNotActive` | Mùa chưa mở hoặc đã đóng |
+| `MerchantNotApproved` | Cửa hàng chưa duyệt |
+| `SoldOut` | Hết số lượng |
+| `Expired` | Voucher hết hạn |
+| `TypeInactive` | Voucher đang tạm ngừng bán |
+| `DiscountAlreadyUsed` | Đã dùng lượt giảm giá của voucher này |
+| `DiscountNotAvailable` | Voucher không có giảm giá |
+| `NotGiftable` | Không tặng được (đã tặng, hoặc là voucher được tặng) |
+| `NoVoucher` | Người này không có voucher đó |
+| `ERC20InsufficientBalance` | Không đủ token |
+
+```ts
+try { await chain.buyVoucher(wallet, id, true); }
+catch (e: any) { res.status(400).json({ error: e.message, code: e.code }); }
+```
+
+---
+
+## 6. Mỗi tính năng của app gọi hàm nào
+
+| Tính năng | Backend làm trước | Gọi |
+|---|---|---|
+| Hoàn thành nhiệm vụ ngày/tuần | Chấm km từ GPS | `giveToken(wallet, CONFIG.missions.dailyReward, key)` |
+| Xem token | | `getToken(wallet)` |
+| Danh sách voucher | Lọc theo khu vực/hạng | `listVouchers()` |
+| Làm xong nhiệm vụ voucher | Xác minh GPS (<50 m), ghi nhớ trong DB | (không gọi chuỗi) |
+| Mua voucher | Kiểm hạng, khu vực, còn trong 7 ngày | `buyVoucher(wallet, id, daDuocGiam)` |
+| Tặng voucher | Chủ voucher xác nhận trong app | `giftVoucher(from, to, id)` |
+| Cửa hàng quét QR | Xác thực QR (chữ ký, hết hạn ngắn) | `useVoucher(holder, id)` |
+| Cửa hàng xem phí | | `getShopFee(shop)`, `getShopUses(shop)` |
+| Quản trị bấm "đóng mùa" | Tính hạng lúc hết mùa + hạng cao nhất của **mọi** ví còn token | `closeSeason(users)` rồi `openSeason()` |
+| Duyệt cửa hàng | | `approveShop(shop)` |
+
+---
+
+## 7. Backend PHẢI tự làm (không nằm trên chuỗi)
+
+Chuỗi chỉ bảo đảm các luật về số dư và voucher. Dữ liệu đời thực thì chuỗi không có, nên backend tự kiểm tra:
+
+- Chấm nhiệm vụ, tính hạng (lên, tụt, lên nhanh), xác minh GPS nhiệm vụ voucher.
+- Kiểm hạng tối thiểu, khu vực, và hạn 7 ngày **trước** `buyVoucher`. Chỉ truyền `withDiscount=true` khi người dùng đã làm xong nhiệm vụ.
+- Xác thực QR và xác nhận ý muốn của chủ voucher trước `giftVoucher` / `useVoucher`.
+- Khi đóng mùa: liệt kê **mọi ví còn token** trong `closeSeason` (hợp đồng chỉ cắt token của ví được liệt kê). Sau đó tự tụt 2 hạng trong DB.
+- Giữ `OPERATOR_PRIVATE_KEY` trong biến môi trường của máy chủ, **không commit, không gửi qua chat**.
+
+---
+
+## 8. Các con số của game: `sdk/config.ts`
+
+Mọi con số (token mỗi nhiệm vụ, mốc km, mức giảm 50%/90%, phí...) nằm ở **một file**:
+```ts
+import { CONFIG } from "./sdk/api";
+CONFIG.missions.dailyReward;              // 10
+CONFIG.voucher.discount.MEDIUM;           // 50
+CONFIG.ranks.minKmPerWeek;                // [0, 5, 10, 15, 25, 40]
+```
+Số nào chỉ backend dùng thì sửa file là có hiệu lực. Số nào ghi trên chuỗi (token giữ lại theo hạng, phí mỗi lượt) thì sau khi sửa chạy `npm run config:apply` (cần ví admin, do người phụ trách blockchain chạy).
+Mức giảm của voucher **đã tạo** thì không đổi được; muốn đổi hãy tạo voucher mới và tắt cái cũ.
+
+---
+
+## 9. Lưu ý khi tích hợp
+
+- Dùng **một** tiến trình giữ kết nối chuỗi. Các hàm đã tự quản lý thứ tự giao dịch, gọi song song được, nhưng đừng chạy nhiều tiến trình dùng chung một khóa operator.
+- Phí 5.000đ của mỗi lượt dùng voucher chỉ được **ghi sổ** trên chuỗi. Thu tiền thật do backend lo.
+- Token `RUN` không chuyển được giữa người dùng. Đây là chủ ý, không phải lỗi.
+- Người dùng nhìn token và voucher ở đâu: ví Core không tự hiện token tùy chỉnh, nên hãy hiển thị số liệu ngay trong app bằng `getToken` / `listMyVouchers`. Dùng link `Tx.link` để chứng minh với giám khảo.
+
+---
+
+## 10. Dành cho người phụ trách blockchain
+
+```bash
+npm test                  # 34 test hợp đồng, độ phủ ~100% số dòng
+npm run compile           # biên dịch
+npm run build:sdk         # xuất ABI ra sdk/abi (chạy lại khi đổi giao diện hợp đồng)
+npm run deploy:fuji       # deploy 3 hợp đồng, ghi deployments/fuji.json
+npm run config:apply      # đồng bộ config.ts lên chuỗi
+npm run demo:ui           # trang demo trực quan
+```
+
+```
+contracts/    RunToken.sol, Voucher.sol, SeasonBadge.sol   (luật chơi trên chuỗi)
+sdk/api.ts    file backend gọi
+sdk/kilomeet.ts   lớp nói chuyện chuẩn blockchain (api.ts dùng bên dưới)
+sdk/config.ts     các con số của game
+sdk/abi/      mô tả giao diện hợp đồng (sinh tự động)
+test/         test hợp đồng
+scripts/      deploy, demo, đồng bộ config
+deployments/  địa chỉ hợp đồng theo mạng
+```
+
+Hợp đồng đã deploy thì **không sửa được**: đổi luật trong file `.sol` nghĩa là deploy lại, ra địa chỉ mới (xem `HE-THONG-BLOCKCHAIN-KILOMEET.md` để hiểu sâu từng hợp đồng).
