@@ -90,7 +90,7 @@ export default function StoresScreen() {
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text className="text-white text-xl font-bold flex-1">Duyệt cửa hàng</Text>
+        <Text className="text-foreground text-xl font-bold flex-1">Duyệt cửa hàng</Text>
       </View>
 
       {/* Tabs */}
@@ -127,7 +127,7 @@ export default function StoresScreen() {
                 <Ionicons name="storefront" size={20} color={colors.primary} />
               </View>
               <View className="flex-1">
-                <Text className="text-white text-base font-semibold">{store.storeName}</Text>
+                <Text className="text-foreground text-base font-semibold">{store.storeName}</Text>
                 <Text className="text-muted-foreground text-xs mt-0.5">{store.storeAddress}</Text>
               </View>
             </View>

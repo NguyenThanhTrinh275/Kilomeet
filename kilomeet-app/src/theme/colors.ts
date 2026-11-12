@@ -1,52 +1,52 @@
 // KILOMeet Design System — Colors
 export const colors = {
   // Primary
-  primary: '#22C55E',       // Green — running/nature
-  primaryDark: '#16A34A',
-  primaryLight: '#4ADE80',
+  primary: '#16A34A',       // Green — running/nature (đậm hơn để đọc rõ trên nền sáng)
+  primaryDark: '#15803D',
+  primaryLight: '#22C55E',
 
   // Accent
-  accent: '#F97316',        // Orange — achievement/fire
-  accentDark: '#EA580C',
-  accentLight: '#FB923C',
+  accent: '#EA580C',        // Orange — achievement/fire
+  accentDark: '#C2410C',
+  accentLight: '#F97316',
 
   // Background
-  bgPrimary: '#0F172A',     // Deep navy
-  bgSecondary: '#1E293B',   // Lighter navy
-  bgTertiary: '#334155',    // Card/surface
+  bgPrimary: '#F4F6F9',     // Nền trang — xám rất nhạt
+  bgSecondary: '#FFFFFF',   // Thẻ, ô nhập, thanh tab
+  bgTertiary: '#EEF2F6',    // Bề mặt phụ
 
   // Surface
-  surface: '#334155',
-  surfaceLight: '#475569',
-  surfaceBorder: '#475569',
+  surface: '#EEF2F6',
+  surfaceLight: '#E2E8F0',
+  surfaceBorder: '#E2E8F0',
 
   // Text
-  textPrimary: '#F8FAFC',
-  textSecondary: '#94A3B8',
+  textPrimary: '#0F172A',
+  textSecondary: '#475569',
   textMuted: '#64748B',
-  textInverse: '#0F172A',
+  textInverse: '#FFFFFF',   // chữ/icon trên nền màu (nút xanh, cam)
 
   // Semantic
-  success: '#22C55E',
-  warning: '#EAB308',
-  error: '#EF4444',
-  info: '#3B82F6',
+  success: '#16A34A',
+  warning: '#CA8A04',
+  error: '#DC2626',
+  info: '#2563EB',
 
   // Rank colors
   rank: {
-    đồng: '#A0785A',
-    bạc: '#94A3B8',
-    vàng: '#EAB308',
-    bạch_kim: '#67E8F9',
-    kim_cương: '#818CF8',
-    cao_thủ: '#F43F5E',
+    đồng: '#9A6B4B',
+    bạc: '#64748B',
+    vàng: '#CA8A04',
+    bạch_kim: '#0891B2',
+    kim_cương: '#6366F1',
+    cao_thủ: '#E11D48',
   },
 
   // Misc
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
-  overlay: 'rgba(0,0,0,0.5)',
+  overlay: 'rgba(15,23,42,0.45)',
 } as const;
 
 export type RankColor = keyof typeof colors.rank;

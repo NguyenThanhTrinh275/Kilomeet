@@ -59,15 +59,15 @@ function RunCard({ run }: { run: Run }) {
 
       <View className="flex-row justify-between">
         <View className="items-center flex-1">
-          <Text className="text-white text-lg font-bold">{run.distanceKm.toFixed(1)}</Text>
+          <Text className="text-foreground text-lg font-bold">{run.distanceKm.toFixed(1)}</Text>
           <Text className="text-muted-foreground text-xs">km</Text>
         </View>
         <View className="items-center flex-1">
-          <Text className="text-white text-lg font-bold">{formatDuration(run.durationMinutes)}</Text>
+          <Text className="text-foreground text-lg font-bold">{formatDuration(run.durationMinutes)}</Text>
           <Text className="text-muted-foreground text-xs">thời gian</Text>
         </View>
         <View className="items-center flex-1">
-          <Text className="text-white text-lg font-bold">{formatPace(run.avgPaceMinPerKm)}</Text>
+          <Text className="text-foreground text-lg font-bold">{formatPace(run.avgPaceMinPerKm)}</Text>
           <Text className="text-muted-foreground text-xs">tốc độ</Text>
         </View>
       </View>
@@ -98,11 +98,11 @@ export default function HistoryScreen() {
       {/* Header */}
       <View className="flex-row items-center px-5 pt-4 pb-4">
         <TouchableOpacity
-          className="w-10 h-10 bg-km-bg-secondary rounded-full items-center justify-center mr-3"
+          className="w-10 h-10 bg-km-bg-secondary border border-border rounded-full items-center justify-center mr-3"
           onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text className="text-white text-xl font-bold">Lịch sử chạy</Text>
+        <Text className="text-foreground text-xl font-bold">Lịch sử chạy</Text>
       </View>
 
       <View className="flex-1">

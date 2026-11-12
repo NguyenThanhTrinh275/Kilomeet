@@ -98,7 +98,7 @@ export default function SeasonScreen() {
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text className="text-white text-xl font-bold flex-1">Quản lý mùa</Text>
+        <Text className="text-foreground text-xl font-bold flex-1">Quản lý mùa</Text>
       </View>
 
       {!season ? (
@@ -114,7 +114,7 @@ export default function SeasonScreen() {
           <Card className="mt-2 mb-4 gap-2">
             <View className="flex-row items-center mb-1">
               <Ionicons name="trophy" size={22} color={colors.accent} />
-              <Text className="text-white text-lg font-bold ml-2 flex-1">{season.name}</Text>
+              <Text className="text-foreground text-lg font-bold ml-2 flex-1">{season.name}</Text>
               <Badge variant={season.isActive ? 'default' : 'destructive'}>
                 <Text>{season.isActive ? 'Đang diễn ra' : 'Đã kết thúc'}</Text>
               </Badge>
@@ -122,12 +122,12 @@ export default function SeasonScreen() {
 
             <View className="flex-row">
               <Text className="text-muted-foreground text-sm w-24">Bắt đầu:</Text>
-              <Text className="text-white text-sm">{new Date(season.startDate).toLocaleDateString('vi-VN')}</Text>
+              <Text className="text-foreground text-sm">{new Date(season.startDate).toLocaleDateString('vi-VN')}</Text>
             </View>
             {season.endDate ? (
               <View className="flex-row">
                 <Text className="text-muted-foreground text-sm w-24">Kết thúc:</Text>
-                <Text className="text-white text-sm">{new Date(season.endDate).toLocaleDateString('vi-VN')}</Text>
+                <Text className="text-foreground text-sm">{new Date(season.endDate).toLocaleDateString('vi-VN')}</Text>
               </View>
             ) : null}
             {season.isActive && season.endDate ? (
@@ -139,7 +139,7 @@ export default function SeasonScreen() {
           </Card>
 
           {/* Rank Thresholds */}
-          <Text className="text-white text-base font-bold mb-3">Ngưỡng rank (km/tuần)</Text>
+          <Text className="text-foreground text-base font-bold mb-3">Ngưỡng rank (km/tuần)</Text>
           <Card className="p-0 overflow-hidden mb-4 gap-0">
             {RANKS.map((rank, i) => (
               <View key={rank}>
@@ -148,7 +148,7 @@ export default function SeasonScreen() {
                     className="w-3 h-3 rounded-full mr-3"
                     style={{ backgroundColor: colors.rank[rank] }}
                   />
-                  <Text className="text-white text-sm flex-1">{RANK_LABELS[rank]}</Text>
+                  <Text className="text-foreground text-sm flex-1">{RANK_LABELS[rank]}</Text>
                   <Text className="text-muted-foreground text-sm font-mono">≥ {RANK_KM_THRESHOLD[rank]} km</Text>
                 </View>
                 {i < RANKS.length - 1 ? <Separator /> : null}
@@ -157,7 +157,7 @@ export default function SeasonScreen() {
           </Card>
 
           {/* Token Retention */}
-          <Text className="text-white text-base font-bold mb-3">Giữ lại token cuối mùa</Text>
+          <Text className="text-foreground text-base font-bold mb-3">Giữ lại token cuối mùa</Text>
           <Card className="p-0 overflow-hidden mb-4 gap-0">
             {RANKS.map((rank, i) => (
               <View key={rank}>
@@ -166,7 +166,7 @@ export default function SeasonScreen() {
                     className="w-3 h-3 rounded-full mr-3"
                     style={{ backgroundColor: colors.rank[rank] }}
                   />
-                  <Text className="text-white text-sm flex-1">{RANK_LABELS[rank]}</Text>
+                  <Text className="text-foreground text-sm flex-1">{RANK_LABELS[rank]}</Text>
                   <Text className="text-muted-foreground text-sm font-mono">{RANK_TOKEN_RETENTION[rank]} token</Text>
                 </View>
                 {i < RANKS.length - 1 ? <Separator /> : null}
@@ -175,16 +175,16 @@ export default function SeasonScreen() {
           </Card>
 
           {/* Quest Rewards */}
-          <Text className="text-white text-base font-bold mb-3">Phần thưởng nhiệm vụ</Text>
+          <Text className="text-foreground text-base font-bold mb-3">Phần thưởng nhiệm vụ</Text>
           <Card className="mb-6 gap-2.5">
             <View className="flex-row items-center">
               <Ionicons name="walk-outline" size={18} color={colors.primary} />
-              <Text className="text-white text-sm ml-2 flex-1">Nhiệm vụ ngày (chạy 2km)</Text>
+              <Text className="text-foreground text-sm ml-2 flex-1">Nhiệm vụ ngày (chạy 2km)</Text>
               <Text className="text-km-accent text-sm font-semibold">+10 token</Text>
             </View>
             <View className="flex-row items-center">
               <Ionicons name="calendar-outline" size={18} color={colors.info} />
-              <Text className="text-white text-sm ml-2 flex-1">Nhiệm vụ tuần (mỗi km)</Text>
+              <Text className="text-foreground text-sm ml-2 flex-1">Nhiệm vụ tuần (mỗi km)</Text>
               <Text className="text-km-accent text-sm font-semibold">+7 token/km</Text>
             </View>
           </Card>
@@ -223,19 +223,19 @@ export default function SeasonScreen() {
           <View className="bg-km-surface/50 rounded-xl p-3 gap-2">
             <View className="flex-row items-start">
               <Ionicons name="arrow-down" size={16} color={colors.error} />
-              <Text className="text-slate-300 text-sm ml-2 flex-1">
+              <Text className="text-slate-600 text-sm ml-2 flex-1">
                 Rank giảm 2 bậc (ví dụ: Kim Cương → Vàng)
               </Text>
             </View>
             <View className="flex-row items-start">
               <Ionicons name="wallet-outline" size={16} color={colors.warning} />
-              <Text className="text-slate-300 text-sm ml-2 flex-1">
+              <Text className="text-slate-600 text-sm ml-2 flex-1">
                 Token bị giới hạn theo rank (Đồng: 0, Bạc: 100, Vàng: 200, ...)
               </Text>
             </View>
             <View className="flex-row items-start">
               <Ionicons name="pricetag-outline" size={16} color={colors.primary} />
-              <Text className="text-slate-300 text-sm ml-2 flex-1">
+              <Text className="text-slate-600 text-sm ml-2 flex-1">
                 Voucher đã sở hữu được giữ nguyên
               </Text>
             </View>

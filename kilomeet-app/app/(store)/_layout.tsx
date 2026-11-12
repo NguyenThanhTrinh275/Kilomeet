@@ -5,7 +5,7 @@ export default function StoreLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#0F172A' },
+        contentStyle: { backgroundColor: '#F4F6F9' },
         animation: 'ios_from_right',
       }}
     />

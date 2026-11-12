@@ -26,7 +26,7 @@ export function QuestCard({ type, title, requirement, reward, progress, target, 
           <Badge variant={type === 'daily' ? 'default' : 'accent'}>
             <Text>{type === 'daily' ? 'NGÀY' : 'TUẦN'}</Text>
           </Badge>
-          <Text className="text-white font-semibold">{title}</Text>
+          <Text className="text-foreground font-semibold">{title}</Text>
         </View>
         {completed && (
           <Badge variant="default">

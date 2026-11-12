@@ -41,9 +41,9 @@ export default function StoreVouchersScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3">
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.white} />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text className="text-white text-lg font-bold">Voucher của tôi</Text>
+        <Text className="text-foreground text-lg font-bold">Voucher của tôi</Text>
         <TouchableOpacity onPress={() => router.push('/(store)/vouchers/create')}>
           <Ionicons name="add-circle" size={28} color={colors.primary} />
         </TouchableOpacity>
@@ -58,20 +58,20 @@ export default function StoreVouchersScreen() {
           {templates.length === 0 && (
             <View className="items-center justify-center py-16">
               <Ionicons name="pricetags-outline" size={48} color={colors.textMuted} />
-              <Text className="text-slate-400 text-base mt-4">Chưa có voucher nào</Text>
+              <Text className="text-slate-500 text-base mt-4">Chưa có voucher nào</Text>
             </View>
           )}
           {templates.map((v) => {
             const sold = v.totalSupply - v.remaining;
             return (
-              <View key={v.id} className="bg-km-bg-secondary rounded-xl overflow-hidden mb-3">
+              <View key={v.id} className="bg-km-bg-secondary border border-border rounded-xl overflow-hidden mb-3">
                 <View className="h-1 bg-km-accent" />
                 <View className="p-4">
                   {/* Title row */}
                   <View className="flex-row items-start justify-between mb-2">
                     <View className="flex-1 mr-3">
-                      <Text className="text-white text-base font-semibold">{v.title}</Text>
-                      <Text className="text-slate-400 text-xs mt-0.5">{v.description}</Text>
+                      <Text className="text-foreground text-base font-semibold">{v.title}</Text>
+                      <Text className="text-slate-500 text-xs mt-0.5">{v.description}</Text>
                     </View>
                     <VoucherStatus remaining={v.remaining} expiresAt={v.expiresAt} />
                   </View>
@@ -81,8 +81,8 @@ export default function StoreVouchersScreen() {
                     {/* Price */}
                     <View className="flex-row items-center mr-4">
                       <Ionicons name="pricetag" size={14} color={colors.accent} />
-                      <Text className="text-white text-sm font-bold ml-1">{v.priceTokens}</Text>
-                      <Text className="text-slate-400 text-xs ml-0.5">token</Text>
+                      <Text className="text-foreground text-sm font-bold ml-1">{v.priceTokens}</Text>
+                      <Text className="text-slate-500 text-xs ml-0.5">token</Text>
                     </View>
 
                     {/* Discount */}
@@ -94,12 +94,12 @@ export default function StoreVouchersScreen() {
                     {/* Sold / Total */}
                     <View className="flex-row items-center mr-4">
                       <Ionicons name="cart" size={14} color={colors.textMuted} />
-                      <Text className="text-slate-400 text-sm ml-1">{sold}/{v.totalSupply}</Text>
+                      <Text className="text-slate-500 text-sm ml-1">{sold}/{v.totalSupply}</Text>
                     </View>
                   </View>
 
                   {/* Bottom row */}
-                  <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-slate-700">
+                  <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-border">
                     {/* Min rank */}
                     <View
                       className="px-2 py-0.5 rounded-md"
@@ -116,7 +116,7 @@ export default function StoreVouchersScreen() {
                     {/* Expiry */}
                     <View className="flex-row items-center">
                       <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                      <Text className="text-slate-400 text-xs ml-1">HSD: {formatDate(v.expiresAt)}</Text>
+                      <Text className="text-slate-500 text-xs ml-1">HSD: {formatDate(v.expiresAt)}</Text>
                     </View>
                   </View>
                 </View>

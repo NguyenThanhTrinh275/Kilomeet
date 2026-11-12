@@ -33,8 +33,8 @@ function AppBottomSheet({
       snapPoints={snapPoints}
       enableDynamicSizing={enableDynamicSizing}
       backdropComponent={renderBackdrop}
-      backgroundStyle={{ backgroundColor: '#1E293B', borderTopLeftRadius: 24, borderTopRightRadius: 24 }}
-      handleIndicatorStyle={{ backgroundColor: '#475569', width: 40 }}
+      backgroundStyle={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 }}
+      handleIndicatorStyle={{ backgroundColor: '#CBD5E1', width: 40 }}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       {...props}>

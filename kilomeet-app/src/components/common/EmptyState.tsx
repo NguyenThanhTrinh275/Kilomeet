@@ -21,7 +21,7 @@ export function EmptyState({ type, message }: Props) {
         style={{ width: 200, height: 200 }}
         resizeMode="contain"
       />
-      <Text className="text-slate-400 text-base text-center mt-4">
+      <Text className="text-slate-500 text-base text-center mt-4">
         {message}
       </Text>
     </View>

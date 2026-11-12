@@ -55,7 +55,7 @@ export function RankProgress({ rank, weeklyKm, tokenBalance, seasonDaysLeft }: P
             </Text>
           </View>
           <View>
-            <Text className="text-white text-lg font-bold">{rankLabel}</Text>
+            <Text className="text-foreground text-lg font-bold">{rankLabel}</Text>
             <Text className="text-muted-foreground text-xs">{weeklyKm.toFixed(1)} km tuần này</Text>
           </View>
         </View>

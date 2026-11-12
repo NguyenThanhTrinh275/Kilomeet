@@ -20,7 +20,7 @@ const RANK_LABELS: Record<string, string> = {
   bạch_kim: 'Bạch kim', kim_cương: 'Kim cương', cao_thủ: 'Cao thủ',
 };
 
-const RIPPLE_CONFIG = { color: 'rgba(255, 255, 255, 0.08)', foreground: true };
+const RIPPLE_CONFIG = { color: 'rgba(15, 23, 42, 0.06)', foreground: true };
 
 export function VoucherCard({
   storeName, title, originalPrice, discountedPrice,
@@ -36,7 +36,7 @@ export function VoucherCard({
         { marginBottom: 12, borderRadius: 16, overflow: 'hidden' },
         Platform.OS === 'ios' && pressed ? { opacity: 0.78 } : undefined,
       ]}>
-      <View className="bg-km-bg-secondary rounded-2xl overflow-hidden">
+      <View className="bg-km-bg-secondary border border-border rounded-2xl overflow-hidden">
         {/* Accent top bar */}
         <View className="h-1 bg-km-accent" />
 
@@ -44,8 +44,8 @@ export function VoucherCard({
           {/* Store + Title */}
           <View className="flex-row items-start justify-between mb-2">
             <View className="flex-1 mr-3">
-              <Text className="text-slate-400 text-xs mb-1">{storeName}</Text>
-              <Text className="text-white text-base font-semibold">{title}</Text>
+              <Text className="text-slate-500 text-xs mb-1">{storeName}</Text>
+              <Text className="text-foreground text-base font-semibold">{title}</Text>
             </View>
             {minRank && (
               <View
@@ -70,7 +70,7 @@ export function VoucherCard({
                 size={16}
                 color={questCompleted ? colors.primary : colors.textMuted}
               />
-              <Text className={`text-xs ml-2 flex-1 ${questCompleted ? 'text-km-primary font-semibold' : 'text-slate-400'}`}>
+              <Text className={`text-xs ml-2 flex-1 ${questCompleted ? 'text-km-primary font-semibold' : 'text-slate-500'}`}>
                 {questCompleted ? `✓ Đã hoàn thành: ${questDescription}` : questDescription}
               </Text>
             </View>
@@ -83,12 +83,12 @@ export function VoucherCard({
                 <View className="flex-row items-center ml-2">
                   <Text className="text-slate-500 text-sm line-through mr-2">{originalPrice}</Text>
                   <Text className="text-km-accent text-lg font-bold">{discountedPrice}</Text>
-                  <Text className="text-slate-400 text-xs ml-1">token</Text>
+                  <Text className="text-slate-500 text-xs ml-1">token</Text>
                 </View>
               ) : (
                 <View className="flex-row items-center ml-2">
-                  <Text className="text-white text-lg font-bold">{originalPrice}</Text>
-                  <Text className="text-slate-400 text-xs ml-1">token</Text>
+                  <Text className="text-foreground text-lg font-bold">{originalPrice}</Text>
+                  <Text className="text-slate-500 text-xs ml-1">token</Text>
                 </View>
               )}
             </View>

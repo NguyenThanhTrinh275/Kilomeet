@@ -50,7 +50,7 @@ export default function OnboardingScreen() {
     <SafeAreaView className="flex-1 bg-km-bg">
       <View className="flex-row justify-end px-6 pt-2">
         <TouchableOpacity onPress={handleSkip}>
-          <Text className="text-slate-400 text-base">Bỏ qua</Text>
+          <Text className="text-slate-500 text-base">Bỏ qua</Text>
         </TouchableOpacity>
       </View>
 
@@ -70,10 +70,10 @@ export default function OnboardingScreen() {
               className="mb-8"
               resizeMode="cover"
             />
-            <Text className="text-white text-2xl font-bold text-center mb-4">
+            <Text className="text-foreground text-2xl font-bold text-center mb-4">
               {item.title}
             </Text>
-            <Text className="text-slate-400 text-base text-center leading-6">
+            <Text className="text-slate-500 text-base text-center leading-6">
               {item.description}
             </Text>
           </View>

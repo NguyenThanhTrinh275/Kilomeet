@@ -100,7 +100,7 @@ export default function CreateVoucherScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text className="text-white text-xl font-bold ml-3">Tạo voucher mới</Text>
+        <Text className="text-foreground text-xl font-bold ml-3">Tạo voucher mới</Text>
       </View>
 
       <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
@@ -229,7 +229,7 @@ export default function CreateVoucherScreen() {
                 <View className="flex-row items-start justify-between">
                   <View className="flex-1 mr-3">
                     <Text className="text-muted-foreground text-xs mb-1">Cà phê Sài Gòn</Text>
-                    <Text className="text-white text-base font-semibold">{title || 'Tiêu đề voucher'}</Text>
+                    <Text className="text-foreground text-base font-semibold">{title || 'Tiêu đề voucher'}</Text>
                   </View>
                   <Badge
                     variant="outline"
@@ -250,7 +250,7 @@ export default function CreateVoucherScreen() {
 
                 <View className="flex-row items-center">
                   <Ionicons name="pricetag" size={16} color={colors.accent} />
-                  <Text className="text-white text-lg font-bold ml-2">{priceTokens || '0'}</Text>
+                  <Text className="text-foreground text-lg font-bold ml-2">{priceTokens || '0'}</Text>
                   <Text className="text-muted-foreground text-xs ml-1">token</Text>
                   {discountPercent ? (
                     <Text className="text-km-primary text-sm font-bold ml-3">-{discountPercent}%</Text>

@@ -53,7 +53,7 @@ export default function LoginScreen() {
   const onSubmit = handleSubmit((values) => performLogin(values.email, values.password));
 
   return (
-    <SafeAreaView className="flex-1 bg-km-bg" style={{ flex: 1, backgroundColor: '#0F172A' }}>
+    <SafeAreaView className="flex-1 bg-km-bg" style={{ flex: 1, backgroundColor: '#F4F6F9' }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1 justify-center px-6"
@@ -61,7 +61,7 @@ export default function LoginScreen() {
         {/* Logo */}
         <View className="items-center mb-10">
           <AppLogo size="lg" style={{ marginBottom: 16 }} />
-          <Text className="text-white text-3xl font-bold">KILOMeet</Text>
+          <Text className="text-foreground text-3xl font-bold">KILOMeet</Text>
           <Text className="text-muted-foreground text-base mt-1">Chạy bộ theo mùa</Text>
         </View>
 
@@ -129,7 +129,7 @@ export default function LoginScreen() {
                 variant="secondary"
                 size="sm"
                 onPress={() => performLogin(acc.email, 'demo123')}>
-                <Text className="text-slate-200 font-normal">{acc.label}</Text>
+                <Text className="text-slate-700 font-normal">{acc.label}</Text>
               </Button>
             ))}
           </View>

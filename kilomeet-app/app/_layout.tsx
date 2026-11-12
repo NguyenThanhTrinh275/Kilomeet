@@ -12,14 +12,14 @@ import { Toaster } from 'sonner-native';
 enableFreeze(true);
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0F172A' }}>
-      <SafeAreaProvider initialMetrics={initialWindowMetrics} style={{ flex: 1, backgroundColor: '#0F172A' }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#F4F6F9' }}>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics} style={{ flex: 1, backgroundColor: '#F4F6F9' }}>
         <BottomSheetModalProvider>
-          <View className="flex-1 bg-km-bg" style={{ flex: 1, backgroundColor: '#0F172A' }}>
-            <StatusBar style="light" />
+          <View className="flex-1 bg-km-bg" style={{ flex: 1, backgroundColor: '#F4F6F9' }}>
+            <StatusBar style="dark" />
             <Slot />
             <PortalHost />
-            <Toaster position="top-center" theme="dark" richColors />
+            <Toaster position="top-center" theme="light" richColors />
           </View>
         </BottomSheetModalProvider>
       </SafeAreaProvider>

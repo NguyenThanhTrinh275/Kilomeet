@@ -23,7 +23,7 @@ function Alert({
       value={cn(
         'text-sm text-foreground',
         variant === 'destructive' && 'text-destructive',
-        variant === 'warning' && 'text-amber-400',
+        variant === 'warning' && 'text-amber-700',
         className
       )}>
       <View
@@ -42,7 +42,7 @@ function Alert({
             className={cn(
               'text-primary',
               variant === 'destructive' && 'text-destructive',
-              variant === 'warning' && 'text-amber-400',
+              variant === 'warning' && 'text-amber-700',
               iconClassName
             )}
           />
@@ -69,7 +69,7 @@ function AlertDescription({ className, ...props }: React.ComponentProps<typeof T
       className={cn(
         'text-muted-foreground ml-0.5 pl-7 text-xs leading-5',
         textClass?.includes('text-destructive') && 'text-destructive/90',
-        textClass?.includes('text-amber-400') && 'text-amber-300/90',
+        textClass?.includes('text-amber-700') && 'text-amber-700/90',
         className
       )}
       {...props}

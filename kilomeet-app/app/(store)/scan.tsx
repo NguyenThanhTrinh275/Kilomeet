@@ -62,7 +62,7 @@ export default function ScanScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text className="text-white text-xl font-bold ml-3">Quét QR Voucher</Text>
+        <Text className="text-foreground text-xl font-bold ml-3">Quét QR Voucher</Text>
       </View>
 
       <View className="flex-1">
@@ -90,16 +90,16 @@ export default function ScanScreen() {
                 </View>
               </View>
 
-              <Text className="text-white text-xl font-bold text-center">Thông tin voucher</Text>
+              <Text className="text-foreground text-xl font-bold text-center">Thông tin voucher</Text>
 
               <View>
                 <Text className="text-muted-foreground text-xs">Voucher</Text>
-                <Text className="text-white text-base font-semibold">{result.voucherTitle}</Text>
+                <Text className="text-foreground text-base font-semibold">{result.voucherTitle}</Text>
               </View>
 
               <View className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex-row items-center">
                 <Ionicons name="information-circle" size={20} color={colors.warning} />
-                <Text className="text-amber-400 text-sm ml-2 font-semibold">
+                <Text className="text-amber-700 text-sm ml-2 font-semibold">
                   Phí: {result.feeVnd.toLocaleString('vi-VN')}đ
                 </Text>
               </View>
@@ -122,12 +122,12 @@ export default function ScanScreen() {
               <View className="bg-km-primary/20 rounded-full p-6 mb-4">
                 <Ionicons name="checkmark-circle" size={72} color={colors.success} />
               </View>
-              <Text className="text-white text-2xl font-bold mb-2">Thành công!</Text>
+              <Text className="text-foreground text-2xl font-bold mb-2">Thành công!</Text>
               <Text className="text-muted-foreground text-base text-center">
                 Voucher đã được xác nhận sử dụng
               </Text>
               {result && (
-                <Text className="text-amber-400 text-sm mt-2 font-semibold">
+                <Text className="text-amber-700 text-sm mt-2 font-semibold">
                   Phí: {result.feeVnd.toLocaleString('vi-VN')}đ
                 </Text>
               )}

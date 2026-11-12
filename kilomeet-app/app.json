@@ -6,8 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "kilomeet",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#0F172A",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F4F6F9",
     "ios": {
       "supportsTablet": false,
       "infoPlist": {
