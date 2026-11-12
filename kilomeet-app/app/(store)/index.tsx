@@ -10,10 +10,10 @@ import type { StoreDashboard, Store } from '../../src/api/types';
 
 function StatCard({ icon, label, value, color }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; color: string }) {
   return (
-    <View className="flex-1 bg-km-bg-secondary rounded-xl p-4 mx-1">
+    <View className="flex-1 bg-km-bg-secondary border border-border rounded-xl p-4 mx-1">
       <Ionicons name={icon} size={22} color={color} />
-      <Text className="text-white text-xl font-bold mt-2">{value}</Text>
-      <Text className="text-slate-400 text-xs mt-1">{label}</Text>
+      <Text className="text-foreground text-xl font-bold mt-2">{value}</Text>
+      <Text className="text-slate-500 text-xs mt-1">{label}</Text>
     </View>
   );
 }
@@ -52,7 +52,8 @@ export default function StoreDashboardScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadDashboard();
+    // Lấy lại trạng thái duyệt + số lượt dùng từ BE.
+    await Promise.all([loadDashboard(), useAuthStore.getState().refreshMe().catch(() => undefined)]);
     setRefreshing(false);
   }, [loadDashboard]);
 
@@ -81,7 +82,7 @@ export default function StoreDashboardScreen() {
         {/* Header */}
         <View className="flex-row items-center justify-between mt-4 mb-6">
           <View className="flex-1">
-            <Text className="text-white text-2xl font-bold">{d?.storeName ?? user?.storeName ?? ''}</Text>
+            <Text className="text-foreground text-2xl font-bold">{d?.storeName ?? user?.storeName ?? ''}</Text>
             <View className="flex-row items-center mt-1">
               <View
                 className="px-2 py-0.5 rounded-full mr-2"
@@ -96,7 +97,7 @@ export default function StoreDashboardScreen() {
               </View>
             </View>
           </View>
-          <TouchableOpacity onPress={handleLogout} className="bg-km-bg-secondary rounded-full p-3">
+          <TouchableOpacity onPress={handleLogout} className="bg-km-bg-secondary border border-border rounded-full p-3">
             <Ionicons name="log-out-outline" size={24} color={colors.error} />
           </TouchableOpacity>
         </View>
@@ -105,7 +106,7 @@ export default function StoreDashboardScreen() {
         {!approved && (
           <View className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4 flex-row items-center">
             <Ionicons name="time-outline" size={24} color={colors.warning} />
-            <Text className="text-amber-400 text-sm ml-3 flex-1 font-semibold">
+            <Text className="text-amber-700 text-sm ml-3 flex-1 font-semibold">
               Tài khoản đang chờ duyệt. Bạn chưa thể tạo voucher hoặc quét QR.
             </Text>
           </View>
@@ -130,7 +131,7 @@ export default function StoreDashboardScreen() {
             style={!approved ? { opacity: 0.4 } : undefined}
           >
             <Ionicons name="add-circle" size={20} color={colors.textInverse} />
-            <Text className="text-km-bg font-bold text-base ml-2">Tạo voucher</Text>
+            <Text className="text-white font-bold text-base ml-2">Tạo voucher</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="flex-1 bg-km-accent rounded-xl py-4 items-center ml-2 flex-row justify-center"
@@ -146,13 +147,13 @@ export default function StoreDashboardScreen() {
 
         {/* Nav to voucher list */}
         <TouchableOpacity
-          className="bg-km-bg-secondary rounded-xl py-4 px-4 mb-6 flex-row items-center justify-between"
+          className="bg-km-bg-secondary border border-border rounded-xl py-4 px-4 mb-6 flex-row items-center justify-between"
           activeOpacity={0.7}
           onPress={() => router.push('/(store)/vouchers')}
         >
           <View className="flex-row items-center">
             <Ionicons name="list" size={20} color={colors.primary} />
-            <Text className="text-white font-semibold text-base ml-3">Danh sách voucher</Text>
+            <Text className="text-foreground font-semibold text-base ml-3">Danh sách voucher</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </TouchableOpacity>
@@ -160,19 +161,19 @@ export default function StoreDashboardScreen() {
         {/* Recent Redemptions */}
         {d && d.recentUsages.length > 0 && (
           <>
-            <Text className="text-white text-lg font-bold mb-3">Đổi gần đây</Text>
+            <Text className="text-foreground text-lg font-bold mb-3">Đổi gần đây</Text>
             {d.recentUsages.map((u, i) => (
-              <View key={i} className="bg-km-bg-secondary rounded-xl p-4 mb-2 flex-row items-center">
+              <View key={i} className="bg-km-bg-secondary border border-border rounded-xl p-4 mb-2 flex-row items-center">
                 <View className="bg-km-surface rounded-full p-2 mr-3">
                   <Ionicons name="receipt" size={18} color={colors.accent} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-white text-sm font-semibold">{u.voucherTitle}</Text>
-                  <Text className="text-slate-400 text-xs mt-0.5">{u.userName}</Text>
+                  <Text className="text-foreground text-sm font-semibold">{u.voucherTitle}</Text>
+                  <Text className="text-slate-500 text-xs mt-0.5">{u.userName}</Text>
                 </View>
                 <View className="items-end">
-                  <Text className="text-slate-400 text-xs">{formatTime(u.usedAt)}</Text>
-                  <Text className="text-amber-400 text-xs mt-0.5">-5.000đ</Text>
+                  <Text className="text-slate-500 text-xs">{formatTime(u.usedAt)}</Text>
+                  <Text className="text-amber-700 text-xs mt-0.5">-5.000đ</Text>
                 </View>
               </View>
             ))}

@@ -20,24 +20,27 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 export default function RunnerHome() {
   const [refreshing, setRefreshing] = useState(false);
   const user = useAuthStore((s) => s.user) as Runner | null;
-  const { tokenBalance, rank, kmThisWeek, quests, runs, syncFromUser, fetchQuests, fetchRuns } =
+  const { tokenBalance, rank, kmThisWeek, quests, runs, season, syncFromUser, fetchQuests, fetchRuns, fetchSeason } =
     useRunnerStore();
 
   useEffect(() => {
     if (user) {
       syncFromUser(user);
-      fetchQuests();
-      fetchRuns();
+      fetchQuests().catch(() => undefined);
+      fetchRuns().catch(() => undefined);
+      fetchSeason().catch(() => undefined);
     }
-  }, [user, syncFromUser, fetchQuests, fetchRuns]);
+  }, [user, syncFromUser, fetchQuests, fetchRuns, fetchSeason]);
 
+  const refreshMe = useAuthStore((s) => s.refreshMe);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchQuests(), fetchRuns()]);
+    await Promise.all([fetchQuests(), fetchRuns(), fetchSeason(), refreshMe()]).catch(() => undefined);
     setRefreshing(false);
-  }, [fetchQuests, fetchRuns]);
+  }, [fetchQuests, fetchRuns, fetchSeason, refreshMe]);
 
-  const seasonDaysLeft = 45; // ponytail: hardcoded until season API; add when /season endpoint exists
+  const seasonDaysLeft = season?.daysLeft ?? 0;
+  const seasonName = season?.name ?? 'Chưa mở mùa';
   const retentionCap = RANK_TOKEN_RETENTION[rank];
   const showBurnWarning = tokenBalance > retentionCap;
 
@@ -54,10 +57,10 @@ export default function RunnerHome() {
           <View className="flex-row items-center justify-between">
             <View>
               <Text className="text-muted-foreground text-sm">Xin chào,</Text>
-              <Text className="text-white text-2xl font-bold">{user?.name ?? 'Runner'} 👋</Text>
+              <Text className="text-foreground text-2xl font-bold">{user?.name ?? 'Runner'} 👋</Text>
             </View>
             <TouchableOpacity
-              className="w-10 h-10 bg-km-bg-secondary rounded-full items-center justify-center"
+              className="w-10 h-10 bg-km-bg-secondary border border-border rounded-full items-center justify-center"
               onPress={() => toast.info('Chưa có thông báo mới')}>
               <Ionicons name="notifications-outline" size={22} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -68,8 +71,8 @@ export default function RunnerHome() {
         <View className="mx-5 mb-5 bg-km-primary/10 border border-km-primary/30 rounded-2xl p-4">
           <View className="flex-row items-center">
             <Ionicons name="trophy" size={20} color={colors.primary} />
-            <Text className="text-km-primary font-semibold ml-2">Mùa 3/2026</Text>
-            <Text className="text-muted-foreground text-xs ml-auto">Còn {seasonDaysLeft} ngày</Text>
+            <Text className="text-km-primary font-semibold ml-2">{seasonName}</Text>
+            {season && <Text className="text-muted-foreground text-xs ml-auto">Còn {seasonDaysLeft} ngày</Text>}
           </View>
         </View>
 
@@ -115,7 +118,7 @@ export default function RunnerHome() {
 
         {/* Quests */}
         <View className="px-5">
-          <Text className="text-white text-lg font-bold mb-3">Nhiệm vụ</Text>
+          <Text className="text-foreground text-lg font-bold mb-3">Nhiệm vụ</Text>
           {quests.map((quest) => (
             <QuestCard
               key={quest.id}

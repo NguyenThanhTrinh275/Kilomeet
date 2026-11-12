@@ -1,4 +1,4 @@
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -73,8 +73,12 @@ export default function ProfileScreen() {
     setSubscribing(true);
     try {
       await api.post('/auth/subscribe');
-      const updated = { ...user, isMember: true, role: 'member' as const };
-      useAuthStore.setState({ user: updated });
+      // Lấy lại user từ BE (role đã đổi sang member); mock thì cập nhật tại chỗ.
+      try {
+        await useAuthStore.getState().refreshMe();
+      } catch {
+        useAuthStore.setState({ user: { ...user, isMember: true, role: 'member' as const } });
+      }
       setSubscribeOpen(false);
       toast.success('Bạn đã là Hội viên KILOMeet! 🎉', {
         description: 'Vào tab "Nhóm" để bắt đầu ghép chạy.',
@@ -106,7 +110,7 @@ export default function ProfileScreen() {
             )}
           </View>
 
-          <Text className="text-white text-2xl font-bold">{user.name}</Text>
+          <Text className="text-foreground text-2xl font-bold">{user.name}</Text>
           <Text className="text-muted-foreground text-sm mt-0.5">{user.email}</Text>
 
           <View className="flex-row items-center mt-3 gap-2 flex-wrap justify-center">
@@ -125,17 +129,21 @@ export default function ProfileScreen() {
               </Badge>
             )}
 
-            <Badge variant="outline" className="bg-km-bg-secondary border-slate-700">
-              <Ionicons name="wallet-outline" size={13} color={colors.textSecondary} />
-              <Text className="text-slate-300 font-mono">{truncateAddress(user.walletAddress)}</Text>
-            </Badge>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => Linking.openURL(`https://testnet.snowtrace.io/address/${user.walletAddress}`)}>
+              <Badge variant="outline" className="bg-km-bg-secondary border-border">
+                <Ionicons name="wallet-outline" size={13} color={colors.textSecondary} />
+                <Text className="text-slate-600 font-mono">{truncateAddress(user.walletAddress)} ↗</Text>
+              </Badge>
+            </TouchableOpacity>
           </View>
         </View>
 
         {/* Stats Card */}
         <Card className="mx-4 p-5 mb-4">
           <View className="flex-row items-center justify-between">
-            <Text className="text-white text-base font-bold">Thành tích mùa này</Text>
+            <Text className="text-foreground text-base font-bold">Thành tích mùa này</Text>
             <TouchableOpacity onPress={() => router.push('/(runner)/history')}>
               <Text className="text-km-primary text-xs font-semibold">Xem chi tiết →</Text>
             </TouchableOpacity>
@@ -183,7 +191,7 @@ export default function ProfileScreen() {
                     <Ionicons name="star" size={16} color={colors.accent} />
                   </View>
                   <View>
-                    <Text className="text-white text-base font-bold">Gói Hội viên KILOMeet</Text>
+                    <Text className="text-foreground text-base font-bold">Gói Hội viên KILOMeet</Text>
                     <Text className="text-km-primary text-xs">Đang hoạt động</Text>
                   </View>
                 </View>
@@ -192,10 +200,10 @@ export default function ProfileScreen() {
                 </Badge>
               </View>
 
-              <View className="bg-km-bg rounded-xl p-3.5 flex-row justify-around border border-slate-800">
+              <View className="bg-km-bg rounded-xl p-3.5 flex-row justify-around border border-border">
                 <View className="items-center">
                   <Text className="text-muted-foreground text-xs mb-0.5">Độ đúng hẹn</Text>
-                  <Text className="text-white text-base font-bold">{user.punctuality}%</Text>
+                  <Text className="text-foreground text-base font-bold">{user.punctuality}%</Text>
                 </View>
                 <Separator orientation="vertical" />
                 <View className="items-center">
@@ -208,7 +216,7 @@ export default function ProfileScreen() {
             <View className="gap-4">
               <View className="flex-row items-start justify-between">
                 <View className="flex-1 mr-2">
-                  <Text className="text-white text-base font-bold">Đăng ký Hội viên</Text>
+                  <Text className="text-foreground text-base font-bold">Đăng ký Hội viên</Text>
                   <Text className="text-muted-foreground text-xs mt-0.5">
                     Mở khoá tính năng ghép nhóm chạy chung
                   </Text>
@@ -218,11 +226,11 @@ export default function ProfileScreen() {
                 </Text>
               </View>
 
-              <View className="bg-km-bg/70 rounded-xl p-3.5 border border-slate-800/80 gap-2">
+              <View className="bg-km-bg/70 rounded-xl p-3.5 border border-border/80 gap-2">
                 {MEMBER_BENEFITS.map((benefit, i) => (
                   <View key={i} className="flex-row items-center">
                     <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-                    <Text className="text-slate-300 text-xs ml-2.5 flex-1">{benefit}</Text>
+                    <Text className="text-slate-600 text-xs ml-2.5 flex-1">{benefit}</Text>
                   </View>
                 ))}
               </View>
@@ -242,9 +250,9 @@ export default function ProfileScreen() {
             activeOpacity={0.7}>
             <View className="flex-row items-center">
               <View className="w-8 h-8 rounded-lg bg-blue-500/10 items-center justify-center">
-                <Ionicons name="time" size={18} color="#38BDF8" />
+                <Ionicons name="time" size={18} color="#0284C7" />
               </View>
-              <Text className="text-white text-sm font-medium ml-3">Lịch sử chạy bộ</Text>
+              <Text className="text-foreground text-sm font-medium ml-3">Lịch sử chạy bộ</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
@@ -256,9 +264,9 @@ export default function ProfileScreen() {
             activeOpacity={0.7}>
             <View className="flex-row items-center">
               <View className="w-8 h-8 rounded-lg bg-amber-500/10 items-center justify-center">
-                <Ionicons name="ribbon" size={18} color="#FBBF24" />
+                <Ionicons name="ribbon" size={18} color="#D97706" />
               </View>
-              <Text className="text-white text-sm font-medium ml-3">Huy hiệu mùa giải</Text>
+              <Text className="text-foreground text-sm font-medium ml-3">Huy hiệu mùa giải</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
@@ -269,7 +277,7 @@ export default function ProfileScreen() {
               <View className="w-8 h-8 rounded-lg bg-emerald-500/10 items-center justify-center">
                 <Ionicons name="notifications" size={18} color={colors.primary} />
               </View>
-              <Text className="text-white text-sm font-medium ml-3">Thông báo nhắc chạy</Text>
+              <Text className="text-foreground text-sm font-medium ml-3">Thông báo nhắc chạy</Text>
             </View>
             <Switch checked={notificationsOn} onCheckedChange={setNotificationsOn} />
           </View>
@@ -277,10 +285,10 @@ export default function ProfileScreen() {
 
           <View className="flex-row items-center justify-between px-4 py-3.5">
             <View className="flex-row items-center">
-              <View className="w-8 h-8 rounded-lg bg-slate-700/30 items-center justify-center">
+              <View className="w-8 h-8 rounded-lg bg-slate-200 items-center justify-center">
                 <Ionicons name="information-circle" size={18} color={colors.textSecondary} />
               </View>
-              <Text className="text-white text-sm font-medium ml-3">Phiên bản</Text>
+              <Text className="text-foreground text-sm font-medium ml-3">Phiên bản</Text>
             </View>
             <Text className="text-muted-foreground text-xs font-mono">v1.0.0 (Avalanche)</Text>
           </View>
@@ -293,7 +301,7 @@ export default function ProfileScreen() {
             <View className="w-8 h-8 rounded-lg bg-red-500/10 items-center justify-center">
               <Ionicons name="log-out" size={18} color={colors.error} />
             </View>
-            <Text className="text-red-400 text-sm font-medium ml-3">Đăng xuất</Text>
+            <Text className="text-red-600 text-sm font-medium ml-3">Đăng xuất</Text>
           </TouchableOpacity>
         </Card>
       </ScrollView>
@@ -361,7 +369,7 @@ function StatItem({
         style={{ backgroundColor: `${iconColor}15` }}>
         <Ionicons name={icon} size={18} color={iconColor} />
       </View>
-      <Text className="text-white text-base font-bold">
+      <Text className="text-foreground text-base font-bold">
         {value}
         {unit ? <Text className="text-xs text-muted-foreground font-normal"> {unit}</Text> : null}
       </Text>

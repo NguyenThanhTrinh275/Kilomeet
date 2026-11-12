@@ -1,4 +1,6 @@
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { useEffect, useState } from 'react';
+import { api } from '../../src/api/client';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,22 +24,32 @@ const RANK_LABELS: Record<Rank, string> = {
   cao_thủ: 'Cao Thủ',
 };
 
-interface SeasonBadge {
-  season: string;
-  period: string;
+/** GET /me/badges */
+interface ApiBadge {
+  seasonId: string;
+  seasonName: string;
   highestRank: Rank;
+  txHash: string | null;
+  current: boolean;
 }
 
-// ponytail: mock until API has season history
-const PAST_SEASONS: SeasonBadge[] = [
-  { season: 'Mùa 2/2026', period: 'Tháng 5-8', highestRank: 'kim_cương' },
-  { season: 'Mùa 1/2026', period: 'Tháng 1-4', highestRank: 'bạch_kim' },
-];
+const SEASON_PERIOD: Record<string, string> = { '1': 'Tháng 1-4', '2': 'Tháng 5-8', '3': 'Tháng 9-12' };
+const periodOf = (seasonId: string) => SEASON_PERIOD[seasonId.split('-')[2] ?? ''] ?? '';
+const EXPLORER = 'https://testnet.snowtrace.io/tx/';
 
 export default function BadgesScreen() {
   const user = useAuthStore((s) => s.user);
   const isRunner = user?.role === 'runner' || user?.role === 'member';
-  const currentBadge = isRunner ? (user as Runner).seasonBadge : null;
+  const [badges, setBadges] = useState<ApiBadge[]>([]);
+
+  useEffect(() => {
+    if (!isRunner) return;
+    api.get<ApiBadge[]>('/me/badges').then(setBadges).catch(() => setBadges([]));
+  }, [isRunner]);
+
+  const current = badges.find((b) => b.current);
+  const currentBadge = current?.highestRank ?? (isRunner ? (user as Runner).seasonBadge : null);
+  const PAST_SEASONS = badges.filter((b) => !b.current);
 
   return (
     <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
@@ -46,14 +58,14 @@ export default function BadgesScreen() {
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text className="text-white text-xl font-bold ml-3">Huy hiệu mùa</Text>
+        <Text className="text-foreground text-xl font-bold ml-3">Huy hiệu mùa</Text>
       </View>
 
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Current Season */}
         <Card className="p-5 mb-4 gap-3">
           <View className="flex-row items-center justify-between">
-            <Text className="text-white text-base font-bold">Mùa 3/2026</Text>
+            <Text className="text-foreground text-base font-bold">{current?.seasonName ?? 'Mùa hiện tại'}</Text>
             <Badge variant="default">
               <Text>Hiện tại</Text>
             </Badge>
@@ -73,9 +85,9 @@ export default function BadgesScreen() {
               </Badge>
             </View>
           ) : (
-            <View className="items-center py-6 bg-km-bg/60 rounded-xl border border-slate-800 gap-2">
+            <View className="items-center py-6 bg-km-bg/60 rounded-xl border border-border gap-2">
               <Ionicons name="ribbon-outline" size={32} color={colors.textSecondary} />
-              <Text className="text-slate-300 text-sm text-center">
+              <Text className="text-slate-600 text-sm text-center">
                 Chưa đạt huy hiệu mùa này
               </Text>
             </View>
@@ -84,16 +96,25 @@ export default function BadgesScreen() {
 
         {/* Past Seasons */}
         <Card className="p-5 mb-4 gap-2">
-          <Text className="text-white text-base font-bold mb-1">Các mùa trước</Text>
+          <Text className="text-foreground text-base font-bold mb-1">Các mùa trước</Text>
+          {PAST_SEASONS.length === 0 && (
+            <Text className="text-slate-500 text-sm py-2">Chưa có huy hiệu mùa trước.</Text>
+          )}
           {PAST_SEASONS.map((s, idx) => {
             const rankColor = colors.rank[s.highestRank];
             return (
-              <View key={s.season}>
-                <View className="flex-row items-center py-3">
+              <View key={s.seasonId}>
+                <TouchableOpacity
+                  className="flex-row items-center py-3"
+                  activeOpacity={s.txHash ? 0.7 : 1}
+                  onPress={() => s.txHash && Linking.openURL(EXPLORER + s.txHash)}>
                   <RankBadge rank={s.highestRank} size="md" />
                   <View className="ml-3 flex-1">
-                    <Text className="text-white text-sm font-semibold">{s.season}</Text>
-                    <Text className="text-slate-400 text-xs mt-0.5">{s.period}</Text>
+                    <Text className="text-foreground text-sm font-semibold">{s.seasonName}</Text>
+                    <Text className="text-slate-500 text-xs mt-0.5">
+                      {periodOf(s.seasonId)}
+                      {s.txHash ? ' · NFT trên Avalanche ↗' : ''}
+                    </Text>
                   </View>
                   <Badge
                     variant="outline"
@@ -103,7 +124,7 @@ export default function BadgesScreen() {
                     }}>
                     <Text style={{ color: rankColor }}>{RANK_LABELS[s.highestRank]}</Text>
                   </Badge>
-                </View>
+                </TouchableOpacity>
                 {idx < PAST_SEASONS.length - 1 ? <Separator /> : null}
               </View>
             );
@@ -112,7 +133,7 @@ export default function BadgesScreen() {
 
         {/* Info Note */}
         <Alert icon={Info}>
-          <AlertDescription className="text-slate-300">
+          <AlertDescription className="text-slate-600">
             Huy hiệu ghi lại hạng cao nhất bạn đạt được mỗi mùa. Thành tích không mất khi reset.
           </AlertDescription>
         </Alert>
