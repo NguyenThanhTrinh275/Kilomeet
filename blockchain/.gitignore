@@ -1,0 +1,20 @@
+# Bí mật: TUYỆT ĐỐI không đưa lên git
+.env
+
+# Cài lại được bằng `npm install --legacy-peer-deps`
+node_modules/
+
+# Hardhat sinh ra, tạo lại bằng `npm run compile`
+artifacts/
+cache/
+typechain-types/
+coverage/
+coverage.json
+dist/
+
+# Địa chỉ hợp đồng của node local, không có ý nghĩa với người khác
+deployments/localhost.json
+deployments/hardhat.json
+
+# LƯU Ý: KHÔNG ignore sdk/abi/ và deployments/fuji.json
+# vì backend cần hai thứ này để gọi hợp đồng.
