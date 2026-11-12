@@ -22,8 +22,15 @@ export function mockGetStoreDashboard(): StoreDashboard {
 }
 
 export function mockCreateVoucher(body: unknown): VoucherTemplate {
-  const { title, description, priceTokens, discountPercent, questDescription, questDiscountPercent, totalSupply, minRank, expiresAt } =
-    body as Omit<VoucherTemplate, 'id' | 'storeId' | 'storeName' | 'storeLatitude' | 'storeLongitude' | 'remaining' | 'imageUrl'>;
+  // FE mới gửi questType / quantity / expiryDate (dd/mm/yyyy) — nhận cả tên cũ như BE (quyết định #16).
+  const b = body as Partial<VoucherTemplate> & { questType?: string; quantity?: number; expiryDate?: string };
+  const { title = '', description = '', priceTokens = 0, discountPercent = 0, minRank = 'đồng' } = b;
+  const questDescription = b.questType ?? b.questDescription ?? null;
+  const questDiscountPercent = questDescription ? (b.questDiscountPercent ?? 0) : 0;
+  const totalSupply = b.quantity ?? b.totalSupply ?? 0;
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(b.expiryDate ?? '');
+  const expiresAt = b.expiresAt
+    ?? (m ? `${m[3]}-${m[2]!.padStart(2, '0')}-${m[1]!.padStart(2, '0')}T16:59:59.999Z` : new Date(Date.now() + 90 * 86_400_000).toISOString());
 
   const voucher: VoucherTemplate = {
     id: `vt-${Date.now()}`,

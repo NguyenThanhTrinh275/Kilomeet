@@ -55,7 +55,8 @@ export function mockCompleteQuest(body: unknown): Quest {
   const quests = getOrCreateQuests(userId);
   const quest = quests.find((q) => q.id === questId);
   if (!quest) throw new Error('Quest not found');
-  if (quest.status !== 'active') throw new Error('Quest already completed or expired');
+  // Idempotent như BE: đã xong thì trả lại quest, không báo lỗi.
+  if (quest.status !== 'active') return quest;
   quest.status = 'completed';
   quest.completedAt = new Date().toISOString();
   quest.progressKm = quest.targetKm;

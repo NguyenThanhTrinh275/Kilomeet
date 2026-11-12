@@ -1,10 +1,13 @@
 // KILOMeet — API Client
-// Currently routes to mock handlers. Swap to real backend with api.setBaseUrl().
+// EXPO_PUBLIC_API_URL rỗng → dùng mock. Có giá trị (vd. http://192.168.1.26:3000) → gọi BE thật.
 
 import type { ApiResponse } from './types';
 import { mockGet, mockPost, mockPut, mockDelete } from './mock/router';
 
-let baseUrl = '';
+const OFFLINE_MESSAGE = 'Không kết nối được máy chủ';
+
+let baseUrl = (process.env.EXPO_PUBLIC_API_URL ?? '').trim().replace(/\/+$/, '');
+let authToken: string | null = null;
 
 async function mockDelay(): Promise<void> {
   const { promise, resolve } = Promise.withResolvers<void>();
@@ -13,13 +16,22 @@ async function mockDelay(): Promise<void> {
 }
 
 async function realFetch<T>(method: string, endpoint: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${baseUrl}${endpoint}`, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const json = (await res.json()) as ApiResponse<T>;
-  if (!json.success) throw new Error(json.message ?? 'API error');
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+  let json: ApiResponse<T>;
+  try {
+    const res = await fetch(`${baseUrl}${endpoint}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    json = (await res.json()) as ApiResponse<T>;
+  } catch {
+    // Mất mạng, sai IP, hoặc server trả về thứ không phải JSON.
+    throw new Error(OFFLINE_MESSAGE);
+  }
+  if (!json.success) throw new Error(json.message ?? 'Có lỗi xảy ra');
   return json.data;
 }
 
@@ -58,6 +70,13 @@ export const api = {
   },
 
   setBaseUrl: (url: string) => {
-    baseUrl = url;
+    baseUrl = url.trim().replace(/\/+$/, '');
   },
+
+  /** JWT gửi kèm mọi request tới BE thật (`Authorization: Bearer`). */
+  setToken: (token: string | null) => {
+    authToken = token;
+  },
+
+  isMock: () => !baseUrl,
 };

@@ -7,11 +7,12 @@ import { useAuthStore } from '../src/stores/auth';
 export default function Index() {
   const user = useAuthStore((s) => s.user);
   const getHomeRoute = useAuthStore((s) => s.getHomeRoute);
+  const restoreSession = useAuthStore((s) => s.restoreSession);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    AsyncStorage.getItem('hasSeenOnboarding').then((v) => {
-      if (user) {
+    Promise.all([AsyncStorage.getItem('hasSeenOnboarding'), restoreSession()]).then(([v, restored]) => {
+      if (user || restored) {
         router.replace(getHomeRoute());
       } else if (v !== 'true') {
         router.replace('/(auth)/onboarding');
@@ -24,8 +25,8 @@ export default function Index() {
 
   if (checking) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0F172A', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#22C55E" />
+      <View style={{ flex: 1, backgroundColor: '#F4F6F9', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#16A34A" />
       </View>
     );
   }

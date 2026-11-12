@@ -152,6 +152,10 @@ export interface VoucherTemplate {
   minRank: Rank;
   expiresAt: string;
   imageUrl: string | null;
+  /** BE trả thêm: người đang đăng nhập có quyền giảm giá nhiệm vụ không (7 ngày, 1 lần/mẫu) */
+  myQuestEligible?: boolean;
+  /** BE trả thêm: giá thực sẽ trả nếu mua bây giờ */
+  myPrice?: number;
 }
 
 export interface OwnedVoucher {
@@ -201,6 +205,10 @@ export interface GroupRun {
   status: GroupStatus;
   members: GroupMember[];
   maxMembers: number;
+  /** BE trả thêm: giờ xuất phát tuyệt đối (ISO) */
+  startsAt?: string;
+  /** BE trả thêm: mốc đã xử lý gần nhất ('' | 'T-2h' | 'T-1h' | 'T-30m' | 'T-10m' | 'T' | 'T+10m' | 'end') */
+  milestone?: string;
 }
 
 // ─── Store Dashboard ────────────────────────────────────────────

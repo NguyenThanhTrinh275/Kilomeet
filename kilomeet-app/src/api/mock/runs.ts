@@ -1,6 +1,7 @@
 // Mock — Run handlers
 import type { Run } from '../types';
-import { getCurrentUserId } from './data';
+import { getCurrentUserId, getCurrentUser } from './data';
+import { mockGetQuests } from './quests';
 
 // Generate Minh's 20+ run history over past weeks
 function generateMinhRuns(): Run[] {
@@ -70,6 +71,18 @@ export function mockEndRun(body: unknown): Run {
   run.route = route;
   run.endedAt = new Date().toISOString();
   run.passedStoreIds = passedStoreIds;
+  // Giống BE: tự chấm nhiệm vụ ngày (≥ 2 km) và cộng token.
+  const daily = mockGetQuests().find((q) => q.type === 'daily' && q.status === 'active');
+  const user = getCurrentUser();
+  if (daily) {
+    daily.progressKm += distanceKm;
+    if (daily.progressKm >= daily.targetKm) {
+      daily.status = 'completed';
+      daily.completedAt = run.endedAt;
+      if (user && 'tokenBalance' in user) user.tokenBalance += daily.rewardTokens;
+    }
+  }
+  if (user && 'kmThisWeek' in user) user.kmThisWeek = Math.round((user.kmThisWeek + distanceKm) * 100) / 100;
   return run;
 }
 

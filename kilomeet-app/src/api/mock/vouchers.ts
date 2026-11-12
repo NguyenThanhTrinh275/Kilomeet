@@ -200,7 +200,10 @@ export function mockGiftVoucher(body: unknown): OwnedVoucher {
   if (voucher.status !== 'owned') throw new Error('Chỉ có thể tặng voucher chưa dùng');
   if (voucher.giftedFrom) throw new Error('Voucher đã được tặng một lần rồi');
 
-  voucher.ownerId = toUserId;
+  // Nhận email hoặc user ID như BE.
+  const recipient = Object.values(MOCK_RUNNERS).find((r) => r.email === toUserId.trim().toLowerCase() || r.id === toUserId);
+  if (!recipient) throw new Error('Không tìm thấy người nhận');
+  voucher.ownerId = recipient.id;
   voucher.giftedFrom = userId;
   voucher.status = 'gifted';
   return voucher;
