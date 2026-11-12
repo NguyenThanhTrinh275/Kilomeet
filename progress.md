@@ -22,7 +22,7 @@
 - [x] Chốt 14 điểm spec chưa rõ (11/11). Xem Mục 11 của hợp đồng API.
 - [x] Chốt stack (12/11): Fastify 5, Prisma 6, PostgreSQL 16 (Docker, cổng 5433), Zod 4, Vitest 3, node-cron 4, Hardhat 2 + OZ 5, ethers v6. Quyết định #15.
 - [x] Chốt 4 điểm A–D (12/11): BE chiều theo FE. Quyết định #16.
-- [x] Tạo `kilomeet-api/`, `contracts/`
+- [x] Tạo `kilomeet-api/`
 - [-] Chia việc: không cần (Claude + bạn làm hết)
 
 ## Giai đoạn 1 — Bộ khung (G1)
@@ -92,7 +92,7 @@
 - [x] `RunToken` (reward có khoá chống trùng, settleSeason theo hạng), `Voucher` (purchase đốt token, giftFor 1 lần, redeem + phí), `SeasonBadge` — 24 test qua
 - [x] Đã deploy Fuji (`blockchain/deployments/fuji.json`): mùa on-chain 2 đang mở, operator đủ quyền, còn ~0,4 AVAX
 - [ ] Thiếu file `blockchain/sdk/kilomeet.ts` (sdk/api.ts import nó) và 1 file test (README ghi 34 test, repo có 24) → nhờ người phụ trách blockchain push
-- [ ] `contracts/` (bản Claude viết trước khi có `blockchain/`) không còn dùng → xoá khi bạn đồng ý
+- [x] Đã xoá `contracts/` (bản Claude viết trước khi có `blockchain/`), 12/11
 - [ ] Lấy khoá ví operator từ người phụ trách blockchain → `CHAIN=fuji` chạy thật
 
 **Tích hợp chain trong BE**
