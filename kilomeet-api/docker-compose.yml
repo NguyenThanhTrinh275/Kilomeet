@@ -1,0 +1,23 @@
+# Postgres cho dev (DB kilomeet) và test (DB kilomeet_test).
+# Cổng 5433 để không đụng Postgres có sẵn trên máy (5432).
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: kilomeet-db
+    environment:
+      POSTGRES_USER: kilomeet
+      POSTGRES_PASSWORD: kilomeet
+      POSTGRES_DB: kilomeet
+      TZ: UTC
+    ports:
+      - "5433:5432"
+    volumes:
+      - kilomeet-db:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kilomeet"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+volumes:
+  kilomeet-db:
