@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KILOMeet Demo</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1b1f24; --mute:#6b7380; --line:#e3e6ea; --brand:#e84142; --ok:#1a8f4c; --warn:#b36b00; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171b; --card:#1d2126; --ink:#eef0f2; --mute:#97a0ac; --line:#2c3238; --brand:#ff5a5b; --ok:#3ecf7a; --warn:#f0a43c; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:880px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:16px; margin:0 0 10px; }
+  .sub { color:var(--mute); margin:0 0 18px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  input { flex:1; min-width:220px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); font:inherit; }
+  button { padding:9px 14px; border:0; border-radius:8px; background:var(--brand); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
+  button:disabled { opacity:.5; cursor:wait; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+  .stat { border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .stat b { display:block; font-size:26px; } .stat span { color:var(--mute); font-size:13px; }
+  .flash { animation:f 1.4s; } @keyframes f { 0%{background:rgba(232,65,66,.25)} 100%{background:transparent} }
+  .v { border:1px solid var(--line); border-radius:10px; padding:12px; margin-top:10px; }
+  .v h3 { margin:0 0 6px; font-size:15px; } .meta { color:var(--mute); font-size:13px; margin-bottom:8px; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:99px; font-size:12px; border:1px solid var(--line); margin-left:6px; }
+  .hold { color:var(--ok); border-color:var(--ok); }
+  .log { font-size:13px; } .log div { padding:6px 0; border-bottom:1px solid var(--line); }
+  .err { color:var(--brand); } a { color:var(--brand); } code { word-break:break-all; font-size:12px; }
+  .steps { color:var(--mute); font-size:14px; margin:0; padding-left:18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>KILOMeet · demo trực quan trên Avalanche Fuji</h1>
+  <p class="sub">Mọi số liệu dưới đây đọc thẳng từ blockchain. Mỗi lần bấm là một giao dịch thật, có link Snowtrace.</p>
+
+  <div class="card">
+    <h2>1. Địa chỉ ví của bạn</h2>
+    <div class="row">
+      <input id="addr" placeholder="Dán địa chỉ ví 0x... (ví Core của bạn)">
+      <button id="load" class="ghost">Xem</button>
+    </div>
+    <p class="sub" style="margin:8px 0 0">Token, voucher sẽ được ghi vào địa chỉ này. Chỉ cần địa chỉ công khai, không cần khóa riêng.</p>
+  </div>
+
+  <div class="card">
+    <h2>2. Tình trạng trên chuỗi</h2>
+    <div class="stats">
+      <div class="stat" id="s-season"><b>-</b><span>Mùa hiện tại</span></div>
+      <div class="stat" id="s-token"><b>-</b><span>Token RUN của bạn</span></div>
+      <div class="stat" id="s-held"><b>-</b><span>Voucher bạn đang giữ</span></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="give">Nhận 100 token (giả lập: đã hoàn thành nhiệm vụ)</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Voucher đang có trên blockchain</h2>
+    <div id="vouchers" class="sub">Đang tải...</div>
+  </div>
+
+  <div class="card">
+    <h2>Nhật ký giao dịch</h2>
+    <div id="log" class="log sub">Chưa có giao dịch nào.</div>
+  </div>
+
+  <div class="card">
+    <h2>Cách xem trọn một vòng đời voucher</h2>
+    <ol class="steps">
+      <li>Dán địa chỉ ví, bấm <b>Xem</b>.</li>
+      <li>Bấm <b>Nhận 100 token</b>, thấy số token tăng.</li>
+      <li>Bấm <b>Mua</b> ở một voucher: token bị <b>đốt</b> (giảm), voucher vào ví bạn, "đã bán" tăng.</li>
+      <li>Bấm <b>Dùng (quét QR)</b>: voucher bị <b>đốt</b> (số bạn giữ giảm), phí 5.000đ được ghi cho quán.</li>
+      <li>Bấm vào link Snowtrace ở nhật ký để thấy giao dịch đó công khai.</li>
+    </ol>
+  </div>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let last = {};
+$('#addr').value = localStorage.getItem('addr') || '';
+
+function short(a) { return a.slice(0, 6) + '…' + a.slice(-4); }
+function log(html, bad) {
+  const box = $('#log'); if (box.classList.contains('sub')) { box.classList.remove('sub'); box.innerHTML = ''; }
+  const d = document.createElement('div'); if (bad) d.className = 'err'; d.innerHTML = new Date().toLocaleTimeString() + ' · ' + html;
+  box.prepend(d);
+}
+async function call(path, body) {
+  const r = await fetch(path, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Lỗi'); return j;
+}
+function setStat(id, val) {
+  const el = $(id + ' b'); const changed = last[id] !== undefined && last[id] !== String(val);
+  el.textContent = val; last[id] = String(val);
+  if (changed) { const p = $(id); p.classList.remove('flash'); void p.offsetWidth; p.classList.add('flash'); }
+}
+async function refresh() {
+  const addr = $('#addr').value.trim(); localStorage.setItem('addr', addr);
+  try {
+    const s = await call('/api/state?addr=' + encodeURIComponent(addr));
+    setStat('#s-season', 'Mùa ' + s.season.season + (s.season.active ? ' (đang mở)' : ' (đã đóng)'));
+    setStat('#s-token', s.token);
+    setStat('#s-held', s.vouchers.reduce((n, v) => n + v.holding, 0));
+    window.__s = s;
+    const box = $('#vouchers'); box.className = ''; box.innerHTML = '';
+    if (!s.vouchers.length) box.innerHTML = '<span class="sub">Chưa có voucher.</span>';
+    s.vouchers.forEach((v) => {
+      const left = v.maxSupply - v.sold;
+      const d = document.createElement('div'); d.className = 'v';
+      d.innerHTML = `<h3>Voucher #${v.id}${v.holding ? `<span class="pill hold">bạn giữ ${v.holding}</span>` : ''}${v.onSale ? '' : '<span class="pill">tạm ngừng</span>'}</h3>
+        <div class="meta">Quán <code>${short(v.shop)}</code> · giá gốc <b>${v.price}</b> token${v.discountedPrice !== null ? ` · làm nhiệm vụ còn <b>${v.discountedPrice}</b>` : ''} · đã bán ${v.sold}/${v.maxSupply} (còn ${left})${v.expiry ? ' · hạn ' + new Date(v.expiry * 1000).toLocaleDateString() : ''}</div>
+        <div class="row">
+          <button data-a="buy" data-id="${v.id}" data-d="0">Mua giá gốc</button>
+          ${v.discountedPrice !== null ? `<button class="ghost" data-a="buy" data-id="${v.id}" data-d="1">Mua giá giảm (đã làm nhiệm vụ)</button>` : ''}
+          <button class="ghost" data-a="use" data-id="${v.id}" ${v.holding ? '' : 'disabled'}>Dùng (quán quét QR)</button>
+        </div>`;
+      box.appendChild(d);
+    });
+  } catch (e) { log(e.message, true); }
+}
+async function act(path, body, label) {
+  const btns = document.querySelectorAll('button'); btns.forEach((b) => (b.disabled = true));
+  log('⏳ ' + label + ' ... đang gửi lên chuỗi (vài giây)');
+  try {
+    const j = await call(path, body);
+    log('✅ ' + label + ' · <a target="_blank" href="' + j.tx.link + '">xem trên Snowtrace</a>');
+  } catch (e) { log('❌ ' + label + ': ' + e.message, true); }
+  btns.forEach((b) => (b.disabled = false)); await refresh();
+}
+function needAddr() { const a = $('#addr').value.trim(); if (!a) { log('Hãy dán địa chỉ ví trước', true); return null; } return a; }
+
+$('#load').onclick = refresh;
+$('#give').onclick = () => { const a = needAddr(); if (a) act('/api/give', { addr: a }, 'Phát 100 token'); };
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest('button[data-a]'); if (!b) return; const a = needAddr(); if (!a) return;
+  if (b.dataset.a === 'buy') act('/api/buy', { addr: a, id: b.dataset.id, discount: b.dataset.d === '1' }, 'Mua voucher #' + b.dataset.id + (b.dataset.d === '1' ? ' (giá giảm)' : ''));
+  else act('/api/use', { addr: a, id: b.dataset.id }, 'Dùng voucher #' + b.dataset.id);
+});
+refresh();
+</script>
+</body>
+</html>
