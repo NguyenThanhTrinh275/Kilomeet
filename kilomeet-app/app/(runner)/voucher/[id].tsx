@@ -8,6 +8,7 @@ import { toast } from 'sonner-native';
 import { colors } from '../../../src/theme/colors';
 import { useVoucherStore } from '../../../src/stores/voucher';
 import { useRunnerStore } from '../../../src/stores/runner';
+import { useAuthStore } from '../../../src/stores/auth';
 import { RANK_INDEX } from '../../../src/api/types';
 import type { VoucherTemplate } from '../../../src/api/types';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,8 @@ export default function VoucherDetailScreen() {
   const buyVoucher = useVoucherStore((s) => s.buyVoucher);
   const giftVoucher = useVoucherStore((s) => s.giftVoucher);
   const fetchMyVouchers = useVoucherStore((s) => s.fetchMyVouchers);
+  const fetchTemplates = useVoucherStore((s) => s.fetchTemplates);
+  const refreshMe = useAuthStore((s) => s.refreshMe);
   const tokenBalance = useRunnerStore((s) => s.tokenBalance);
   const rank = useRunnerStore((s) => s.rank);
   const runs = useRunnerStore((s) => s.runs);
@@ -54,16 +57,22 @@ export default function VoucherDetailScreen() {
     );
   }
 
+  // BE tự xét quyền giảm giá (7 ngày, mỗi mẫu 1 lần) và trả myQuestEligible/myPrice.
+  // Chế độ mock không có 2 field này → đoán theo lịch sử chạy như trước.
   const passedStoreIds = runs.flatMap((r) => r.passedStoreIds || []);
   const hasPassedStore = passedStoreIds.includes(template.storeId);
-  const questCompleted = ownedVoucher?.questCompletedAt != null || hasPassedStore;
+  const questCompleted = ownedVoucher
+    ? ownedVoucher.questCompletedAt != null
+    : (template.myQuestEligible ?? hasPassedStore);
 
   const hasQuestDiscount = template.questDiscountPercent > 0 && template.questDescription;
   const discountedPrice = hasQuestDiscount
     ? Math.round(template.priceTokens * (1 - template.questDiscountPercent / 100))
     : null;
 
-  const price = questCompleted && discountedPrice != null ? discountedPrice : template.priceTokens;
+  const price = ownedVoucher
+    ? ownedVoucher.paidTokens
+    : (template.myPrice ?? (questCompleted && discountedPrice != null ? discountedPrice : template.priceTokens));
 
   const handleBuy = async () => {
     if (RANK_INDEX[rank] < RANK_INDEX[template.minRank]) {
@@ -81,11 +90,11 @@ export default function VoucherDetailScreen() {
 
     setBuying(true);
     try {
-      await buyVoucher(template.id, questCompleted);
-      useRunnerStore.setState({ tokenBalance: tokenBalance - price });
-      await fetchMyVouchers();
+      const bought = await buyVoucher(template.id, questCompleted);
+      // Số dư lấy lại từ BE (BE trừ theo giá BE tự tính).
+      await Promise.all([fetchMyVouchers(), refreshMe().catch(() => undefined), fetchTemplates().catch(() => undefined)]);
       toast.success('Mua thành công 🎉', {
-        description: `Đã đổi ${price} token lấy voucher "${template.title}".`,
+        description: `Đã đổi ${bought.paidTokens} token lấy voucher "${template.title}".`,
         action: {
           label: 'Xem mã QR',
           onClick: () => router.replace('/(runner)/vouchers'),
@@ -104,7 +113,7 @@ export default function VoucherDetailScreen() {
     const trimmed = recipientId.trim();
     if (!trimmed) {
       toast.warning('Thiếu thông tin', {
-        description: 'Vui lòng nhập ID hoặc chọn tài khoản người nhận.',
+        description: 'Vui lòng nhập email người nhận.',
       });
       return;
     }
@@ -129,13 +138,13 @@ export default function VoucherDetailScreen() {
   return (
     <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
       {/* Header */}
-      <View className="flex-row items-center px-5 pt-3 pb-3 border-b border-slate-800">
+      <View className="flex-row items-center px-5 pt-3 pb-3 border-b border-border">
         <TouchableOpacity
           onPress={() => router.back()}
-          className="mr-3 w-9 h-9 items-center justify-center rounded-full bg-km-bg-secondary">
+          className="mr-3 w-9 h-9 items-center justify-center rounded-full bg-km-bg-secondary border border-border">
           <Ionicons name="arrow-back" size={20} color="white" />
         </TouchableOpacity>
-        <Text className="text-white text-lg font-bold flex-1">Chi tiết voucher</Text>
+        <Text className="text-foreground text-lg font-bold flex-1">Chi tiết voucher</Text>
       </View>
 
       <ScrollView className="flex-1 px-5 pt-4" contentContainerStyle={{ paddingBottom: 60 }}>
@@ -146,14 +155,14 @@ export default function VoucherDetailScreen() {
               <Ionicons name="storefront" size={24} color={colors.accent} />
             </View>
             <View className="flex-1">
-              <Text className="text-white font-bold text-lg">{template.storeName}</Text>
+              <Text className="text-foreground font-bold text-lg">{template.storeName}</Text>
               <Text className="text-muted-foreground text-xs mt-0.5">HSD: {template.expiresAt.slice(0, 10)}</Text>
             </View>
           </View>
 
           <View className="gap-1">
-            <Text className="text-white text-xl font-bold">{template.title}</Text>
-            <Text className="text-slate-300 text-sm leading-5">{template.description}</Text>
+            <Text className="text-foreground text-xl font-bold">{template.title}</Text>
+            <Text className="text-slate-600 text-sm leading-5">{template.description}</Text>
           </View>
         </Card>
 
@@ -161,13 +170,13 @@ export default function VoucherDetailScreen() {
         {template.questDescription && (
           <Card className="mb-4 gap-3">
             <View className="flex-row items-center justify-between">
-              <Text className="text-white font-bold text-base">Nhiệm vụ giảm giá</Text>
+              <Text className="text-foreground font-bold text-base">Nhiệm vụ giảm giá</Text>
               <Badge variant={questCompleted ? 'default' : 'secondary'}>
                 <Text>{questCompleted ? '✓ Đã hoàn thành' : 'Chưa hoàn thành'}</Text>
               </Badge>
             </View>
 
-            <View className="flex-row items-start bg-km-bg/80 rounded-xl p-3 border border-slate-800">
+            <View className="flex-row items-start bg-km-bg/80 rounded-xl p-3 border border-border">
               <Ionicons
                 name={questCompleted ? 'checkmark-circle' : 'flag-outline'}
                 size={20}
@@ -175,7 +184,7 @@ export default function VoucherDetailScreen() {
                 style={{ marginTop: 1 }}
               />
               <View className="ml-2.5 flex-1">
-                <Text className="text-slate-200 text-sm">{template.questDescription}</Text>
+                <Text className="text-slate-700 text-sm">{template.questDescription}</Text>
                 <Text className="text-km-accent text-xs font-semibold mt-1">
                   Giảm {template.questDiscountPercent}% khi hoàn thành
                 </Text>
@@ -194,24 +203,24 @@ export default function VoucherDetailScreen() {
 
         {/* Price & Rank Card */}
         <Card className="mb-4 gap-3">
-          <Text className="text-white font-bold text-base">Thông tin giá & điều kiện</Text>
+          <Text className="text-foreground font-bold text-base">Thông tin giá & điều kiện</Text>
           <View className="flex-row items-baseline">
             {discountedPrice != null && questCompleted && (
               <Text className="text-slate-500 text-lg line-through mr-3">{template.priceTokens} token</Text>
             )}
             <Text className="text-km-accent text-3xl font-extrabold">{price}</Text>
-            <Text className="text-slate-300 text-base font-semibold ml-1.5">token</Text>
+            <Text className="text-slate-600 text-base font-semibold ml-1.5">token</Text>
           </View>
 
           <Separator />
 
           <View className="flex-row items-center justify-between">
             <Text className="text-muted-foreground text-xs">Yêu cầu hạng:</Text>
-            <Text className="text-white text-xs font-bold uppercase">{template.minRank}+</Text>
+            <Text className="text-foreground text-xs font-bold uppercase">{template.minRank}+</Text>
           </View>
           <View className="flex-row items-center justify-between">
             <Text className="text-muted-foreground text-xs">Số lượng còn lại:</Text>
-            <Text className="text-white text-xs font-bold">{template.remaining}/{template.totalSupply}</Text>
+            <Text className="text-foreground text-xs font-bold">{template.remaining}/{template.totalSupply}</Text>
           </View>
         </Card>
 
@@ -219,7 +228,7 @@ export default function VoucherDetailScreen() {
         {ownedVoucher && (
           <Card className="mb-4 items-center gap-4">
             <View className="flex-row items-center justify-between w-full">
-              <Text className="text-white font-bold text-base">Mã QR sử dụng</Text>
+              <Text className="text-foreground font-bold text-base">Mã QR sử dụng</Text>
               <Badge variant={ownedVoucher.status === 'used' ? 'secondary' : 'default'}>
                 <Text>{ownedVoucher.status === 'used' ? 'Đã sử dụng' : 'Có thể dùng'}</Text>
               </Badge>
@@ -261,10 +270,10 @@ export default function VoucherDetailScreen() {
             <View className="w-10 h-10 rounded-full bg-km-accent/15 items-center justify-center mr-3 border border-km-accent/30">
               <Ionicons name="gift" size={20} color={colors.accent} />
             </View>
-            <Text className="text-white text-xl font-bold">Tặng voucher</Text>
+            <Text className="text-foreground text-xl font-bold">Tặng voucher</Text>
           </View>
 
-          <Text className="text-slate-300 text-xs leading-5">
+          <Text className="text-slate-600 text-xs leading-5">
             Voucher chỉ được tặng một lần duy nhất. Sau khi tặng, bạn sẽ không còn quyền sử dụng mã này.
           </Text>
 
@@ -274,22 +283,23 @@ export default function VoucherDetailScreen() {
               variant="outline"
               size="sm"
               className="self-start"
-              onPress={() => setRecipientId('user-minh')}>
-              <Text className="text-km-primary">+ Chọn: Trần Minh (user-minh)</Text>
+              onPress={() => setRecipientId('lan@demo.com')}>
+              <Text className="text-km-primary">+ Chọn: Nguyễn Lan (lan@demo.com)</Text>
             </Button>
           </View>
 
           <View className="gap-1.5">
-            <Label>Hoặc nhập User ID người nhận:</Label>
+            <Label>Hoặc nhập email người nhận:</Label>
             <View className="bg-km-bg rounded-xl px-4 h-12 border border-border flex-row items-center">
               <Ionicons name="person-outline" size={18} color={colors.textSecondary} />
               <BottomSheetTextInput
-                className="flex-1 text-white text-sm ml-2.5"
-                placeholder="VD: user-minh"
+                className="flex-1 text-foreground text-sm ml-2.5"
+                placeholder="VD: lan@demo.com"
                 placeholderTextColor={colors.textMuted}
                 value={recipientId}
                 onChangeText={setRecipientId}
                 autoCapitalize="none"
+                keyboardType="email-address"
               />
             </View>
           </View>

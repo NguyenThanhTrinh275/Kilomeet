@@ -39,7 +39,8 @@ export default function VouchersScreen() {
               ? Math.round(t.priceTokens * (1 - t.questDiscountPercent / 100))
               : undefined,
           questDescription: t.questDescription ?? undefined,
-          questCompleted: passedStoreIds.includes(t.storeId),
+          // BE trả myQuestEligible (7 ngày, 1 lần/mẫu); mock thì đoán theo lịch sử chạy.
+          questCompleted: t.myQuestEligible ?? passedStoreIds.includes(t.storeId),
           minRank: t.minRank,
         }))
       : myVouchers.map((v) => ({
@@ -63,7 +64,7 @@ export default function VouchersScreen() {
     <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
       {/* Header */}
       <View className="px-5 pt-4 pb-3 gap-4">
-        <Text className="text-white text-2xl font-bold">Voucher</Text>
+        <Text className="text-foreground text-2xl font-bold">Voucher</Text>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as 'all' | 'mine')}>
           <TabsList className="w-full">

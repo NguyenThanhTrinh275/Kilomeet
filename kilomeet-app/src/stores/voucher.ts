@@ -11,6 +11,7 @@ interface VoucherState {
   fetchTemplates: (storeId?: string) => Promise<void>;
   fetchMyVouchers: () => Promise<void>;
   buyVoucher: (templateId: string, questCompleted?: boolean) => Promise<OwnedVoucher>;
+  /** `toUserId`: email (hoặc user ID) người nhận */
   giftVoucher: (voucherId: string, toUserId: string) => Promise<void>;
 }
 
@@ -21,15 +22,23 @@ export const useVoucherStore = create<VoucherState>((set) => ({
 
   fetchTemplates: async (storeId) => {
     set({ isLoading: true });
-    const params = storeId ? { storeId } : undefined;
-    const templates = await api.get<VoucherTemplate[]>('/vouchers', params);
-    set({ templates, isLoading: false });
+    try {
+      const params = storeId ? { storeId } : undefined;
+      const templates = await api.get<VoucherTemplate[]>('/vouchers', params);
+      set({ templates });
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
   fetchMyVouchers: async () => {
     set({ isLoading: true });
-    const myVouchers = await api.get<OwnedVoucher[]>('/vouchers/mine');
-    set({ myVouchers, isLoading: false });
+    try {
+      const myVouchers = await api.get<OwnedVoucher[]>('/vouchers/mine');
+      set({ myVouchers });
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
   buyVoucher: async (templateId, questCompleted) => {
