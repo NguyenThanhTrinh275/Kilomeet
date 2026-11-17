@@ -1,21 +1,31 @@
-import { View, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertCircle } from 'lucide-react-native';
 import * as Location from 'expo-location';
-import { colors } from '../../src/theme/colors';
+import MapView, { Marker } from 'react-native-maps';
+import { AlertCircle, Check, Clock, Crosshair, Footprints, Info, Lock, Mail, MapPin as MapPinIcon, Sparkles, Store, User, Wallet } from 'lucide-react-native';
 import { useAuthStore } from '../../src/stores/auth';
-import { FormInput } from '@/components/ui/form-input';
-import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { C, GAME_MAP_STYLE, TONE } from '../../src/theme/game';
+import {
+  Banner,
+  Body,
+  Card,
+  GButton,
+  GFormInput,
+  GText,
+  IconTile,
+  MapPin,
+  Row,
+  Screen,
+  Toggle,
+  TopBar,
+} from '../../src/components/game';
 
 type Role = 'runner' | 'store';
+const HCMUT = { latitude: 10.7722, longitude: 106.6596 };
 
 const registerSchema = z.object({
   name: z.string().trim().min(2, 'Nhập tối thiểu 2 ký tự'),
@@ -27,11 +37,37 @@ const registerSchema = z.object({
 
 type RegisterForm = z.infer<typeof registerSchema>;
 
+function ClassCard({ on, tone, icon, title, desc, onPress }: { on: boolean; tone: 'green' | 'orange'; icon: typeof Store; title: string; desc: string; onPress: () => void }) {
+  return (
+    <Card onPress={onPress} pad={14} gap={8} fill={on ? TONE[tone][300] : C.surface} style={{ flex: 1 }}>
+      <Row between>
+        <IconTile icon={icon} size={48} iconSize={26} fill={on ? TONE[tone][500] : C.sunken} radius={14} sw={2.5} depth="small" />
+        <View style={{ width: 24, height: 24, borderRadius: 24, borderWidth: 2, borderColor: C.ink900, backgroundColor: on ? C.ink900 : C.surface, alignItems: 'center', justifyContent: 'center' }}>
+          {on ? <Check size={14} color={C.white} strokeWidth={3} /> : null}
+        </View>
+      </Row>
+      <GText v="titleS">{title}</GText>
+      <GText v="bodyS" color={C.ink500}>
+        {desc}
+      </GText>
+    </Card>
+  );
+}
+
 export default function RegisterScreen() {
   const [role, setRole] = useState<Role>('runner');
   const [storePos, setStorePos] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [allowLocation, setAllowLocation] = useState(true);
+  const register = useAuthStore((s) => s.register);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const error = useAuthStore((s) => s.error);
+
+  const { control, handleSubmit } = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { name: '', email: '', password: '', storeName: '', storeAddress: '' },
+  });
 
   const pickStoreLocation = async () => {
     setLocating(true);
@@ -47,14 +83,6 @@ export default function RegisterScreen() {
       setLocating(false);
     }
   };
-  const register = useAuthStore((s) => s.register);
-  const isLoading = useAuthStore((s) => s.isLoading);
-  const error = useAuthStore((s) => s.error);
-
-  const { control, handleSubmit } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: { name: '', email: '', password: '', storeName: '', storeAddress: '' },
-  });
 
   const onSubmit = handleSubmit(async ({ email, name, password, storeName, storeAddress }) => {
     setLocalError(null);
@@ -62,13 +90,11 @@ export default function RegisterScreen() {
       setLocalError('Vui lòng nhập tên quán, địa chỉ và lấy vị trí quán');
       return;
     }
+    if (role === 'runner' && allowLocation) {
+      Location.requestForegroundPermissionsAsync().catch(() => undefined);
+    }
     try {
-      await register(
-        email,
-        name,
-        password,
-        role === 'store' ? { role, storeName, storeAddress, ...storePos! } : { role },
-      );
+      await register(email, name, password, role === 'store' ? { role, storeName, storeAddress, ...storePos! } : { role });
     } catch {
       return;
     }
@@ -78,146 +104,78 @@ export default function RegisterScreen() {
     else router.replace('/(runner)');
   });
 
+  const pos = storePos ?? HCMUT;
+
   return (
-    <SafeAreaView className="flex-1 bg-km-bg">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1">
-        <ScrollView className="flex-1 px-6" contentContainerStyle={{ justifyContent: 'center', flexGrow: 1 }}>
-          {/* Header */}
-          <View className="flex-row items-center mb-8">
-            <TouchableOpacity onPress={() => router.back()} className="mr-4">
-              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-            <Text className="text-foreground text-2xl font-bold">Đăng ký</Text>
-          </View>
+    <Screen>
+      <TopBar title="Tạo tài khoản" action={Info} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <Body gap={16}>
+          <GText v="caps" color={C.ink500}>
+            Bạn là ai?
+          </GText>
+          <Row gap={12} center={false}>
+            <ClassCard on={role === 'runner'} tone="green" icon={Footprints} title="Người chạy" desc="Chạy, làm nhiệm vụ, nhận token" onPress={() => setRole('runner')} />
+            <ClassCard on={role === 'store'} tone="orange" icon={Store} title="Đối tác" desc="Tạo voucher, đón khách chạy ngang quán" onPress={() => setRole('store')} />
+          </Row>
 
-          {/* Role Selector */}
-          <View className="mb-6">
-            <Text className="text-muted-foreground text-sm mb-3">Bạn là</Text>
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                className={`flex-1 h-16 rounded-xl items-center justify-center border ${
-                  role === 'runner'
-                    ? 'bg-km-primary/10 border-km-primary'
-                    : 'bg-km-bg-secondary border-km-surface-light'
-                }`}
-                onPress={() => setRole('runner')}>
-                <Ionicons
-                  name="footsteps"
-                  size={20}
-                  color={role === 'runner' ? colors.primary : colors.textMuted}
-                />
-                <Text className={`text-sm mt-1 ${role === 'runner' ? 'text-km-primary font-semibold' : 'text-slate-500'}`}>
-                  Người chạy
-                </Text>
-              </TouchableOpacity>
+          <GFormInput control={control} name="name" label={role === 'store' ? 'Tên chủ quán' : 'Họ tên'} icon={User} placeholder="Nguyễn Văn A" />
+          {role === 'store' ? (
+            <>
+              <GFormInput control={control} name="storeName" label="Tên cửa hàng" icon={Store} placeholder="VD: Fuji Coffee" />
+              <GFormInput control={control} name="storeAddress" label="Địa chỉ" icon={MapPinIcon} placeholder="VD: 268 Lý Thường Kiệt, Q.10" />
+            </>
+          ) : null}
+          <GFormInput control={control} name="email" label="Email" icon={Mail} placeholder="email@example.com" keyboardType="email-address" autoCapitalize="none" />
+          <GFormInput control={control} name="password" label="Mật khẩu" icon={Lock} placeholder="Tối thiểu 6 ký tự" secureTextEntry />
 
-              <TouchableOpacity
-                className={`flex-1 h-16 rounded-xl items-center justify-center border ${
-                  role === 'store'
-                    ? 'bg-km-accent/10 border-km-accent'
-                    : 'bg-km-bg-secondary border-km-surface-light'
-                }`}
-                onPress={() => setRole('store')}>
-                <Ionicons
-                  name="storefront"
-                  size={20}
-                  color={role === 'store' ? colors.accent : colors.textMuted}
-                />
-                <Text className={`text-sm mt-1 ${role === 'store' ? 'text-km-accent font-semibold' : 'text-slate-500'}`}>
-                  Cửa hàng
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          {role === 'store' ? (
+            <>
+              <Card pad={10} gap={10}>
+                <View style={{ height: 150, borderRadius: 14, borderWidth: 2, borderColor: C.ink900, overflow: 'hidden' }}>
+                  <MapView
+                    style={{ flex: 1 }}
+                    customMapStyle={GAME_MAP_STYLE}
+                    region={{ ...pos, latitudeDelta: 0.006, longitudeDelta: 0.006 }}
+                    scrollEnabled={false}
+                    zoomEnabled={false}
+                    pitchEnabled={false}
+                    rotateEnabled={false}>
+                    {storePos ? (
+                      <Marker coordinate={storePos} anchor={{ x: 0.5, y: 1 }}>
+                        <MapPin kind="store" />
+                      </Marker>
+                    ) : null}
+                  </MapView>
+                </View>
+                <Row gap={8} style={{ paddingHorizontal: 4 }}>
+                  <Crosshair size={18} color={storePos ? C.green700 : C.ink500} strokeWidth={2.5} />
+                  <GText v="bodyMStrong" style={{ flex: 1 }}>
+                    {storePos ? `${storePos.latitude.toFixed(4)}, ${storePos.longitude.toFixed(4)}` : 'Chưa có vị trí quán'}
+                  </GText>
+                </Row>
+                <GButton label="Lấy vị trí quán (đứng tại quán)" type="secondary" size="M" icon={Crosshair} loading={locating} onPress={() => void pickStoreLocation()} block />
+              </Card>
+              <Banner icon={Clock} tone="coin" iconColor={C.ink900} text="Sau khi đăng ký, quán sẽ chờ quản trị duyệt trước khi tạo voucher." />
+            </>
+          ) : (
+            <>
+              <Banner icon={Wallet} tone="sky" title="Ví Avalanche tự tạo" text="Token & voucher của bạn nằm trên chuỗi Fuji." />
+              <Card row pad={12} gap={10} depth="none" sw={2} radius={14}>
+                <MapPinIcon size={22} color={C.green700} strokeWidth={2.5} />
+                <GText v="bodyMStrong" style={{ flex: 1 }}>
+                  Cho phép dùng vị trí khi chạy
+                </GText>
+                <Toggle value={allowLocation} onChange={setAllowLocation} />
+              </Card>
+            </>
+          )}
 
-          {/* Form */}
-          <View className="gap-4">
-            <FormInput
-              control={control}
-              name="name"
-              label="Họ tên"
-              placeholder="Nguyễn Văn A"
-              inputClassName="h-14"
-              leftIcon={<Ionicons name="person-outline" size={20} color={colors.textMuted} />}
-            />
+          {localError || error ? <Banner icon={AlertCircle} tone="red" text={localError ?? error ?? ''} /> : null}
 
-            <FormInput
-              control={control}
-              name="email"
-              label="Email"
-              placeholder="email@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              inputClassName="h-14"
-              leftIcon={<Ionicons name="mail-outline" size={20} color={colors.textMuted} />}
-            />
-
-            <FormInput
-              control={control}
-              name="password"
-              label="Mật khẩu"
-              placeholder="Tối thiểu 6 ký tự"
-              secureTextEntry
-              inputClassName="h-14"
-              leftIcon={<Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />}
-            />
-
-            {role === 'store' && (
-              <>
-                <FormInput
-                  control={control}
-                  name="storeName"
-                  label="Tên cửa hàng"
-                  placeholder="VD: Fuji Coffee"
-                  inputClassName="h-14"
-                  leftIcon={<Ionicons name="storefront-outline" size={20} color={colors.textMuted} />}
-                />
-                <FormInput
-                  control={control}
-                  name="storeAddress"
-                  label="Địa chỉ"
-                  placeholder="VD: 268 Lý Thường Kiệt, Q.10"
-                  inputClassName="h-14"
-                  leftIcon={<Ionicons name="location-outline" size={20} color={colors.textMuted} />}
-                />
-                <Button variant="outline" onPress={() => void pickStoreLocation()} disabled={locating}>
-                  <Ionicons name="navigate-outline" size={18} color={colors.primary} />
-                  <Text>
-                    {locating
-                      ? 'Đang lấy vị trí...'
-                      : storePos
-                        ? `Vị trí quán: ${storePos.latitude.toFixed(5)}, ${storePos.longitude.toFixed(5)}`
-                        : 'Lấy vị trí quán (đứng tại quán)'}
-                  </Text>
-                </Button>
-                <Text className="text-slate-500 text-xs">
-                  Cửa hàng mới cần quản trị viên duyệt trước khi tạo voucher. Vị trí dùng để xác minh nhiệm vụ "chạy ngang qua quán" (50 m).
-                </Text>
-              </>
-            )}
-
-            {localError || error ? (
-              <Alert icon={AlertCircle} variant="destructive">
-                <AlertDescription>{localError ?? error}</AlertDescription>
-              </Alert>
-            ) : null}
-
-            <Button size="lg" className="mt-2" onPress={() => void onSubmit()} disabled={isLoading}>
-              <Text>{isLoading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}</Text>
-            </Button>
-
-            {/* Wallet note */}
-            <View className="flex-row items-center bg-km-bg-secondary border border-border rounded-xl p-4 mt-2">
-              <Ionicons name="wallet-outline" size={20} color={colors.primary} />
-              <Text className="text-muted-foreground text-xs ml-3 flex-1">
-                Ví Avalanche sẽ được tạo tự động khi đăng ký. Bạn không cần chuẩn bị gì thêm.
-              </Text>
-            </View>
-          </View>
-        </ScrollView>
+          <GButton label="Tạo tài khoản" type="accent" icon={Sparkles} loading={isLoading} onPress={() => void onSubmit()} block />
+        </Body>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }

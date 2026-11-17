@@ -5,7 +5,7 @@ export default function RunnerLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#F4F6F9' },
+        contentStyle: { backgroundColor: '#FFF5E1' },
         animation: 'ios_from_right',
       }}
     >
@@ -15,6 +15,8 @@ export default function RunnerLayout() {
       <Stack.Screen name="voucher/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="groups/create" options={{ headerShown: false }} />
       <Stack.Screen name="groups/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="store/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="season-result" options={{ headerShown: false, animation: 'fade' }} />
     </Stack>
   );
 }

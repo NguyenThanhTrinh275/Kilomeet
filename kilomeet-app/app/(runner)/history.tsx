@@ -1,76 +1,45 @@
-import { View, RefreshControl, TouchableOpacity } from 'react-native';
-import { useState, useCallback, useEffect } from 'react';
-import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { FlashList } from '@shopify/flash-list';
-import { colors } from '../../src/theme/colors';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { RefreshControl, View } from 'react-native';
+import { Calendar, Check, Footprints, Store } from 'lucide-react-native';
 import { useRunnerStore } from '../../src/stores/runner';
-import { DAILY_QUEST_KM } from '../../src/api/types';
-import type { Run } from '../../src/api/types';
-import { EmptyState } from '../../src/components/common/EmptyState';
-import { Text } from '@/components/ui/text';
-import { Card } from '@/components/ui/card';
+import { DAILY_QUEST_KM, type Run } from '../../src/api/types';
+import { C } from '../../src/theme/game';
+import { fmtDayMonth, fmtKm, fmtMinutes, fmtPace, fmtTime, fmtWeekday } from '../../src/lib/format';
+import { Body, Card, EmptyState, GText, Pill, RouteThumb, Row, Screen, SectionHeader, TopBar } from '../../src/components/game';
 
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return `${dd}/${mm}/${d.getFullYear()}`;
+const DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+/** Thứ Hai 00:00 giờ VN của tuần hiện tại (ms). */
+function weekStartVN(now = Date.now()) {
+  const vn = new Date(now + 7 * 3600_000);
+  const dow = (vn.getUTCDay() + 6) % 7; // 0 = T2
+  return Date.UTC(vn.getUTCFullYear(), vn.getUTCMonth(), vn.getUTCDate() - dow) - 7 * 3600_000;
 }
 
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-function formatDuration(minutes: number): string {
-  const m = Math.floor(minutes);
-  const s = Math.round((minutes - m) * 60);
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-function formatPace(pace: number): string {
-  if (!pace || !isFinite(pace)) return '--:-- /km';
-  const m = Math.floor(pace);
-  const s = Math.round((pace - m) * 60);
-  return `${m}:${String(s).padStart(2, '0')} /km`;
-}
-
-function RunCard({ run }: { run: Run }) {
-  const meetsQuest = run.distanceKm >= DAILY_QUEST_KM;
-
+function RunCard({ run, i }: { run: Run; i: number }) {
+  const quest = run.distanceKm >= DAILY_QUEST_KM;
+  const stores = run.passedStoreIds?.length ?? 0;
   return (
-    <Card className="mb-3 gap-3">
-      <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center">
-          <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-          <Text className="text-muted-foreground text-sm ml-1.5">{formatDate(run.startedAt)}</Text>
-          <Text className="text-slate-500 text-sm mx-2">·</Text>
-          <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
-          <Text className="text-muted-foreground text-sm ml-1">{formatTime(run.startedAt)}</Text>
-        </View>
-        {meetsQuest && (
-          <View className="bg-km-primary/20 rounded-full w-7 h-7 items-center justify-center">
-            <Ionicons name="checkmark" size={18} color={colors.primary} />
-          </View>
-        )}
+    <Card row pad={12} gap={12}>
+      <RouteThumb seed={i} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <GText v="bodyS" color={C.ink500}>
+          {fmtWeekday(run.startedAt)} · {fmtTime(run.startedAt)}
+        </GText>
+        <GText v="numM">{fmtKm(run.distanceKm, 2)} km</GText>
+        <GText v="bodyS" color={C.ink700}>
+          {fmtMinutes(run.durationMinutes)} · {fmtPace(run.avgPaceMinPerKm)}/km
+        </GText>
+        {stores ? (
+          <Row gap={4}>
+            <Store size={12} color={C.grape700} strokeWidth={2.5} />
+            <GText v="bodyS" color={C.grape700}>
+              Qua {stores} quán
+            </GText>
+          </Row>
+        ) : null}
       </View>
-
-      <View className="flex-row justify-between">
-        <View className="items-center flex-1">
-          <Text className="text-foreground text-lg font-bold">{run.distanceKm.toFixed(1)}</Text>
-          <Text className="text-muted-foreground text-xs">km</Text>
-        </View>
-        <View className="items-center flex-1">
-          <Text className="text-foreground text-lg font-bold">{formatDuration(run.durationMinutes)}</Text>
-          <Text className="text-muted-foreground text-xs">thời gian</Text>
-        </View>
-        <View className="items-center flex-1">
-          <Text className="text-foreground text-lg font-bold">{formatPace(run.avgPaceMinPerKm)}</Text>
-          <Text className="text-muted-foreground text-xs">tốc độ</Text>
-        </View>
-      </View>
+      {quest ? <Pill tone="green" label="NV ngày" icon={Check} /> : <Pill tone="coin" label="Chưa đủ 2 km" />}
     </Card>
   );
 }
@@ -80,45 +49,77 @@ export default function HistoryScreen() {
   const { runs, fetchRuns } = useRunnerStore();
 
   useEffect(() => {
-    fetchRuns();
+    fetchRuns().catch(() => undefined);
   }, [fetchRuns]);
-
-  const sorted = [...runs].sort(
-    (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
-  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchRuns();
+    await fetchRuns().catch(() => undefined);
     setRefreshing(false);
   }, [fetchRuns]);
 
-  return (
-    <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
-      {/* Header */}
-      <View className="flex-row items-center px-5 pt-4 pb-4">
-        <TouchableOpacity
-          className="w-10 h-10 bg-km-bg-secondary border border-border rounded-full items-center justify-center mr-3"
-          onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text className="text-foreground text-xl font-bold">Lịch sử chạy</Text>
-      </View>
+  const sorted = useMemo(() => [...runs].sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt)), [runs]);
+  const start = weekStartVN();
+  const week = sorted.filter((r) => Date.parse(r.startedAt) >= start);
+  const perDay = DAYS.map((_, d) => week.filter((r) => Math.floor((Date.parse(r.startedAt) - start) / 86_400_000) === d).reduce((s, r) => s + r.distanceKm, 0));
+  const weekKm = perDay.reduce((a, b) => a + b, 0);
+  const weekMin = week.reduce((s, r) => s + r.durationMinutes, 0);
+  const max = Math.max(5, ...perDay);
+  const todayIdx = Math.floor((Date.now() - start) / 86_400_000);
 
-      <View className="flex-1">
-        <FlashList
-          data={sorted}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <RunCard run={item} />}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-          }
-          ListEmptyComponent={
-            <EmptyState type="runs" message="Chưa có buổi chạy nào" />
-          }
-        />
-      </View>
-    </SafeAreaView>
+  return (
+    <Screen>
+      <TopBar title="Lịch sử chạy" action={Calendar} />
+      <Body refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.green700} />}>
+        <Card fill={C.sky300} gap={12}>
+          <Row between>
+            <GText v="caps" color={C.sky700}>
+              Tuần này
+            </GText>
+            <Pill tone="ink" label={`${fmtDayMonth(new Date(start).toISOString())} – ${fmtDayMonth(new Date(start + 6 * 86_400_000).toISOString())}`} />
+          </Row>
+          <Row gap={8}>
+            {[
+              [fmtKm(weekKm), 'km'],
+              [String(week.length), 'buổi'],
+              [weekKm > 0 ? fmtPace(weekMin / weekKm) : `--'--"`, 'pace TB'],
+            ].map(([v, l]) => (
+              <View key={l} style={{ flex: 1 }}>
+                <GText v="numL">{v}</GText>
+                <GText v="bodyS" color={C.ink700}>
+                  {l}
+                </GText>
+              </View>
+            ))}
+          </Row>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 110, gap: 10, paddingHorizontal: 4 }}>
+            {perDay.map((km, d) => (
+              <View key={d} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+                <View
+                  style={{
+                    width: 26,
+                    height: Math.max(6, (km / max) * 84),
+                    borderRadius: 8,
+                    backgroundColor: km <= 0 ? C.sunken : km === Math.max(...perDay) ? C.coin500 : C.sky500,
+                    borderWidth: 2,
+                    borderColor: C.ink900,
+                  }}
+                />
+                <GText v="caps" color={d === todayIdx ? C.ink900 : C.ink700} style={{ fontSize: 10 }}>
+                  {DAYS[d]}
+                </GText>
+              </View>
+            ))}
+          </View>
+        </Card>
+
+        <SectionHeader title="Các buổi chạy" link={`${runs.length} buổi`} linkColor={C.ink500} />
+        {sorted.length === 0 ? (
+          <EmptyState icon={Footprints} title="Chưa có buổi chạy nào" text="Bấm nút CHẠY ở giữa thanh tab để bắt đầu." tone={C.green300} />
+        ) : (
+          sorted.map((r, i) => <RunCard key={r.id} run={r} i={i} />)
+        )}
+      </Body>
+    </Screen>
   );
 }

@@ -1,31 +1,17 @@
-import { View, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { useEffect, useState } from 'react';
-import { api } from '../../src/api/client';
+import { Linking, View } from 'react-native';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Info } from 'lucide-react-native';
+import { ChevronRight, Clock, Flame, Info, Lock, Trophy, Users } from 'lucide-react-native';
+import { toast } from 'sonner-native';
+import { api } from '../../src/api/client';
 import { useAuthStore } from '../../src/stores/auth';
-import { colors } from '../../src/theme/colors';
-import { RankBadge } from '../../src/components/common/RankBadge';
+import { useRunnerStore } from '../../src/stores/runner';
 import type { Rank, Runner } from '../../src/api/types';
-import { Text } from '@/components/ui/text';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-
-const RANK_LABELS: Record<Rank, string> = {
-  đồng: 'Đồng',
-  bạc: 'Bạc',
-  vàng: 'Vàng',
-  bạch_kim: 'Bạch Kim',
-  kim_cương: 'Kim Cương',
-  cao_thủ: 'Cao Thủ',
-};
+import { C, RANK_LABEL } from '../../src/theme/game';
+import { Body, Card, GText, IconTile, Pill, RankEmblem, Row, Screen, SectionHeader, TopBar, XPBar } from '../../src/components/game';
 
 /** GET /me/badges */
-interface ApiBadge {
+export interface ApiBadge {
   seasonId: string;
   seasonName: string;
   highestRank: Rank;
@@ -33,13 +19,13 @@ interface ApiBadge {
   current: boolean;
 }
 
-const SEASON_PERIOD: Record<string, string> = { '1': 'Tháng 1-4', '2': 'Tháng 5-8', '3': 'Tháng 9-12' };
-const periodOf = (seasonId: string) => SEASON_PERIOD[seasonId.split('-')[2] ?? ''] ?? '';
 const EXPLORER = 'https://testnet.snowtrace.io/tx/';
 
 export default function BadgesScreen() {
   const user = useAuthStore((s) => s.user);
+  const season = useRunnerStore((s) => s.season);
   const isRunner = user?.role === 'runner' || user?.role === 'member';
+  const runner = isRunner ? (user as Runner) : null;
   const [badges, setBadges] = useState<ApiBadge[]>([]);
 
   useEffect(() => {
@@ -48,96 +34,119 @@ export default function BadgesScreen() {
   }, [isRunner]);
 
   const current = badges.find((b) => b.current);
-  const currentBadge = current?.highestRank ?? (isRunner ? (user as Runner).seasonBadge : null);
-  const PAST_SEASONS = badges.filter((b) => !b.current);
+  const currentBadge = current?.highestRank ?? runner?.seasonBadge ?? null;
+  const past = badges.filter((b) => !b.current);
+  const slots = Math.max(3, Math.ceil(past.length / 3) * 3);
+  const seasonPct = season ? Math.min(1, (Date.now() - Date.parse(season.startDate)) / (Date.parse(season.endDate) - Date.parse(season.startDate))) : 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
-      {/* Header */}
-      <View className="flex-row items-center px-4 py-3">
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text className="text-foreground text-xl font-bold ml-3">Huy hiệu mùa</Text>
-      </View>
-
-      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* Current Season */}
-        <Card className="p-5 mb-4 gap-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-foreground text-base font-bold">{current?.seasonName ?? 'Mùa hiện tại'}</Text>
-            <Badge variant="default">
-              <Text>Hiện tại</Text>
-            </Badge>
+    <Screen>
+      <TopBar title="Huy hiệu mùa" action={Info} onAction={() => toast.info('Huy hiệu là NFT không chuyển được, ghi hạng cao nhất mỗi mùa.')} />
+      <Body>
+        <Card row fill={C.coin300} gap={14} pad={16}>
+          {currentBadge ? <RankEmblem rank={currentBadge} size={72} /> : <IconTile icon={Trophy} size={72} iconSize={36} fill={C.sunken} radius={22} />}
+          <View style={{ flex: 1, gap: 4 }}>
+            <Pill tone="ink" label="Mùa hiện tại" />
+            <GText v="titleM">{current?.seasonName ?? season?.name ?? 'Mùa hiện tại'}</GText>
+            <GText v="bodyS" color={C.ink700}>
+              {currentBadge ? `Cao nhất mùa này: ${RANK_LABEL[currentBadge]}` : 'Chưa đạt huy hiệu mùa này'}
+            </GText>
+            <XPBar pct={seasonPct} tone="coin" height={14} />
+            {season ? (
+              <GText v="bodyS" color={C.ink500}>
+                Còn {season.daysLeft} ngày để giữ huy hiệu
+              </GText>
+            ) : null}
           </View>
-          {currentBadge ? (
-            <View className="items-center py-4 gap-2">
-              <RankBadge rank={currentBadge} size="lg" />
-              <Badge
-                variant="outline"
-                style={{
-                  backgroundColor: `${colors.rank[currentBadge]}20`,
-                  borderColor: `${colors.rank[currentBadge]}60`,
-                }}>
-                <Text style={{ color: colors.rank[currentBadge] }}>
-                  {RANK_LABELS[currentBadge]}
-                </Text>
-              </Badge>
-            </View>
-          ) : (
-            <View className="items-center py-6 bg-km-bg/60 rounded-xl border border-border gap-2">
-              <Ionicons name="ribbon-outline" size={32} color={colors.textSecondary} />
-              <Text className="text-slate-600 text-sm text-center">
-                Chưa đạt huy hiệu mùa này
-              </Text>
-            </View>
-          )}
         </Card>
 
-        {/* Past Seasons */}
-        <Card className="p-5 mb-4 gap-2">
-          <Text className="text-foreground text-base font-bold mb-1">Các mùa trước</Text>
-          {PAST_SEASONS.length === 0 && (
-            <Text className="text-slate-500 text-sm py-2">Chưa có huy hiệu mùa trước.</Text>
-          )}
-          {PAST_SEASONS.map((s, idx) => {
-            const rankColor = colors.rank[s.highestRank];
-            return (
-              <View key={s.seasonId}>
-                <TouchableOpacity
-                  className="flex-row items-center py-3"
-                  activeOpacity={s.txHash ? 0.7 : 1}
-                  onPress={() => s.txHash && Linking.openURL(EXPLORER + s.txHash)}>
-                  <RankBadge rank={s.highestRank} size="md" />
-                  <View className="ml-3 flex-1">
-                    <Text className="text-foreground text-sm font-semibold">{s.seasonName}</Text>
-                    <Text className="text-slate-500 text-xs mt-0.5">
-                      {periodOf(s.seasonId)}
-                      {s.txHash ? ' · NFT trên Avalanche ↗' : ''}
-                    </Text>
-                  </View>
-                  <Badge
-                    variant="outline"
-                    style={{
-                      backgroundColor: `${rankColor}20`,
-                      borderColor: `${rankColor}50`,
-                    }}>
-                    <Text style={{ color: rankColor }}>{RANK_LABELS[s.highestRank]}</Text>
-                  </Badge>
-                </TouchableOpacity>
-                {idx < PAST_SEASONS.length - 1 ? <Separator /> : null}
+        <SectionHeader title="Kệ cúp" link={`${past.length} mùa`} linkColor={C.ink500} />
+        <Card fill={C.sunken} pad={[16, 12]} gap={0}>
+          {Array.from({ length: slots / 3 }).map((_, rowIdx) => (
+            <View key={rowIdx} style={{ gap: 0 }}>
+              <View style={{ flexDirection: 'row', gap: 8, paddingTop: rowIdx ? 16 : 0 }}>
+                {Array.from({ length: 3 }).map((__, col) => {
+                  const b = past[rowIdx * 3 + col];
+                  return (
+                    <View key={col} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+                      {b ? (
+                        <>
+                          <View style={{ width: 90, height: 84, alignItems: 'center' }}>
+                            <View style={{ position: 'absolute', bottom: 0, width: 80, height: 20, borderRadius: 40, backgroundColor: C.ink300, borderWidth: 2, borderColor: C.ink900 }} />
+                            <RankEmblem rank={b.highestRank} size={64} />
+                          </View>
+                          <GText v="titleS" align="center">
+                            {RANK_LABEL[b.highestRank]}
+                          </GText>
+                          <GText v="bodyS" color={C.ink500} align="center" numberOfLines={1}>
+                            {b.seasonName}
+                          </GText>
+                          {b.txHash ? (
+                            <GText v="bodyS" color={C.sky700} onPress={() => Linking.openURL(EXPLORER + b.txHash)}>
+                              NFT ↗
+                            </GText>
+                          ) : null}
+                        </>
+                      ) : (
+                        <>
+                          <View style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: C.surface, borderWidth: 2.5, borderColor: C.ink300, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' }}>
+                            <Lock size={26} color={C.ink300} strokeWidth={2.5} />
+                          </View>
+                          <GText v="bodyS" color={C.ink500}>
+                            Chưa mở
+                          </GText>
+                        </>
+                      )}
+                    </View>
+                  );
+                })}
               </View>
-            );
-          })}
+              <View style={{ height: 12, marginTop: 12, borderRadius: 6, backgroundColor: C.orange700, borderWidth: 2, borderColor: C.ink900 }} />
+            </View>
+          ))}
         </Card>
 
-        {/* Info Note */}
-        <Alert icon={Info}>
-          <AlertDescription className="text-slate-600">
-            Huy hiệu ghi lại hạng cao nhất bạn đạt được mỗi mùa. Thành tích không mất khi reset.
-          </AlertDescription>
-        </Alert>
-      </ScrollView>
-    </SafeAreaView>
+        {past.length > 0 ? (
+          <Card row pad={14} onPress={() => router.push('/(runner)/season-result')}>
+            <IconTile icon={Trophy} fill={C.grape500} color={C.white} />
+            <View style={{ flex: 1 }}>
+              <GText v="titleS">Tổng kết {past[past.length - 1]!.seasonName}</GText>
+              <GText v="bodyS" color={C.ink500}>
+                Xem huy hiệu, hạng và token sau reset
+              </GText>
+            </View>
+            <ChevronRight size={20} color={C.ink500} strokeWidth={2.5} />
+          </Card>
+        ) : null}
+
+        {runner?.isMember ? (
+          <>
+            <SectionHeader title="Thành tích" link="Hội viên" linkColor={C.ink500} />
+            <Row gap={12} center={false}>
+              {[
+                [Users, C.green500, 'Đội', 'Chạy chung'],
+                [Clock, C.sky500, `${runner.punctuality}%`, 'Đúng hẹn'],
+                [Flame, C.orange500, RANK_LABEL[runner.rank], 'Hạng hiện tại'],
+              ].map(([I, fill, v, l]) => (
+                <Card key={l as string} pad={12} gap={6} center style={{ flex: 1 }}>
+                  <View style={{ width: 52, height: 52, borderRadius: 52, backgroundColor: fill as string, borderWidth: 2.5, borderColor: C.ink900, alignItems: 'center', justifyContent: 'center', boxShadow: `0px 2px 0px ${C.ink900}` }}>
+                    {(() => {
+                      const Icon = I as typeof Users;
+                      return <Icon size={26} color={C.ink900} strokeWidth={2.5} />;
+                    })()}
+                  </View>
+                  <GText v="numM" numberOfLines={1} adjustsFontSizeToFit>
+                    {v as string}
+                  </GText>
+                  <GText v="bodyS" color={C.ink500}>
+                    {l as string}
+                  </GText>
+                </Card>
+              ))}
+            </Row>
+          </>
+        ) : null}
+      </Body>
+    </Screen>
   );
 }

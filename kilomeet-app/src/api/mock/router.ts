@@ -11,6 +11,7 @@ import {
   mockLocations, mockShareLocation, mockAutoMatch, mockMeetingPoints, mockAdminStores, mockAdminStoreAction,
   mockNotifications,
 } from './extra';
+import { mockGetStoreProfile, mockGetMyStoreProfile, mockUpdateMyStoreProfile } from './profile';
 
 type Handler = (body?: unknown, params?: Record<string, string>) => unknown;
 
@@ -33,6 +34,8 @@ const GET_ROUTES: Record<string, Handler> = {
   '/groups/locations': () => mockLocations(),
   '/groups/meeting-points': () => mockMeetingPoints(),
   '/notifications': () => mockNotifications(),
+  '/stores/profile': (_b, p) => mockGetStoreProfile(p),
+  '/store/profile': () => mockGetMyStoreProfile(),
 };
 
 const POST_ROUTES: Record<string, Handler> = {
@@ -55,6 +58,7 @@ const POST_ROUTES: Record<string, Handler> = {
   '/groups/leave': (b) => mockLeaveGroup(b),
   '/groups/location': () => mockShareLocation(),
   '/groups/auto-match': () => mockAutoMatch(),
+  '/store/profile': (b) => mockUpdateMyStoreProfile(b),
 };
 
 const PUT_ROUTES: Record<string, Handler> = {};

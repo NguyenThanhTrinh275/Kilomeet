@@ -1,294 +1,237 @@
-import { useState, useEffect, useCallback } from 'react';
-import { View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { toast } from 'sonner-native';
-import { colors } from '../../src/theme/colors';
+import { Calendar, ChevronRight, Plus, RefreshCcw, ShoppingBag, Sun, TrendingDown, Trophy, Wallet } from 'lucide-react-native';
 import { api } from '../../src/api/client';
-import { RANKS, RANK_KM_THRESHOLD, RANK_TOKEN_RETENTION } from '../../src/api/types';
-import type { SeasonInfo } from '../../src/api/types';
-import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-
-const RANK_LABELS: Record<string, string> = {
-  đồng: 'Đồng', bạc: 'Bạc', vàng: 'Vàng',
-  bạch_kim: 'Bạch Kim', kim_cương: 'Kim Cương', cao_thủ: 'Cao Thủ',
-};
+import { DAILY_QUEST_REWARD, RANKS, RANK_KM_THRESHOLD, RANK_TOKEN_RETENTION, WEEKLY_QUEST_TOKEN_PER_KM, type SeasonInfo } from '../../src/api/types';
+import { C, RANK_LABEL, TONE, type Tone } from '../../src/theme/game';
+import { fmtDate } from '../../src/lib/format';
+import { Body, Card, Coin, EmptyState, GameDialog, GButton, GText, IconTile, InfoRow, Loading, Pill, RankEmblem, Row, Screen, SectionHeader, TopBar } from '../../src/components/game';
 
 export default function SeasonScreen() {
-  const router = useRouter();
   const [seasons, setSeasons] = useState<SeasonInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [closeModal, setCloseModal] = useState(false);
-  const [newModal, setNewModal] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
 
   const fetchSeasons = useCallback(async () => {
     try {
-      const data = await api.get<SeasonInfo[]>('/admin/season');
-      setSeasons(data);
+      setSeasons(await api.get<SeasonInfo[]>('/admin/season'));
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { void fetchSeasons(); }, [fetchSeasons]);
+  useEffect(() => {
+    void fetchSeasons();
+  }, [fetchSeasons]);
 
   const season = seasons.find((s) => s.isActive) ?? seasons[seasons.length - 1];
-  const daysLeft = season?.endDate
-    ? Math.max(0, Math.ceil((new Date(season.endDate).getTime() - Date.now()) / 86_400_000))
-    : 0;
+  const past = seasons.filter((s) => s !== season);
+  const daysLeft = season?.endDate ? Math.max(0, Math.ceil((new Date(season.endDate).getTime() - Date.now()) / 86_400_000)) : 0;
 
-  async function handleCloseSeason() {
-    setActionLoading(true);
+  async function act(action: 'end' | 'start') {
+    setBusy(true);
     try {
-      await api.post<SeasonInfo>('/admin/season', { action: 'end' });
-      setCloseModal(false);
-      toast.success('Đã đóng mùa giải hiện tại');
-      setLoading(true);
+      await api.post<SeasonInfo>('/admin/season', { action });
+      setCloseOpen(false);
+      setNewOpen(false);
+      toast.success(action === 'end' ? 'Đã đóng mùa giải hiện tại' : 'Đã mở mùa giải mới');
       await fetchSeasons();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Không thể đóng mùa');
+      toast.error(e instanceof Error ? e.message : action === 'end' ? 'Không thể đóng mùa' : 'Không thể mở mùa mới');
     } finally {
-      setActionLoading(false);
+      setBusy(false);
     }
   }
 
-  async function handleNewSeason() {
-    setActionLoading(true);
-    try {
-      await api.post<SeasonInfo>('/admin/season', { action: 'start' });
-      setNewModal(false);
-      toast.success('Đã mở mùa giải mới');
-      setLoading(true);
-      await fetchSeasons();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Không thể mở mùa mới');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  if (loading && seasons.length === 0) {
-    return (
-      <SafeAreaView className="flex-1 bg-km-bg items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </SafeAreaView>
-    );
-  }
+  if (loading && seasons.length === 0) return <Loading />;
 
   return (
-    <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
-      {/* Header */}
-      <View className="flex-row items-center px-4 pt-4 pb-2">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3">
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text className="text-foreground text-xl font-bold flex-1">Quản lý mùa</Text>
-      </View>
+    <Screen>
+      <TopBar title="Quản lý mùa" action={Calendar} />
+      <Body>
+        {!season ? (
+          <>
+            <EmptyState icon={Trophy} title="Chưa có mùa nào" text="Mở mùa đầu tiên để người chạy bắt đầu leo hạng." tone={C.coin300} />
+            <GButton label="Mở mùa mới" icon={Plus} onPress={() => setNewOpen(true)} block />
+          </>
+        ) : (
+          <>
+            <Card fill={C.grape300} gap={8}>
+              <Row between>
+                <GText v="titleM" style={{ flex: 1 }}>
+                  {season.name}
+                </GText>
+                <Pill tone={season.isActive ? 'green' : 'red'} label={season.isActive ? 'Đang diễn ra' : 'Đã kết thúc'} />
+              </Row>
+              <Row between>
+                <GText v="bodyM" color={C.ink700}>
+                  Bắt đầu
+                </GText>
+                <GText v="bodyMStrong">{fmtDate(season.startDate)}</GText>
+              </Row>
+              {season.endDate ? (
+                <Row between>
+                  <GText v="bodyM" color={C.ink700}>
+                    Kết thúc
+                  </GText>
+                  <GText v="bodyMStrong">{fmtDate(season.endDate)} · 23:59</GText>
+                </Row>
+              ) : null}
+              {season.isActive ? (
+                <Row between>
+                  <GText v="bodyM" color={C.ink700}>
+                    Còn lại
+                  </GText>
+                  <GText v="bodyMStrong">{daysLeft} ngày</GText>
+                </Row>
+              ) : null}
+              {season.isActive ? (
+                <GButton label="Đóng mùa & chạy reset" type="danger" icon={RefreshCcw} onPress={() => setCloseOpen(true)} block style={{ marginTop: 6 }} />
+              ) : (
+                <GButton label="Mở mùa mới" icon={Plus} onPress={() => setNewOpen(true)} block style={{ marginTop: 6 }} />
+              )}
+            </Card>
 
-      {!season ? (
-        <View className="flex-1 items-center justify-center px-4 gap-4">
-          <Text className="text-muted-foreground text-base">Chưa có mùa nào</Text>
-          <Button size="lg" onPress={() => setNewModal(true)}>
-            <Text>Mở mùa mới</Text>
-          </Button>
-        </View>
-      ) : (
-        <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 32 }}>
-          {/* Current Season Card */}
-          <Card className="mt-2 mb-4 gap-2">
-            <View className="flex-row items-center mb-1">
-              <Ionicons name="trophy" size={22} color={colors.accent} />
-              <Text className="text-foreground text-lg font-bold ml-2 flex-1">{season.name}</Text>
-              <Badge variant={season.isActive ? 'default' : 'destructive'}>
-                <Text>{season.isActive ? 'Đang diễn ra' : 'Đã kết thúc'}</Text>
-              </Badge>
-            </View>
+            <SectionHeader title="Bậc thang hạng" link="km/tuần · token giữ" linkColor={C.ink500} />
+            <Card pad={[4, 14]} gap={0}>
+              <Row style={{ paddingVertical: 8, borderBottomWidth: 1.5, borderBottomColor: C.ink300 }}>
+                <GText v="caps" color={C.ink500} style={{ flex: 1 }}>
+                  Hạng
+                </GText>
+                <GText v="caps" color={C.ink500} style={{ width: 80 }}>
+                  Km/tuần
+                </GText>
+                <GText v="caps" color={C.ink500} style={{ width: 80 }}>
+                  Giữ tối đa
+                </GText>
+              </Row>
+              {RANKS.map((r, i) => (
+                <Row key={r} style={{ paddingVertical: 8, borderBottomWidth: i < RANKS.length - 1 ? 1.5 : 0, borderBottomColor: C.ink300 }}>
+                  <Row gap={8} style={{ flex: 1 }}>
+                    <RankEmblem rank={r} size={30} />
+                    <GText v="bodyMStrong">{RANK_LABEL[r]}</GText>
+                  </Row>
+                  <GText v="numS" style={{ width: 80 }}>
+                    {RANK_KM_THRESHOLD[r] ? `${RANK_KM_THRESHOLD[r]} km` : '—'}
+                  </GText>
+                  <Row gap={4} style={{ width: 80 }}>
+                    <Coin size={16} />
+                    <GText v="numS">{RANK_TOKEN_RETENTION[r]}</GText>
+                  </Row>
+                </Row>
+              ))}
+            </Card>
 
-            <View className="flex-row">
-              <Text className="text-muted-foreground text-sm w-24">Bắt đầu:</Text>
-              <Text className="text-foreground text-sm">{new Date(season.startDate).toLocaleDateString('vi-VN')}</Text>
-            </View>
-            {season.endDate ? (
-              <View className="flex-row">
-                <Text className="text-muted-foreground text-sm w-24">Kết thúc:</Text>
-                <Text className="text-foreground text-sm">{new Date(season.endDate).toLocaleDateString('vi-VN')}</Text>
-              </View>
+            <SectionHeader title="Phần thưởng nhiệm vụ" />
+            <Row gap={12} center={false}>
+              {[
+                ['Nhiệm vụ ngày', `+${DAILY_QUEST_REWARD}`, 'chạy ≥ 2 km', 'orange'],
+                ['Nhiệm vụ tuần', `+${WEEKLY_QUEST_TOKEN_PER_KM}/km`, 'TB 4 tuần +10%', 'sky'],
+              ].map(([t, v, s, tone]) => (
+                <Card key={t} fill={TONE[tone as Tone][300]} gap={4} pad={14} style={{ flex: 1 }}>
+                  <GText v="bodyMStrong">{t}</GText>
+                  <Row gap={4}>
+                    <Coin size={22} />
+                    <GText v="numL">{v}</GText>
+                  </Row>
+                  <GText v="bodyS" color={C.ink700}>
+                    {s}
+                  </GText>
+                </Card>
+              ))}
+            </Row>
+
+            {past.length ? (
+              <>
+                <SectionHeader title="Mùa trước" />
+                {past.map((s) => (
+                  <Card key={s.id} row pad={12} depth="small">
+                    <IconTile icon={Trophy} size={40} iconSize={20} fill={C.sunken} color={C.ink500} radius={12} />
+                    <View style={{ flex: 1 }}>
+                      <GText v="bodyMStrong">{s.name}</GText>
+                      <GText v="bodyS" color={C.ink500}>
+                        {fmtDate(s.startDate)} – {s.endDate ? fmtDate(s.endDate) : '…'}
+                      </GText>
+                    </View>
+                    <Pill tone="ink" label="Đã đóng" />
+                  </Card>
+                ))}
+              </>
             ) : null}
-            {season.isActive && season.endDate ? (
-              <View className="flex-row">
-                <Text className="text-muted-foreground text-sm w-24">Còn lại:</Text>
-                <Text className="text-km-accent text-sm font-semibold">{daysLeft} ngày</Text>
-              </View>
-            ) : null}
-          </Card>
+          </>
+        )}
+      </Body>
 
-          {/* Rank Thresholds */}
-          <Text className="text-foreground text-base font-bold mb-3">Ngưỡng rank (km/tuần)</Text>
-          <Card className="p-0 overflow-hidden mb-4 gap-0">
-            {RANKS.map((rank, i) => (
-              <View key={rank}>
-                <View className="flex-row items-center px-4 py-3">
-                  <View
-                    className="w-3 h-3 rounded-full mr-3"
-                    style={{ backgroundColor: colors.rank[rank] }}
-                  />
-                  <Text className="text-foreground text-sm flex-1">{RANK_LABELS[rank]}</Text>
-                  <Text className="text-muted-foreground text-sm font-mono">≥ {RANK_KM_THRESHOLD[rank]} km</Text>
-                </View>
-                {i < RANKS.length - 1 ? <Separator /> : null}
-              </View>
-            ))}
-          </Card>
-
-          {/* Token Retention */}
-          <Text className="text-foreground text-base font-bold mb-3">Giữ lại token cuối mùa</Text>
-          <Card className="p-0 overflow-hidden mb-4 gap-0">
-            {RANKS.map((rank, i) => (
-              <View key={rank}>
-                <View className="flex-row items-center px-4 py-3">
-                  <View
-                    className="w-3 h-3 rounded-full mr-3"
-                    style={{ backgroundColor: colors.rank[rank] }}
-                  />
-                  <Text className="text-foreground text-sm flex-1">{RANK_LABELS[rank]}</Text>
-                  <Text className="text-muted-foreground text-sm font-mono">{RANK_TOKEN_RETENTION[rank]} token</Text>
-                </View>
-                {i < RANKS.length - 1 ? <Separator /> : null}
-              </View>
-            ))}
-          </Card>
-
-          {/* Quest Rewards */}
-          <Text className="text-foreground text-base font-bold mb-3">Phần thưởng nhiệm vụ</Text>
-          <Card className="mb-6 gap-2.5">
-            <View className="flex-row items-center">
-              <Ionicons name="walk-outline" size={18} color={colors.primary} />
-              <Text className="text-foreground text-sm ml-2 flex-1">Nhiệm vụ ngày (chạy 2km)</Text>
-              <Text className="text-km-accent text-sm font-semibold">+10 token</Text>
-            </View>
-            <View className="flex-row items-center">
-              <Ionicons name="calendar-outline" size={18} color={colors.info} />
-              <Text className="text-foreground text-sm ml-2 flex-1">Nhiệm vụ tuần (mỗi km)</Text>
-              <Text className="text-km-accent text-sm font-semibold">+7 token/km</Text>
-            </View>
-          </Card>
-
-          {/* Action Buttons */}
-          {season.isActive ? (
-            <Button
-              variant="destructive"
-              size="lg"
-              onPress={() => setCloseModal(true)}>
-              <Ionicons name="lock-closed" size={18} color={colors.white} />
-              <Text>Đóng mùa</Text>
-            </Button>
-          ) : (
-            <Button size="lg" onPress={() => setNewModal(true)}>
-              <Ionicons name="add-circle" size={18} color={colors.textInverse} />
-              <Text>Mở mùa mới</Text>
-            </Button>
-          )}
-        </ScrollView>
-      )}
-
-      {/* Close Season AlertDialog */}
-      <AlertDialog open={closeModal} onOpenChange={setCloseModal}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <View className="items-center mb-1">
-              <Ionicons name="warning" size={44} color={colors.warning} />
-            </View>
-            <AlertDialogTitle className="text-center">Đóng mùa hiện tại?</AlertDialogTitle>
-            <AlertDialogDescription className="text-center">
-              Khi đóng mùa, các thay đổi sau sẽ diễn ra:
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <View className="bg-km-surface/50 rounded-xl p-3 gap-2">
-            <View className="flex-row items-start">
-              <Ionicons name="arrow-down" size={16} color={colors.error} />
-              <Text className="text-slate-600 text-sm ml-2 flex-1">
-                Rank giảm 2 bậc (ví dụ: Kim Cương → Vàng)
-              </Text>
-            </View>
-            <View className="flex-row items-start">
-              <Ionicons name="wallet-outline" size={16} color={colors.warning} />
-              <Text className="text-slate-600 text-sm ml-2 flex-1">
-                Token bị giới hạn theo rank (Đồng: 0, Bạc: 100, Vàng: 200, ...)
-              </Text>
-            </View>
-            <View className="flex-row items-start">
-              <Ionicons name="pricetag-outline" size={16} color={colors.primary} />
-              <Text className="text-slate-600 text-sm ml-2 flex-1">
-                Voucher đã sở hữu được giữ nguyên
-              </Text>
-            </View>
+      <GameDialog
+        open={closeOpen}
+        onClose={() => setCloseOpen(false)}
+        icon={RefreshCcw}
+        title={`Đóng ${season?.name ?? 'mùa'}?`}
+        text="Thao tác không thể hoàn tác. Giao dịch reset được ghi công khai trên Avalanche."
+        actions={
+          <>
+            <GButton label="Đóng mùa" type="danger" icon={RefreshCcw} loading={busy} onPress={() => void act('end')} block />
+            <GButton label="Huỷ" type="secondary" onPress={() => setCloseOpen(false)} block />
+          </>
+        }>
+        <View style={{ alignSelf: 'stretch', gap: 8 }}>
+          {[
+            [TrendingDown, 'Mọi người tụt 2 bậc hạng (thấp nhất Đồng)', 'red'],
+            [Wallet, 'Token cắt theo hạng: tối đa 0 → 500', 'coin'],
+            [Trophy, 'Mint huy hiệu mùa (NFT không chuyển được)', 'grape'],
+            [ShoppingBag, 'Voucher đã mua được giữ nguyên', 'green'],
+          ].map(([I, t, tone]) => {
+            const Icon = I as typeof Trophy;
+            return (
+              <Row key={t as string} gap={10} style={{ paddingVertical: 8, paddingHorizontal: 10, borderRadius: 12, backgroundColor: TONE[tone as Tone][300], borderWidth: 1.5, borderColor: C.ink900 }}>
+                <Icon size={18} color={C.ink900} strokeWidth={2.5} />
+                <GText v="bodyMStrong" style={{ flex: 1 }}>
+                  {t as string}
+                </GText>
+              </Row>
+            );
+          })}
+          <View style={{ gap: 6, padding: 12, borderRadius: 14, backgroundColor: C.sunken, borderWidth: 2, borderColor: C.ink900 }}>
+            <GText v="caps" color={C.ink500}>
+              Ví dụ · Cao Thủ 1.000 token
+            </GText>
+            <Row gap={8} style={{ justifyContent: 'center' }}>
+              <RankEmblem rank="cao_thủ" size={32} />
+              <Row gap={3}>
+                <Coin size={16} />
+                <GText v="numS">1.000</GText>
+              </Row>
+              <ChevronRight size={18} color={C.ink500} strokeWidth={2.5} />
+              <RankEmblem rank="bạch_kim" size={32} />
+              <Row gap={3}>
+                <Coin size={16} />
+                <GText v="numS" color={C.green700}>
+                  500
+                </GText>
+              </Row>
+            </Row>
           </View>
+        </View>
+      </GameDialog>
 
-          <AlertDialogFooter>
-            <AlertDialogCancel className="flex-1" disabled={actionLoading}>
-              <Text>Huỷ</Text>
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              className="flex-1"
-              disabled={actionLoading}
-              onPress={() => void handleCloseSeason()}>
-              {actionLoading ? (
-                <ActivityIndicator size="small" color={colors.white} />
-              ) : (
-                <Text>Đóng mùa</Text>
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* New Season AlertDialog */}
-      <AlertDialog open={newModal} onOpenChange={setNewModal}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <View className="items-center mb-1">
-              <Ionicons name="sunny" size={44} color={colors.accent} />
-            </View>
-            <AlertDialogTitle className="text-center">Mở mùa mới?</AlertDialogTitle>
-            <AlertDialogDescription className="text-center">
-              Mùa mới sẽ bắt đầu và runner có thể thăng hạng trở lại.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="flex-1" disabled={actionLoading}>
-              <Text>Huỷ</Text>
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="flex-1"
-              disabled={actionLoading}
-              onPress={() => void handleNewSeason()}>
-              {actionLoading ? (
-                <ActivityIndicator size="small" color={colors.textInverse} />
-              ) : (
-                <Text>Mở mùa</Text>
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </SafeAreaView>
+      <GameDialog
+        open={newOpen}
+        onClose={() => setNewOpen(false)}
+        icon={Sun}
+        iconFill={C.coin500}
+        iconColor={C.ink900}
+        title="Mở mùa mới?"
+        text="Mùa mới bắt đầu ngay, người chạy có thể leo hạng trở lại."
+        actions={
+          <>
+            <GButton label="Mở mùa" icon={Plus} loading={busy} onPress={() => void act('start')} block />
+            <GButton label="Huỷ" type="secondary" onPress={() => setNewOpen(false)} block />
+          </>
+        }
+      />
+    </Screen>
   );
 }

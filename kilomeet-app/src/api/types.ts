@@ -253,3 +253,50 @@ export interface ApiResponse<T> {
   success: boolean;
   message?: string;
 }
+
+// ─── Store profile (trang giới thiệu quán) ──────────────────────
+
+export type StoreCoverTheme = 'coffee' | 'tea' | 'gym';
+
+export interface StoreOpeningHours {
+  /** Nhãn nhóm ngày, ví dụ "T2 – T6", "Thứ 7", "Chủ nhật" */
+  label: string;
+  /** HH:mm */
+  open: string;
+  /** HH:mm */
+  close: string;
+  enabled: boolean;
+}
+
+export interface StoreHighlight {
+  name: string;
+  priceVnd: number;
+}
+
+/** GET /stores/profile?storeId=… (người chạy) · GET/POST /store/profile (chủ quán) */
+export interface StoreProfile {
+  storeId: string;
+  storeName: string;
+  /** Câu giới thiệu ngắn, tối đa 60 ký tự — hiện trên thẻ quán */
+  tagline: string;
+  /** Giới thiệu chi tiết, tối đa 500 ký tự */
+  description: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  coverTheme: StoreCoverTheme;
+  tags: string[];
+  openingHours: StoreOpeningHours[];
+  highlights: StoreHighlight[];
+  phone: string;
+  /** Chỉ đọc — BE tính */
+  verified: boolean;
+  totalUsages: number;
+  /** % lượt dùng voucher đến từ người đã chạy ngang quán */
+  runnerSharePercent: number;
+}
+
+export type StoreProfileUpdate = Pick<
+  StoreProfile,
+  'storeName' | 'tagline' | 'description' | 'coverTheme' | 'tags' | 'openingHours' | 'highlights' | 'phone'
+>;
