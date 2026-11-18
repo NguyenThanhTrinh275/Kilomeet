@@ -8,3 +8,4 @@ export * from './Art';
 export * from './Layout';
 export * from './Overlays';
 export * from './TabBar';
+export * from './GameMap';

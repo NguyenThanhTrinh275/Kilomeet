@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
-import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { toast } from 'sonner-native';
 import { AlertTriangle, Bell, ChevronRight, Flame, Footprints, Play, Route, Target, Trophy, Wallet } from 'lucide-react-native';
+import { api } from '../../../src/api/client';
+import { seasonResultKey } from '../season-result';
 import { useAuthStore } from '../../../src/stores/auth';
 import { useRunnerStore } from '../../../src/stores/runner';
 import { RANKS, RANK_KM_THRESHOLD, RANK_TOKEN_RETENTION } from '../../../src/api/types';
@@ -55,6 +58,30 @@ export default function RunnerHome() {
   const refreshMe = useAuthStore((s) => s.refreshMe);
   const { tokenBalance, rank, kmThisWeek, quests, runs, season, syncFromUser, fetchQuests, fetchRuns, fetchSeason } = useRunnerStore();
   const resetIn = useDailyReset();
+
+  // Mùa vừa đóng (có huy hiệu mùa cũ chưa xem) → mở màn "Kết quả mùa" (bước 8 kịch bản demo).
+  // Màn kết quả tự đánh dấu đã xem khi mở; nếu lần push bị mất (app vừa khởi động), lần focus sau mở lại.
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) return;
+      let cancelled = false;
+      const t = setTimeout(async () => {
+        try {
+          const badges = await api.get<{ seasonId: string; current: boolean }[]>('/me/badges');
+          const last = badges.filter((b) => !b.current).pop();
+          if (!last || cancelled) return;
+          if (await AsyncStorage.getItem(seasonResultKey(user.id, last.seasonId)).catch(() => '1')) return;
+          if (!cancelled) router.push('/(runner)/season-result');
+        } catch {
+          // không có huy hiệu / lỗi mạng: bỏ qua
+        }
+      }, 1200);
+      return () => {
+        cancelled = true;
+        clearTimeout(t);
+      };
+    }, [user?.id]),
+  );
 
   useEffect(() => {
     if (user) {
@@ -119,8 +146,9 @@ export default function RunnerHome() {
             <GText v="bodyS" color={C.ink500}>
               Xin chào,
             </GText>
+            {/* Chào bằng tên gọi (từ cuối của họ tên VN) cho vừa chỗ cạnh ô token: "Trần Minh" → "Minh". */}
             <GText v="titleM" numberOfLines={1}>
-              {user?.name ?? 'Runner'}
+              {user?.name?.trim().split(/\s+/).pop() ?? 'Runner'}
             </GText>
           </View>
           <CoinChip amount={fmtInt(tokenBalance)} />
@@ -212,7 +240,7 @@ export default function RunnerHome() {
               <QuestCard
                 key={q.id}
                 done={done}
-                tag={daily ? 'Nhiệm vụ ngày' : 'Nhiệm vụ tuần'}
+                tag={daily ? 'Hôm nay' : 'Tuần này'}
                 tagTone={daily ? 'orange' : 'sky'}
                 tone={daily ? 'orange' : 'sky'}
                 icon={daily ? Flame : Target}

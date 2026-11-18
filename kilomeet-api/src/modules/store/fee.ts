@@ -1,6 +1,7 @@
 // Ví phí trả trước của cửa hàng (quyết định #28, hợp đồng Mục 5.5b).
 // Mọi thay đổi số dư / tạm giữ đi kèm 1 dòng store_fee_entries có `ref` duy nhất → gọi lặp không ghi 2 lần.
 import { randomBytes } from 'node:crypto';
+import { Prisma } from '@prisma/client';
 import {
   availableVnd, sellableByFee, shortfallVnd, topupError, TOPUP_PRESETS_VND, VOUCHER_FEE_VND, type FeeWallet,
 } from '../../domain/fee.js';
@@ -97,13 +98,19 @@ export async function topup(storeId: string, amountVnd: number, requestId?: stri
   if (store.status !== 'approved') throw forbidden('Cửa hàng chưa được duyệt');
   const ref = `topup:${storeId}:${requestId?.trim() || randomBytes(8).toString('hex')}`;
   const now = clock.now();
-  await prisma.$transaction(async (tx) => {
-    if (await tx.storeFeeEntry.findUnique({ where: { ref } })) return; // gọi lặp
-    await tx.store.update({ where: { userId: storeId }, data: { feeBalanceVnd: { increment: amountVnd } } });
-    await tx.storeFeeEntry.create({
-      data: { storeId, kind: 'topup', amountVnd, balanceDelta: amountVnd, heldDelta: 0, ref, createdAt: now },
+  try {
+    await prisma.$transaction(async (tx) => {
+      if (await tx.storeFeeEntry.findUnique({ where: { ref } })) return; // gọi lặp
+      // Ghi sổ TRƯỚC: ref unique → request trùng chạy song song bị chặn ở đây, không cộng số dư 2 lần.
+      await tx.storeFeeEntry.create({
+        data: { storeId, kind: 'topup', amountVnd, balanceDelta: amountVnd, heldDelta: 0, ref, createdAt: now },
+      });
+      await tx.store.update({ where: { userId: storeId }, data: { feeBalanceVnd: { increment: amountVnd } } });
     });
-  });
+  } catch (e) {
+    // Request trùng requestId chạy song song: bản kia đã nạp → coi như thành công.
+    if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002')) throw e;
+  }
   return feeWallet(storeId);
 }
 
@@ -128,7 +135,7 @@ export async function feeWallet(storeId: string) {
   // Tên voucher cho dòng hold/charge/release (ref = <kind>:<ownedVoucherId>).
   const ovIds = entries.filter((e) => e.kind !== 'topup').map((e) => e.ref.slice(e.ref.indexOf(':') + 1));
   const ovs = ovIds.length
-    ? await prisma.ownedVoucher.findMany({ where: { id: { in: ovIds } }, select: { id: true, template: { select: { title: true } }, owner: { select: { name: true } } } })
+    ? await prisma.ownedVoucher.findMany({ where: { id: { in: ovIds } }, select: { id: true, template: { select: { title: true } }, owner: { select: { name: true } }, buyer: { select: { name: true } } } })
     : [];
   const ovById = new Map(ovs.map((v) => [v.id, v]));
 
@@ -149,7 +156,7 @@ export async function feeWallet(storeId: string) {
       const v = e.kind === 'topup' ? undefined : ovById.get(e.ref.slice(e.ref.indexOf(':') + 1));
       const subtitle =
         e.kind === 'topup' ? 'Thanh toán giả lập'
-        : e.kind === 'hold' ? `«${v?.template.title ?? 'Voucher'}» vừa bán${v ? ` · ${v.owner.name}` : ''}`
+        : e.kind === 'hold' ? `«${v?.template.title ?? 'Voucher'}» vừa bán${v ? ` · ${v.buyer.name}` : ''}`
         : e.kind === 'charge' ? `Quét «${v?.template.title ?? 'Voucher'}»${v ? ` của ${v.owner.name}` : ''}`
         : `«${v?.template.title ?? 'Voucher'}» hết hạn chưa dùng`;
       return {

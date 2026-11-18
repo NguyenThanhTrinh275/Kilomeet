@@ -1,8 +1,11 @@
 // Primitive kiểu game: chữ, thẻ chunky, nhãn, ô icon, nút icon, chip, công tắc.
 import * as React from 'react';
 import {
+  Platform,
+  StyleSheet,
   Text,
   View,
+  type TextStyle,
   type PressableProps,
   type StyleProp,
   type TextProps,
@@ -33,12 +36,33 @@ function textOf(children: React.ReactNode): string {
     .join('');
 }
 
+/**
+ * Android đo độ rộng chữ `textTransform: 'uppercase'` theo chuỗi GỐC (chữ thường hẹp hơn) → nhãn caps bị cắt
+ * "NHIỆM VỤ T…" / xuống dòng. Viết hoa sẵn trong JS rồi bỏ textTransform để đo đúng.
+ */
+function upper(children: React.ReactNode): React.ReactNode {
+  return React.Children.map(children, (c) => (typeof c === 'string' ? c.toUpperCase() : c));
+}
+
+/**
+ * Android đo thiếu chuỗi có chữ tiếng Việt khối Latin Extended Additional (ạ ầ ồ ữ ệ…, U+1EA0–U+1EF9) và font đậm
+ * Lilita One / Nunito Black → cắt chữ cuối ("ĐỒNG" → "ĐỒN", "1.068" → "1.06", "Tạm giữ 0đ" → "Tạm giữ").
+ * Thêm 1 dấu cách không ngắt ở cuối thì đo đủ.
+ */
+const STACKED_UPPER = /[\u1EA0-\u1EF9]/;
+
 export function GText({ v = 'bodyM', color = C.ink900, align, strike, style, children, ...props }: GTextProps) {
   const fallback = v.startsWith('num') && NO_LILITA.test(textOf(children)) ? { fontFamily: FONT.display } : null;
+  const flat = StyleSheet.flatten(style) as TextStyle | undefined;
+  const caps = (flat?.textTransform ?? TYPE[v].textTransform) === 'uppercase';
+  let content = caps ? upper(children) : children;
+  // Lilita One (num*) và Nunito Black (caps) có nét tràn quá độ rộng ký tự → Android cắt chữ số / chữ cuối.
+  const heavy = v.startsWith('num') || caps;
+  if (Platform.OS === 'android' && (heavy || STACKED_UPPER.test(textOf(content))) && textOf(content)) content = [content, '\u00A0'];
   return (
     <Text
       {...props}
-      children={children}
+      children={content}
       style={[
         TYPE[v],
         fallback,
@@ -46,6 +70,7 @@ export function GText({ v = 'bodyM', color = C.ink900, align, strike, style, chi
         align ? { textAlign: align } : null,
         strike ? { textDecorationLine: 'line-through' } : null,
         style,
+        caps ? { textTransform: 'none' } : null,
       ]}
     />
   );
@@ -165,7 +190,7 @@ export function Pill({ tone = 'green', label, icon: Icon, style }: { tone?: Pill
         style,
       ]}>
       {Icon ? <Icon size={12} color={tone === 'ink' ? C.coin500 : C.ink900} strokeWidth={2.5} /> : null}
-      <GText v="caps" color={fg}>
+      <GText v="caps" color={fg} numberOfLines={1}>
         {label}
       </GText>
     </View>

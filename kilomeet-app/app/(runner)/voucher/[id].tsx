@@ -171,6 +171,8 @@ export default function VoucherDetailScreen() {
   const left = template.remaining;
   /** Quán hết khả dụng trong ví phí (quyết định #28): còn hàng nhưng tạm ngừng bán. */
   const paused = left > 0 && !!template.pausedForFee;
+  /** Sau khi mua, template tải lại và quyền giảm đã dùng → lấy giá thực trả để hiện giá giảm trên vé. */
+  const paidDeal = !!unlocked && unlocked.paidTokens < template.priceTokens;
   const ticketProps = {
     discount: discountLabel(template.discountPercent),
     store: template.storeName,
@@ -344,10 +346,10 @@ export default function VoucherDetailScreen() {
                 </GText>
               </View>
               <GText v="bodyL" color={C.ink700} align="center">
-                Bạn đã đổi {unlocked?.paidTokens ?? price} token{showDeal ? ` (giảm ${template.questDiscountPercent}% nhờ nhiệm vụ)` : ''}.
+                Bạn đã đổi {unlocked?.paidTokens ?? price} token{paidDeal ? ` (giảm ${template.questDiscountPercent}% nhờ nhiệm vụ)` : ''}.
               </GText>
               <View style={{ alignSelf: 'stretch' }}>
-                <VoucherTicket {...ticketProps} dealPrice={showDeal ? (unlocked?.paidTokens ?? price) : undefined} leftLabel={`HSD ${fmtDayMonth(template.expiresAt)}`} />
+                <VoucherTicket {...ticketProps} dealPrice={paidDeal ? unlocked!.paidTokens : undefined} questLabel={paidDeal ? `Đã chạy ngang quán · -${template.questDiscountPercent}%` : undefined} leftLabel={`HSD ${fmtDayMonth(template.expiresAt)}`} />
               </View>
               {unlocked ? (
                 <View style={{ alignSelf: 'stretch' }}>
@@ -454,7 +456,7 @@ function GiftSheet({
       <Banner icon={Info} tone="coin" iconColor={C.ink900} text="Điều kiện hạng và khu vực chỉ xét lúc mua — người nhận dùng được ngay." />
       <Row gap={12}>
         <GButton label="Huỷ" type="secondary" onPress={onClose} flex disabled={busy} />
-        <GButton label="Xác nhận tặng" type="accent" icon={Gift} loading={busy} onPress={onConfirm} flex />
+        <GButton label="Tặng ngay" type="accent" icon={Gift} loading={busy} onPress={onConfirm} flex />
       </Row>
     </GameSheet>
   );

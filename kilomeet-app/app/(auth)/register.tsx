@@ -6,9 +6,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
+import { GameMap } from '../../src/components/game/GameMap';
 import { AlertCircle, Check, Clock, Crosshair, Footprints, Info, Lock, Mail, MapPin as MapPinIcon, Sparkles, Store, User, Wallet } from 'lucide-react-native';
 import { useAuthStore } from '../../src/stores/auth';
-import { C, GAME_MAP_STYLE, TONE } from '../../src/theme/game';
+import { C, TONE } from '../../src/theme/game';
 import {
   Banner,
   Body,
@@ -133,9 +134,8 @@ export default function RegisterScreen() {
             <>
               <Card pad={10} gap={10}>
                 <View style={{ height: 150, borderRadius: 14, borderWidth: 2, borderColor: C.ink900, overflow: 'hidden' }}>
-                  <MapView
+                  <GameMap
                     style={{ flex: 1 }}
-                    customMapStyle={GAME_MAP_STYLE}
                     region={{ ...pos, latitudeDelta: 0.006, longitudeDelta: 0.006 }}
                     scrollEnabled={false}
                     zoomEnabled={false}
@@ -146,7 +146,7 @@ export default function RegisterScreen() {
                         <MapPin kind="store" />
                       </Marker>
                     ) : null}
-                  </MapView>
+                  </GameMap>
                 </View>
                 <Row gap={8} style={{ paddingHorizontal: 4 }}>
                   <Crosshair size={18} color={storePos ? C.green700 : C.ink500} strokeWidth={2.5} />

@@ -103,7 +103,10 @@ export default function StoreFeeScreen() {
     setConfirmOpen(true);
   };
 
+  const inFlight = useRef(false);
   const topup = async () => {
+    if (inFlight.current) return; // bấm 2 lần liền: chỉ gửi 1 request
+    inFlight.current = true;
     setBusy(true);
     try {
       const next = await api.post<StoreFeeWallet>('/store/fee/topup', { amountVnd: selected, requestId: requestId.current });
@@ -115,6 +118,7 @@ export default function StoreFeeScreen() {
     } catch (e) {
       toast.error('Nạp tiền không thành công', { description: (e as Error).message });
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
@@ -143,13 +147,15 @@ export default function StoreFeeScreen() {
         <Card fill={C.coin300} gap={12} pad={16}>
           <Row gap={12}>
             <IconTile icon={Wallet} size={48} iconSize={26} fill={C.surface} radius={14} sw={2} />
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, gap: 2 }}>
               <GText v="caps" color={C.ink700}>
                 Khả dụng
               </GText>
-              <GText v="numL">{fmtVnd(w.availableVnd)}</GText>
+              <GText v="numL" numberOfLines={1} adjustsFontSizeToFit>
+                {fmtVnd(w.availableVnd)}
+              </GText>
+              <Pill tone={w.sellableCount > 0 ? 'green' : 'red'} label={w.sellableCount > 0 ? `Bán thêm ${w.sellableCount} voucher` : 'Hết khả dụng'} />
             </View>
-            <Pill tone={w.sellableCount > 0 ? 'green' : 'red'} label={w.sellableCount > 0 ? `Bán thêm ${w.sellableCount}` : 'Hết khả dụng'} />
           </Row>
           <View style={{ height: 16, borderRadius: 999, borderWidth: 2, borderColor: C.ink900, backgroundColor: C.surface, overflow: 'hidden', flexDirection: 'row' }}>
             {w.balanceVnd > 0 ? (
@@ -159,22 +165,22 @@ export default function StoreFeeScreen() {
               </>
             ) : null}
           </View>
-          <Row gap={14}>
+          <Row gap={14} style={{ flexWrap: 'wrap', rowGap: 4 }}>
             {[
               [C.green500, `Khả dụng ${fmtVnd(w.availableVnd)}`],
               [C.orange500, `Tạm giữ ${fmtVnd(w.heldVnd)}`],
             ].map(([c, t]) => (
-              <Row key={t} gap={6}>
-                <View style={{ width: 10, height: 10, borderRadius: 10, backgroundColor: c, borderWidth: 1.5, borderColor: C.ink900 }} />
+              <View key={t} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 10, height: 10, borderRadius: 10, marginRight: 6, backgroundColor: c, borderWidth: 1.5, borderColor: C.ink900 }} />
                 <GText v="bodyS" color={C.ink700}>
                   {t}
                 </GText>
-              </Row>
+              </View>
             ))}
           </Row>
           <Row gap={10} center={false}>
             {[
-              ['Đang tạm giữ', fmtVnd(w.heldVnd), `${w.heldCount} voucher chưa quét`],
+              ['Tạm giữ', fmtVnd(w.heldVnd), `${w.heldCount} voucher chưa quét`],
               ['Đã trả phí', fmtVnd(w.totalPaidVnd), `${fmtVnd(fee)} mỗi lượt quét`],
             ].map(([l, v, n]) => (
               <Card key={l} pad={[10, 12]} gap={2} radius={14} sw={2} depth="none" style={{ flex: 1 }}>
@@ -230,7 +236,7 @@ export default function StoreFeeScreen() {
               }}>
               <Plus size={16} color={C.ink900} strokeWidth={2.5} />
               <GText v="bodyMStrong">
-                Nạp đủ {fmtVnd(fillUp)} để bán hết {w.unsoldCount} voucher
+                Nạp đủ {fmtVnd(fillUp)} để bán hết
               </GText>
             </Pressable>
           ) : null}

@@ -149,18 +149,26 @@ export const RADIUS = { s: 10, m: 16, l: 22, pill: 999 } as const;
 export const NIGHT_GRADIENT = [C.night2, C.night] as const;
 export const NIGHT_DEEP_GRADIENT = [C.night2, C.ink900] as const;
 
-/** Kiểu bản đồ Google pastel khớp minh hoạ game (Android / provider Google). */
+/** Bản đồ Google kiểu hoạt hình khớp Map/City trong Figma: ẩn chữ / POI / giao thông, đường trắng viền mực. Dùng qua <GameMap>. */
 export const GAME_MAP_STYLE = [
   { elementType: 'geometry', stylers: [{ color: C.mapLand }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: C.ink700 }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }, { weight: 3 }] },
-  { featureType: 'poi', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.park', stylers: [{ visibility: 'on' }] },
   { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: C.mapPark }] },
-  { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-  { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: C.mapBlock }] },
+  { featureType: 'poi.park', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: C.mapLand }] },
+  { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ color: C.mapBlock }] },
+  { featureType: 'landscape.man_made', elementType: 'geometry.stroke', stylers: [{ color: C.ink900 }, { weight: 1.2 }] },
   { featureType: 'road', elementType: 'geometry.fill', stylers: [{ color: '#ffffff' }] },
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: C.ink300 }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: C.ink900 }, { weight: 2 }] },
+  // Hẻm / đường nhỏ: viền nhạt, mảnh cho đỡ rối (Figma chỉ có đường chính viền đậm).
+  { featureType: 'road.local', elementType: 'geometry.fill', stylers: [{ color: '#ffffff' }, { weight: 0.6 }] },
+  { featureType: 'road.local', elementType: 'geometry.stroke', stylers: [{ color: C.ink300 }, { weight: 0.4 }] },
   { featureType: 'road.highway', elementType: 'geometry.fill', stylers: [{ color: C.coin300 }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: C.ink900 }, { weight: 2.5 }] },
+  { featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'off' }] },
   { featureType: 'transit', stylers: [{ visibility: 'off' }] },
   { featureType: 'water', elementType: 'geometry', stylers: [{ color: C.mapWater }] },
 ];

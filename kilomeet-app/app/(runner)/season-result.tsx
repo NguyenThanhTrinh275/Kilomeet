@@ -1,5 +1,6 @@
 // Màn "Season Over" — tổng kết mùa vừa đóng: huy hiệu, hạng tụt 2 bậc, token giữ lại.
 import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +15,9 @@ import { fmtInt } from '../../src/lib/format';
 import { Card, Coin, GButton, GText, Glow, Loading, Pill, RankEmblem, Row, StarField, XPBar } from '../../src/components/game';
 import type { ApiBadge } from './badges';
 
+/** Khoá AsyncStorage "đã xem kết quả mùa" — Sảnh tự mở màn này 1 lần sau khi mùa đóng. */
+export const seasonResultKey = (userId: string, seasonId: string) => `kilomeet:season-result-v3:${userId}:${seasonId}`;
+
 export default function SeasonResultScreen() {
   const user = useAuthStore((s) => s.user) as Runner | null;
   const myVouchers = useVoucherStore((s) => s.myVouchers);
@@ -22,7 +26,12 @@ export default function SeasonResultScreen() {
   useEffect(() => {
     api
       .get<ApiBadge[]>('/me/badges')
-      .then((b) => setBadge(b.filter((x) => !x.current).pop() ?? null))
+      .then((b) => {
+        const last = b.filter((x) => !x.current).pop() ?? null;
+        setBadge(last);
+        const uid = useAuthStore.getState().user?.id;
+        if (last && uid) AsyncStorage.setItem(seasonResultKey(uid, last.seasonId), '1').catch(() => undefined);
+      })
       .catch(() => setBadge(null));
   }, []);
 

@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
+import { GameMap } from '../../src/components/game/GameMap';
 import { toast } from 'sonner-native';
 import { Camera, Check, Coffee, Dumbbell, Eye, Info, Phone, Plus, ShieldCheck, Sparkles, Store as StoreIcon, Trophy, X } from 'lucide-react-native';
 import { api } from '../../src/api/client';
 import { useAuthStore } from '../../src/stores/auth';
 import type { Store, StoreCoverTheme, StoreHighlight, StoreOpeningHours, StoreProfile, StoreProfileUpdate } from '../../src/api/types';
-import { C, DEPTH, FONT, GAME_MAP_STYLE, TONE, type Tone } from '../../src/theme/game';
+import { C, DEPTH, FONT, TONE, type Tone } from '../../src/theme/game';
 import { fmtVnd } from '../../src/lib/format';
 import { profileCompleteness } from '../../src/lib/storeProfile';
 import {
@@ -316,9 +317,8 @@ export default function StoreProfileEditor() {
           </GText>
           <Card row pad={10} gap={12} depth="small">
             <View style={{ width: 84, height: 84, borderRadius: 14, borderWidth: 2, borderColor: C.ink900, overflow: 'hidden' }}>
-              <MapView
+              <GameMap
                 style={{ flex: 1 }}
-                customMapStyle={GAME_MAP_STYLE}
                 initialRegion={{ latitude: p.latitude, longitude: p.longitude, latitudeDelta: 0.004, longitudeDelta: 0.004 }}
                 scrollEnabled={false}
                 zoomEnabled={false}
@@ -327,7 +327,7 @@ export default function StoreProfileEditor() {
                 <Marker coordinate={{ latitude: p.latitude, longitude: p.longitude }} anchor={{ x: 0.5, y: 1 }}>
                   <MapPin kind="store" size={28} />
                 </Marker>
-              </MapView>
+              </GameMap>
             </View>
             <View style={{ flex: 1, gap: 2 }}>
               <GText v="bodyMStrong">{p.address || `${p.latitude.toFixed(4)}, ${p.longitude.toFixed(4)}`}</GText>

@@ -37,7 +37,7 @@ function TabItem({ label, icon: Icon, active, onPress, center }: { label: string
         borderColor: C.ink900,
       }}>
       {Icon ? <Icon size={24} color={active ? C.ink900 : C.ink500} strokeWidth={2.5} /> : null}
-      <GText v="caps" color={active ? C.ink900 : C.ink500} align="center" numberOfLines={1} style={{ fontSize: 10, letterSpacing: 0 }}>
+      <GText v="caps" color={active ? C.ink900 : C.ink500} align="center" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ fontSize: 11, letterSpacing: 0, textTransform: 'none' }}>
         {label}
       </GText>
     </Pressable>
@@ -89,6 +89,8 @@ export function GameTabBar({ state, navigateToTab }: BottomTabBarProps) {
 
   return (
     <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 98 + Math.max(insets.bottom - 8, 0) }}>
+      {/* Che phần nội dung cuộn lọt xuống dưới thanh tab (vùng phím điều hướng Android). */}
+      <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 60, bottom: 0, backgroundColor: C.bg }} />
       <View
         style={[
           {
@@ -122,6 +124,8 @@ export function StoreNav({ active }: { active: 'home' | 'vouchers' }) {
   const insets = useSafeAreaInsets();
   return (
     <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 98 + Math.max(insets.bottom - 8, 0) }}>
+      {/* Che phần nội dung cuộn lọt xuống dưới thanh tab (vùng phím điều hướng Android). */}
+      <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 60, bottom: 0, backgroundColor: C.bg }} />
       <View
         style={[
           {

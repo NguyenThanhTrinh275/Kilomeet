@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar, Check, Hourglass, Link2, LogOut, RefreshCcw, Shield, Store as StoreIcon } from 'lucide-react-native';
 import { api } from '../../src/api/client';
@@ -14,7 +14,8 @@ type AdminStore = PendingStore & { status: 'pending' | 'approved' | 'rejected' }
 
 function daysUntil(dateStr: string) {
   if (!dateStr) return 0;
-  return Math.max(0, Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86_400_000));
+  // endDate (YYYY-MM-DD) là ngày cuối mùa, tính hết 23:59:59 giờ VN — khớp `daysLeft` của BE ở màn người chạy.
+  return Math.max(0, Math.ceil((Date.parse(`${dateStr.slice(0, 10)}T23:59:59+07:00`) - Date.now()) / 86_400_000));
 }
 
 export default function AdminDashboard() {
@@ -43,9 +44,12 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
+  // Tải lại mỗi lần quay về (sau khi duyệt quán / đóng mùa).
+  useFocusEffect(
+    useCallback(() => {
+      void fetchData();
+    }, [fetchData]),
+  );
 
   if (loading) return <Loading />;
   const active = seasons.find((s) => s.isActive);

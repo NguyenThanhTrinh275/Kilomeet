@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { GameMap } from '../../src/components/game/GameMap';
 import { toast } from 'sonner-native';
 import { Calendar, Check, Crosshair, Mail, Search, Store as StoreIcon, X } from 'lucide-react-native';
 import { api } from '../../src/api/client';
 import type { PendingStore } from '../../src/api/types';
-import { C, GAME_MAP_STYLE } from '../../src/theme/game';
+import { C } from '../../src/theme/game';
 import { fmtDate } from '../../src/lib/format';
 import { Body, Card, EmptyState, GameDialog, GButton, GText, IconTile, Loading, MapPin, Pill, type PillTone, Row, Screen, Segmented, TopBar } from '../../src/components/game';
 
@@ -87,9 +88,8 @@ export default function StoresScreen() {
                   <Pill tone={tone} label={label} />
                 </Row>
                 <View style={{ height: 130, borderRadius: 14, borderWidth: 2, borderColor: C.ink900, overflow: 'hidden' }}>
-                  <MapView
+                  <GameMap
                     style={{ flex: 1 }}
-                    customMapStyle={GAME_MAP_STYLE}
                     initialRegion={{ latitude: s.latitude, longitude: s.longitude, latitudeDelta: 0.005, longitudeDelta: 0.005 }}
                     scrollEnabled={false}
                     zoomEnabled={false}
@@ -98,7 +98,7 @@ export default function StoresScreen() {
                     <Marker coordinate={{ latitude: s.latitude, longitude: s.longitude }} anchor={{ x: 0.5, y: 1 }}>
                       <MapPin kind="store" />
                     </Marker>
-                  </MapView>
+                  </GameMap>
                 </View>
                 <Row gap={12} style={{ flexWrap: 'wrap' }}>
                   {[

@@ -54,9 +54,10 @@ export function CoinChip({ amount, style, size = 'm' }: { amount: string; style?
 /** Đồng xu + số, không khung. */
 export function CoinAmount({ amount, size = 18, v = 'numM', color = C.ink900, strike }: { amount: string; size?: number; v?: 'numS' | 'numM' | 'numL'; color?: string; strike?: boolean }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+    // Không dùng `gap`: Android đo khung co-theo-nội-dung thiếu phần gap → cắt chữ số cuối ("1.06" thay vì "1.068").
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
       <Coin size={size} />
-      <GText v={v} color={color} strike={strike}>
+      <GText v={v} color={color} strike={strike} style={{ marginLeft: 4 }}>
         {amount}
       </GText>
     </View>
@@ -108,7 +109,6 @@ export function RankChip({ rank, style, small }: { rank: Rank; style?: StyleProp
         {
           flexDirection: 'row',
           alignItems: 'center',
-          gap: small ? 4 : 6,
           paddingVertical: small ? 2 : 3,
           paddingLeft: small ? 2 : 3,
           paddingRight: small ? 8 : 12,
@@ -122,7 +122,7 @@ export function RankChip({ rank, style, small }: { rank: Rank; style?: StyleProp
         style,
       ]}>
       <RankEmblem rank={rank} size={small ? 18 : 22} />
-      <GText v="caps" style={small ? { fontSize: 10 } : null}>
+      <GText v="caps" style={[{ marginLeft: small ? 4 : 6 }, small ? { fontSize: 10 } : null]}>
         {RANK_LABEL[rank]}
       </GText>
     </View>

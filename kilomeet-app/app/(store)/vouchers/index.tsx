@@ -73,7 +73,7 @@ export default function StoreVouchersScreen() {
               <Card key={v.id} gap={10} pad={14} style={ended ? { opacity: 0.6 } : null}>
                 <Row gap={12}>
                   <View style={{ width: 64, height: 64, borderRadius: 16, backgroundColor: stub, borderWidth: 2.5, borderColor: C.ink900, alignItems: 'center', justifyContent: 'center' }}>
-                    <GText v="numM" color={stub === C.grape500 ? C.white : C.ink900}>
+                    <GText v="numM" color={stub === C.grape500 ? C.white : C.ink900} numberOfLines={1} style={{ fontSize: 17 }}>
                       {discountLabel(v.discountPercent)}
                     </GText>
                   </View>
@@ -90,19 +90,19 @@ export default function StoreVouchersScreen() {
                   </View>
                 </Row>
                 {v.questDescription ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 10, backgroundColor: C.grape300, borderWidth: 1.5, borderColor: C.ink900 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', maxWidth: '100%', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 10, backgroundColor: C.grape300, borderWidth: 1.5, borderColor: C.ink900 }}>
                     <Route size={14} color={C.grape700} strokeWidth={2.5} />
-                    <GText v="bodyS">
+                    <GText v="bodyS" style={{ marginLeft: 6, flexShrink: 1 }}>
                       Nhiệm vụ: -{v.questDiscountPercent}% khi {v.questDescription.toLowerCase()}
                     </GText>
                   </View>
                 ) : null}
-                <Row gap={10}>
-                  <XPBar pct={v.totalSupply ? sold / v.totalSupply : 0} tone="orange" height={14} style={{ width: 120 }} />
+                <XPBar pct={v.totalSupply ? sold / v.totalSupply : 0} tone="orange" height={14} />
+                <Row between>
                   <GText v="bodyS" color={C.ink700}>
                     Đã bán {sold}/{v.totalSupply}
                   </GText>
-                  <GText v="bodyS" color={C.ink500} style={{ marginLeft: 'auto' }}>
+                  <GText v="bodyS" color={C.ink500}>
                     HSD {fmtDate(v.expiresAt)}
                   </GText>
                 </Row>

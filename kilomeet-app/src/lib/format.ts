@@ -24,16 +24,19 @@ export function fmtVndShort(n: number): string {
 
 /** Phút (số thực) → "mm:ss" */
 export function fmtMinutes(minutes: number): string {
-  const m = Math.floor(minutes);
-  const s = Math.round((minutes - m) * 60);
+  // Làm tròn TỔNG số giây trước, để 5,999 phút ra "06:00" chứ không phải "05:60".
+  const total = Math.round(minutes * 60);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 /** Tốc độ phút/km → 5'46" */
 export function fmtPace(minPerKm: number): string {
   if (!minPerKm || !isFinite(minPerKm)) return `--'--"`;
-  const m = Math.floor(minPerKm);
-  const s = Math.round((minPerKm - m) * 60);
+  const total = Math.round(minPerKm * 60);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}'${String(s).padStart(2, '0')}"`;
 }
 

@@ -73,10 +73,11 @@ export default function StoreDashboardScreen() {
   useEffect(() => {
     load().finally(() => setLoading(false));
   }, [load]);
+  // Quay lại màn (sau khi quét QR, nạp ví phí, sửa hồ sơ…) → tải lại số liệu.
   useFocusEffect(
     useCallback(() => {
-      api.get<StoreProfile>('/store/profile').then(setProfile).catch(() => undefined);
-    }, []),
+      void load();
+    }, [load]),
   );
 
   const onRefresh = useCallback(async () => {

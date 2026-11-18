@@ -3,11 +3,12 @@ import { Linking, Platform, ScrollView, Share, StyleSheet, View, type ScrollView
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Circle, Marker } from 'react-native-maps';
+import { GameMap } from '../../../src/components/game/GameMap';
 import { AlertCircle, Check, ChevronLeft, Clock, Coffee, Footprints, Link2, Navigation, Route, ShieldCheck, ShoppingBag, Sparkles, Store, UtensilsCrossed } from 'lucide-react-native';
 import { useVoucherStore } from '../../../src/stores/voucher';
 import { useRunnerStore } from '../../../src/stores/runner';
 import type { StoreProfile } from '../../../src/api/types';
-import { C, DEPTH, GAME_MAP_STYLE, TONE, type Tone } from '../../../src/theme/game';
+import { C, DEPTH, TONE, type Tone } from '../../../src/theme/game';
 import { discountLabel, fmtInt, fmtVnd } from '../../../src/lib/format';
 import { isOpenNow, loadStoreProfile } from '../../../src/lib/storeProfile';
 import { haversine, getCurrentPosition, type LatLng } from '../../../src/services/location';
@@ -210,9 +211,8 @@ export default function StoreProfileScreen() {
           <SectionHeader title="Vị trí & nhiệm vụ" />
           <Card pad={10} gap={10}>
             <View style={{ height: 170, borderRadius: 14, borderWidth: 2, borderColor: C.ink900, overflow: 'hidden' }}>
-              <MapView
+              <GameMap
                 style={StyleSheet.absoluteFill}
-                customMapStyle={GAME_MAP_STYLE}
                 initialRegion={{ latitude: profile.latitude, longitude: profile.longitude, latitudeDelta: 0.005, longitudeDelta: 0.005 }}
                 scrollEnabled={false}
                 zoomEnabled={false}
@@ -222,7 +222,7 @@ export default function StoreProfileScreen() {
                 <Marker coordinate={profile} anchor={{ x: 0.5, y: 1 }}>
                   <MapPin kind="store" />
                 </Marker>
-              </MapView>
+              </GameMap>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 12, backgroundColor: passed ? C.green300 : C.grape300, borderWidth: 1.5, borderColor: C.ink900 }}>
               {passed ? <Check size={20} color={C.green700} strokeWidth={2.5} /> : <Route size={20} color={C.grape700} strokeWidth={2.5} />}

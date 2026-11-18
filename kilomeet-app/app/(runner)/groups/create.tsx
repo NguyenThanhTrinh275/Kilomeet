@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import MapView, { Marker, type MapPressEvent } from 'react-native-maps';
+import { GameMap } from '../../../src/components/game/GameMap';
 import { toast } from 'sonner-native';
 import { Check, Flag, Flame, Info, Minus, Plus, Sparkles, Users } from 'lucide-react-native';
 import { GROUP_TIME_SLOTS, RANKS, type RankRange, type Runner } from '../../../src/api/types';
 import { useGroupStore, type MeetingPoint } from '../../../src/stores/group';
 import { useAuthStore } from '../../../src/stores/auth';
-import { C, DEPTH, GAME_MAP_STYLE } from '../../../src/theme/game';
+import { C, DEPTH } from '../../../src/theme/game';
 import {
   Banner,
   Body,
@@ -196,9 +197,8 @@ export default function CreateGroupScreen() {
         {cap('Điểm hội tụ')}
         <Card pad={10} gap={10}>
           <View style={{ height: 170, borderRadius: 14, borderWidth: 2, borderColor: C.ink900, overflow: 'hidden' }}>
-            <MapView
+            <GameMap
               style={{ flex: 1 }}
-              customMapStyle={GAME_MAP_STYLE}
               initialRegion={{ ...HCMUT, latitudeDelta: 0.025, longitudeDelta: 0.025 }}
               onPress={(e: MapPressEvent) => setPin(e.nativeEvent.coordinate)}>
               <Marker coordinate={pin} draggable onDragEnd={(e) => setPin(e.nativeEvent.coordinate)} anchor={{ x: 0.5, y: 1 }}>
@@ -209,7 +209,7 @@ export default function CreateGroupScreen() {
                   <MapPin kind={p.type === 'store' ? 'store' : 'quest'} size={32} />
                 </Marker>
               ))}
-            </MapView>
+            </GameMap>
           </View>
           <GText v="bodyS" color={C.ink500}>
             Chạm bản đồ / kéo ghim, hoặc chọn điểm có sẵn:

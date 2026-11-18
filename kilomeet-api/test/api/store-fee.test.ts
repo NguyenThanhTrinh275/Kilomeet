@@ -115,3 +115,12 @@ describe('ví phí trả trước (quyết định #28)', () => {
     expect(v6.pausedForFee).toBe(true);
   });
 });
+
+describe('nạp tiền gọi song song', () => {
+  it('2 request cùng requestId chạy song song → đều thành công, chỉ nạp 1 lần', async () => {
+    const fuji = await ctx.login('quanfuji@demo.com');
+    const rs = await Promise.all([1, 2, 3].map(() => ctx.post('/store/fee/topup', { amountVnd: 30_000, requestId: 'same' }, fuji)));
+    expect(rs.every((r) => r.json.success)).toBe(true);
+    expect((await prisma.store.findUniqueOrThrow({ where: { userId: 'store-fuji' } })).feeBalanceVnd).toBe(180_000);
+  });
+});

@@ -30,7 +30,7 @@ export default function SeasonScreen() {
 
   const season = seasons.find((s) => s.isActive) ?? seasons[seasons.length - 1];
   const past = seasons.filter((s) => s !== season);
-  const daysLeft = season?.endDate ? Math.max(0, Math.ceil((new Date(season.endDate).getTime() - Date.now()) / 86_400_000)) : 0;
+  const daysLeft = season?.endDate ? Math.max(0, Math.ceil((Date.parse(`${season.endDate.slice(0, 10)}T23:59:59+07:00`) - Date.now()) / 86_400_000)) : 0;
 
   async function act(action: 'end' | 'start') {
     setBusy(true);
@@ -105,23 +105,25 @@ export default function SeasonScreen() {
                 <GText v="caps" color={C.ink500} style={{ flex: 1 }}>
                   Hạng
                 </GText>
-                <GText v="caps" color={C.ink500} style={{ width: 80 }}>
-                  Km/tuần
+                <GText v="caps" color={C.ink500} style={{ width: 66 }}>
+                  Km
                 </GText>
-                <GText v="caps" color={C.ink500} style={{ width: 80 }}>
-                  Giữ tối đa
+                <GText v="caps" color={C.ink500} style={{ width: 66 }}>
+                  Giữ
                 </GText>
               </Row>
               {RANKS.map((r, i) => (
                 <Row key={r} style={{ paddingVertical: 8, borderBottomWidth: i < RANKS.length - 1 ? 1.5 : 0, borderBottomColor: C.ink300 }}>
-                  <Row gap={8} style={{ flex: 1 }}>
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                     <RankEmblem rank={r} size={30} />
-                    <GText v="bodyMStrong">{RANK_LABEL[r]}</GText>
-                  </Row>
-                  <GText v="numS" style={{ width: 80 }}>
+                    <GText v="bodyMStrong" numberOfLines={1} style={{ marginLeft: 8, flexShrink: 1 }}>
+                      {RANK_LABEL[r]}
+                    </GText>
+                  </View>
+                  <GText v="numS" style={{ width: 66 }}>
                     {RANK_KM_THRESHOLD[r] ? `${RANK_KM_THRESHOLD[r]} km` : '—'}
                   </GText>
-                  <Row gap={4} style={{ width: 80 }}>
+                  <Row gap={4} style={{ width: 66 }}>
                     <Coin size={16} />
                     <GText v="numS">{RANK_TOKEN_RETENTION[r]}</GText>
                   </Row>

@@ -27,23 +27,27 @@ export function GameDialog({
   children?: React.ReactNode;
   actions?: React.ReactNode;
 }) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(27,26,58,0.65)', justifyContent: 'center', padding: 24 }}>
-        <Pressable
-          onPress={() => undefined}
+      {/* Chừa thanh trạng thái + phím điều hướng; nội dung dài (vd. đóng mùa) thì cuộn trong hộp thoại. */}
+      <Pressable
+        onPress={onClose}
+        style={{ flex: 1, backgroundColor: 'rgba(27,26,58,0.65)', justifyContent: 'center', paddingHorizontal: 24, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }}>
+        <View
+          onStartShouldSetResponder={() => true}
           style={[
             {
               backgroundColor: C.surface,
               borderRadius: 28,
               borderWidth: 2.5,
               borderColor: C.ink900,
-              padding: 24,
-              gap: 14,
-              alignItems: 'center',
+              maxHeight: '100%',
+              overflow: 'hidden',
             },
             DEPTH.chunky,
           ]}>
+          <ScrollView bounces={false} contentContainerStyle={{ padding: 24, gap: 14, alignItems: 'center' }}>
           {icon ? <IconTile icon={icon} size={72} iconSize={34} fill={iconFill} color={iconColor} radius={22} sw={3} depth="small" /> : null}
           <GText v="titleL" align="center">
             {title}
@@ -55,7 +59,8 @@ export function GameDialog({
           ) : null}
           {children}
           {actions ? <View style={{ alignSelf: 'stretch', gap: 12, marginTop: 4 }}>{actions}</View> : null}
-        </Pressable>
+          </ScrollView>
+        </View>
       </Pressable>
     </Modal>
   );
@@ -65,9 +70,9 @@ export function GameSheet({ open, onClose, children }: { open: boolean; onClose:
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(27,26,58,0.6)' }}>
+      {/* Android edge-to-edge: cửa sổ không tự co khi bật bàn phím → phải dùng 'padding' cả trên Android,
+          nếu không ô nhập (mã QR, email người nhận) bị bàn phím che mất. */}
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(27,26,58,0.6)' }}>
         <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
         <View
           style={{

@@ -36,7 +36,7 @@ export default function ScanScreen() {
       setPhase('scanned');
       setManualOpen(false);
     } catch (e) {
-      toast.error('QR không hợp lệ', { description: (e as Error).message || 'QR không hợp lệ hoặc đã sử dụng' });
+      toast.error('Không dùng được voucher', { description: (e as Error).message || 'QR không hợp lệ hoặc đã sử dụng' });
       processing.current = false;
     }
   };
@@ -154,7 +154,7 @@ export default function ScanScreen() {
         </Card>
         <Row gap={12}>
           <GButton label="Huỷ" type="secondary" onPress={reset} flex />
-          <GButton label="Xác nhận dùng" icon={Check} onPress={confirm} flex />
+          <GButton label="Xác nhận" onPress={confirm} flex />
         </Row>
       </GameSheet>
     </View>

@@ -31,7 +31,7 @@ export function StatTile({
       <GText v={value.length > 4 ? 'numM' : 'numL'} numberOfLines={1} adjustsFontSizeToFit style={value.length > 4 ? { fontSize: 24, lineHeight: 36 } : null}>
         {value}
       </GText>
-      <GText v="bodyS" color={C.ink500} numberOfLines={1}>
+      <GText v="bodyS" color={C.ink500} numberOfLines={2}>
         {label}
       </GText>
     </Card>
@@ -174,9 +174,11 @@ export function VoucherTicket({
           )}
         </Row>
         {questLabel ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8, backgroundColor: C.grape300, borderWidth: 1.5, borderColor: C.ink900 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', maxWidth: '100%', paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8, backgroundColor: C.grape300, borderWidth: 1.5, borderColor: C.ink900 }}>
             <Route size={14} color={C.ink900} strokeWidth={2.5} />
-            <GText v="bodyS">{questLabel}</GText>
+            <GText v="bodyS" style={{ marginLeft: 4, flexShrink: 1 }}>
+              {questLabel}
+            </GText>
           </View>
         ) : null}
       </View>

@@ -24,8 +24,9 @@ export function totalDistance(route: LatLng[]): number {
 export function formatPace(kmPerMs: number): string {
   if (kmPerMs <= 0) return '--:--';
   const minPerKm = 1 / (kmPerMs * 60000);
-  const mins = Math.floor(minPerKm);
-  const secs = Math.round((minPerKm - mins) * 60);
+  const total = Math.round(minPerKm * 60);
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 

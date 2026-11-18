@@ -3,13 +3,14 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Circle, Marker } from 'react-native-maps';
+import { GameMap } from '../../../src/components/game/GameMap';
 import * as Location from 'expo-location';
 import { toast } from 'sonner-native';
 import { Check, ChevronLeft, Flag, Info, MapPin as PinIcon, Navigation, Users, X } from 'lucide-react-native';
 import { useGroupStore, type MemberLocation } from '../../../src/stores/group';
 import { useAuthStore } from '../../../src/stores/auth';
 import type { GroupRun } from '../../../src/api/types';
-import { C, DEPTH, GAME_MAP_STYLE } from '../../../src/theme/game';
+import { C, DEPTH } from '../../../src/theme/game';
 import { avatarColor, initials } from '../../../src/lib/format';
 import {
   Avatar,
@@ -169,7 +170,7 @@ function GroupLobby({ group, userId }: { group: GroupRun; userId: string }) {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={{ height: 400, borderBottomWidth: 3, borderColor: C.ink900 }}>
-          <MapView style={StyleSheet.absoluteFill} customMapStyle={GAME_MAP_STYLE} initialRegion={{ ...meeting, latitudeDelta: 0.012, longitudeDelta: 0.012 }}>
+          <GameMap style={StyleSheet.absoluteFill} initialRegion={{ ...meeting, latitudeDelta: 0.012, longitudeDelta: 0.012 }}>
             <Circle center={meeting} radius={50} strokeColor={C.green700} strokeWidth={2.5} fillColor="rgba(43,212,106,0.2)" lineDashPattern={[6, 5]} />
             <Marker coordinate={meeting} anchor={{ x: 0.5, y: 1 }} title={group.meetingPoint.name}>
               <MapPin kind="meet" size={56} />
@@ -182,7 +183,7 @@ function GroupLobby({ group, userId }: { group: GroupRun; userId: string }) {
                 </View>
               </Marker>
             ))}
-          </MapView>
+          </GameMap>
           <SafeAreaView edges={['top']} style={{ position: 'absolute', left: 0, right: 0, top: 0 }}>
             <Row gap={12} style={{ paddingHorizontal: 16, paddingTop: 6 }}>
               <IconButton icon={ChevronLeft} onPress={() => router.back()} />

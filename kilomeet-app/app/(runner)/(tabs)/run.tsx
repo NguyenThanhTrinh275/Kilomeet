@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Marker, Polyline } from 'react-native-maps';
+import { GameMap } from '../../../src/components/game/GameMap';
 import * as Location from 'expo-location';
 import { toast } from 'sonner-native';
 import { Check, ChevronRight, Clock, Crosshair, Flame, Gauge, Gift, Home, Link2, Navigation, Pause, Play, Sparkles, Square, Star, Store, Target, Timer, Trophy, X } from 'lucide-react-native';
@@ -14,8 +15,8 @@ import { useUiStore } from '../../../src/stores/ui';
 import { formatDuration, haversine, requestLocationPermission, totalDistance, type LatLng } from '../../../src/services/location';
 import { DEMO_ENABLED, DEMO_ROUTES } from '../../../src/demo/routes';
 import type { GpsPoint } from '../../../src/api/types';
-import { C, DEPTH, GAME_MAP_STYLE, NIGHT_DEEP_GRADIENT, NIGHT_GRADIENT } from '../../../src/theme/game';
-import { fmtInt, fmtKm } from '../../../src/lib/format';
+import { C, DEPTH, NIGHT_DEEP_GRADIENT, NIGHT_GRADIENT } from '../../../src/theme/game';
+import { fmtInt, fmtKm, fmtPace } from '../../../src/lib/format';
 import {
   Banner,
   Card,
@@ -58,6 +59,7 @@ export default function RunScreen() {
   const [stopOpen, setStopOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
   const mapRef = useRef<MapView>(null);
+  const insets = useSafeAreaInsets();
   const watchRef = useRef<Location.LocationSubscription | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(0);
@@ -257,7 +259,7 @@ export default function RunScreen() {
   };
 
   const paceMin = elapsed > 0 && distance > 0 ? elapsed / 60000 / distance : 0;
-  const pace = paceMin ? `${Math.floor(paceMin)}'${String(Math.round((paceMin % 1) * 60)).padStart(2, '0')}"` : `--'--"`;
+  const pace = fmtPace(paceMin);
   const daily = quests.find((q) => q.type === 'daily');
   const weekly = quests.find((q) => q.type === 'weekly');
   const dailyHit = !!daily && daily.status === 'active' && daily.progressKm + distance >= daily.targetKm;
@@ -267,19 +269,23 @@ export default function RunScreen() {
     const center = currentPos ?? HCMUT;
     return (
       <View style={{ flex: 1, backgroundColor: C.mapLand }}>
-        <MapView
+        <GameMap
           ref={mapRef}
           style={StyleSheet.absoluteFill}
-          customMapStyle={GAME_MAP_STYLE}
           initialRegion={{ ...center, latitudeDelta: 0.012, longitudeDelta: 0.012 }}
-          showsUserLocation
+          showsUserLocation={!currentPos}
           showsMyLocationButton={false}>
+          {currentPos ? (
+            <Marker coordinate={currentPos} anchor={{ x: 0.5, y: 1 }} zIndex={10}>
+              <MapPin kind="me" />
+            </Marker>
+          ) : null}
           {stores.map((s) => (
             <Marker key={s.id} coordinate={s} anchor={{ x: 0.5, y: 1 }} title={s.name} description={s.deal ? `Chạy ngang quán: -${s.deal}% giá voucher` : undefined}>
               <MapPin kind={s.deal ? 'quest' : 'store'} icon={Store} />
             </Marker>
           ))}
-        </MapView>
+        </GameMap>
 
         <SafeAreaView edges={['top']} style={{ paddingHorizontal: 24, paddingTop: 8, gap: 12 }} pointerEvents="box-none">
           <Card row pad={12} gap={10}>
@@ -310,7 +316,8 @@ export default function RunScreen() {
             borderColor: C.ink900,
             paddingTop: 12,
             paddingHorizontal: 24,
-            paddingBottom: TAB_BAR_SPACE,
+            // + vùng phím điều hướng: nút CHẠY nổi cao hơn thanh tab, không được che nút mẫu.
+            paddingBottom: TAB_BAR_SPACE + Math.max(insets.bottom - 8, 0) + 4,
             gap: 14,
           }}>
           <View style={{ alignSelf: 'center', width: 48, height: 6, borderRadius: 3, backgroundColor: C.ink300 }} />
@@ -320,9 +327,11 @@ export default function RunScreen() {
                 <Card key={q.id} pad={12} gap={6} depth="small" style={{ flex: 1 }}>
                   <Row between>
                     <Pill tone={i === 0 ? 'orange' : 'sky'} label={i === 0 ? 'Ngày' : 'Tuần'} />
-                    <Row gap={3}>
-                      <Coin size={16} />
-                      <GText v="numS">+{q.rewardTokens}</GText>
+                    <Row gap={2}>
+                      <Coin size={14} />
+                      <GText v="numS" numberOfLines={1}>
+                        +{q.rewardTokens}
+                      </GText>
                     </Row>
                   </Row>
                   <GText v="titleS">
@@ -334,11 +343,20 @@ export default function RunScreen() {
             )}
           </Row>
           <GButton label="XUẤT PHÁT" type="accent" icon={Play} filledIcon height={64} onPress={() => void startRun()} block />
-          {DEMO_ENABLED
-            ? (Object.keys(DEMO_ROUTES) as (keyof typeof DEMO_ROUTES)[]).map((name) => (
-                <GButton key={name} label={`Buổi chạy mẫu · ${name}`} type="secondary" size="S" icon={Sparkles} onPress={() => void replayDemo(name)} block />
-              ))
-            : null}
+          {DEMO_ENABLED ? (
+            <Row gap={10}>
+              {(Object.keys(DEMO_ROUTES) as (keyof typeof DEMO_ROUTES)[]).map((name) => (
+                <GButton
+                  key={name}
+                  label={name.startsWith('3') ? 'Mẫu 3 km' : 'Mẫu qua quán'}
+                  type="secondary"
+                  size="S"
+                  onPress={() => void replayDemo(name)}
+                  flex
+                />
+              ))}
+            </Row>
+          ) : null}
         </View>
       </View>
     );
@@ -449,7 +467,7 @@ export default function RunScreen() {
                       const on = (claimedStoreId ?? selectedStore) === p.storeId;
                       const deal = stores.find((s) => s.id === p.storeId)?.deal;
                       return (
-                        <Card key={p.storeId} row pad={14} fill={on ? C.grape300 : C.surface} onPress={claimedStoreId ? undefined : () => setSelectedStore(p.storeId)}>
+                        <Card key={p.storeId} row pad={14} fill={on ? C.grape300 : C.surface} onPress={claimedStoreId ? undefined : () => setSelectedStore(p.storeId)} style={claimedStoreId && !on ? { opacity: 0.45 } : undefined}>
                           <IconTile icon={Store} size={48} iconSize={24} fill={on ? C.grape500 : C.orange500} color={on ? C.white : C.ink900} radius={14} sw={2.5} />
                           <View style={{ flex: 1 }}>
                             <GText v="titleS">{p.storeName}</GText>
@@ -457,7 +475,7 @@ export default function RunScreen() {
                               {deal ? `Voucher giảm ${deal}% giá token` : 'Giảm giá voucher của quán'}
                             </GText>
                           </View>
-                          {claimedStoreId === p.storeId ? <Pill tone="green" label="Đã nhận" icon={Check} /> : <RadioDot on={on} />}
+                          {claimedStoreId === p.storeId ? <Pill tone="green" label="Đã nhận" icon={Check} /> : claimedStoreId ? null : <RadioDot on={on} />}
                         </Card>
                       );
                     })}
@@ -551,13 +569,17 @@ export default function RunScreen() {
         </Row>
 
         <View style={[{ flex: 1, minHeight: 160, borderRadius: 24, borderWidth: 3, borderColor: C.ink900, overflow: 'hidden' }, DEPTH.chunky]}>
-          <MapView
+          <GameMap
             ref={mapRef}
             style={StyleSheet.absoluteFill}
-            customMapStyle={GAME_MAP_STYLE}
             initialRegion={{ ...mapCenter, latitudeDelta: 0.006, longitudeDelta: 0.006 }}
-            showsUserLocation
+            showsUserLocation={!currentPos}
             showsMyLocationButton={false}>
+            {currentPos ? (
+              <Marker coordinate={currentPos} anchor={{ x: 0.5, y: 1 }} zIndex={10}>
+                <MapPin kind="me" size={40} />
+              </Marker>
+            ) : null}
             {route.length > 1 ? (
               <>
                 <Polyline coordinates={route} strokeColor={C.ink900} strokeWidth={9} />
@@ -569,7 +591,7 @@ export default function RunScreen() {
                 <MapPin kind="store" size={36} />
               </Marker>
             ))}
-          </MapView>
+          </GameMap>
           {passedLive[0] ? (
             <View style={{ position: 'absolute', left: 12, top: 12, flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999, backgroundColor: C.grape500, borderWidth: 2, borderColor: C.ink900 }}>
               <Store size={14} color={C.white} strokeWidth={2.5} />

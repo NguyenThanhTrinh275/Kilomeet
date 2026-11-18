@@ -104,14 +104,12 @@ export default function LoginScreen() {
           </Card>
 
           <Pressable onPress={() => router.push('/(auth)/register')} hitSlop={8}>
-            <Row gap={4}>
-              <GText v="bodyM" color={C.ink500}>
-                Chưa có tài khoản?
-              </GText>
+            <GText v="bodyM" color={C.ink500} align="center">
+              Chưa có tài khoản?{' '}
               <GText v="bodyMStrong" color={C.orange700}>
                 Đăng ký ngay
               </GText>
-            </Row>
+            </GText>
           </Pressable>
 
           <Row gap={10} style={{ alignSelf: 'stretch' }}>
