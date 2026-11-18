@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { Contract, JsonRpcProvider, Wallet, keccak256, toUtf8Bytes, type ContractTransactionResponse } from 'ethers';
+import { Contract, JsonRpcProvider, Wallet, keccak256, toUtf8Bytes, type ContractTransactionResponse, type Log } from 'ethers';
 import { config } from '../lib/config.js';
-import { ChainRetryLater, type ChainGateway, type ResolvedOp, type SendResult } from './gateway.js';
+import { ChainRetryLater, ChainTxUnknown, type ChainGateway, type RecoverResult, type ResolvedOp, type SendResult } from './gateway.js';
 
 // Chỉ các hàm/lỗi BE dùng, khớp ABI trong ../blockchain/sdk/abi (test/contract/chain-abi.test.ts kiểm tra).
 export const TOKEN_ABI = [
@@ -91,6 +91,7 @@ export class FujiChain implements ChainGateway {
   private readonly voucher: Contract;
   private readonly badge: Contract;
   private roleChecked = false;
+  private onBroadcast: ((txHash: string) => Promise<void>) | undefined;
 
   constructor() {
     const key = config.SERVER_PRIVATE_KEY || config.OPERATOR_PRIVATE_KEY;
@@ -103,15 +104,54 @@ export class FujiChain implements ChainGateway {
     this.badge = new Contract(a.SeasonBadge, BADGE_ABI, this.signer);
   }
 
-  async send(op: ResolvedOp): Promise<SendResult> {
+  async send(op: ResolvedOp, onBroadcast?: (txHash: string) => Promise<void>): Promise<SendResult> {
     await this.checkRole();
+    this.onBroadcast = onBroadcast;
     try {
       return await this.dispatch(op);
     } catch (e) {
-      if (e instanceof ChainRetryLater) throw e;
+      if (e instanceof ChainRetryLater || e instanceof ChainTxUnknown) throw e;
       const name = revertName(e);
       if (name === 'SeasonNotActive') throw new ChainRetryLater('Mùa on-chain đang đóng, chờ mở mùa');
       throw new Error(name ? `${op.op} bị từ chối: ${name}` : String((e as Error).message ?? e));
+    } finally {
+      this.onBroadcast = undefined;
+    }
+  }
+
+  /** Tra receipt của giao dịch đã phát. Chưa thấy trên mạng (bị bỏ khỏi mempool) → failed = gửi lại an toàn. */
+  async recover(op: ResolvedOp, txHash: string): Promise<RecoverResult> {
+    const provider = this.signer.provider!;
+    const receipt = await provider.getTransactionReceipt(txHash);
+    if (receipt) {
+      if (receipt.status !== 1) return { state: 'failed' };
+      return { state: 'done', result: op.op === 'createVoucherType' ? { txHash, typeId: this.typeIdFromLogs(receipt.logs, txHash) } : { txHash } };
+    }
+    return (await provider.getTransaction(txHash)) ? { state: 'unknown' } : { state: 'failed' };
+  }
+
+  private typeIdFromLogs(logs: readonly Log[], txHash: string): number {
+    for (const log of logs) {
+      const parsed = this.voucher.interface.parseLog(log);
+      if (parsed?.name === 'VoucherTypeCreated') return Number(parsed.args[0]);
+    }
+    throw new Error(`Không thấy sự kiện VoucherTypeCreated trong ${txHash}`);
+  }
+
+  /**
+   * Chờ receipt. Đã lên mạng thì báo `onBroadcast` để lưu txHash trước khi chờ.
+   * Revert sau khi lên mạng → lỗi thường (gửi lại an toàn). Lỗi khác lúc chờ (timeout, mất RPC) → ChainTxUnknown.
+   */
+  private async waitMined(tx: ContractTransactionResponse, notify: boolean) {
+    if (notify) await this.onBroadcast?.(tx.hash);
+    try {
+      const receipt = await tx.wait(1, 120_000);
+      if (!receipt || receipt.status !== 1) throw new Error(`Giao dịch thất bại: ${tx.hash}`);
+      return receipt;
+    } catch (e) {
+      if ((e as { code?: string }).code === 'CALL_EXCEPTION') throw new Error(`Giao dịch bị revert: ${tx.hash}`);
+      if (e instanceof Error && e.message.startsWith('Giao dịch thất bại')) throw e;
+      throw new ChainTxUnknown(`Chưa rõ kết quả ${tx.hash}: ${(e as Error).message ?? e}`);
     }
   }
 
@@ -126,8 +166,7 @@ export class FujiChain implements ChainGateway {
 
   private async mined(p: Promise<ContractTransactionResponse>): Promise<SendResult> {
     const tx = await p;
-    const receipt = await tx.wait(1, 120_000);
-    if (!receipt || receipt.status !== 1) throw new Error(`Giao dịch thất bại: ${tx.hash}`);
+    await this.waitMined(tx, true);
     return { txHash: tx.hash };
   }
 
@@ -150,15 +189,11 @@ export class FujiChain implements ChainGateway {
         if ((await v('approvedMerchant')(op.merchant)) === op.approved) return { txHash: null };
         return this.mined(v('setMerchantApproved')(op.merchant, op.approved));
       case 'createVoucherType': {
-        if (!(await v('approvedMerchant')(op.merchant))) await this.mined(v('setMerchantApproved')(op.merchant, true));
+        // Duyệt quán trước (idempotent: đọc trạng thái trước khi gửi), không lưu hash của giao dịch phụ này.
+        if (!(await v('approvedMerchant')(op.merchant))) await this.waitMined(await v('setMerchantApproved')(op.merchant, true), false);
         const tx: ContractTransactionResponse = await v('createVoucherType')(op.merchant, op.price, op.discountBps, op.maxSupply, op.expiry);
-        const receipt = await tx.wait(1, 120_000);
-        if (!receipt || receipt.status !== 1) throw new Error(`Giao dịch thất bại: ${tx.hash}`);
-        for (const log of receipt.logs) {
-          const parsed = this.voucher.interface.parseLog(log);
-          if (parsed?.name === 'VoucherTypeCreated') return { txHash: tx.hash, typeId: Number(parsed.args[0]) };
-        }
-        throw new Error(`Không thấy sự kiện VoucherTypeCreated trong ${tx.hash}`);
+        const receipt = await this.waitMined(tx, true);
+        return { txHash: tx.hash, typeId: this.typeIdFromLogs(receipt.logs, tx.hash) };
       }
       case 'purchaseVoucher':
         return this.mined(v('purchase')(op.to, this.typeIdOf(op), op.discounted));

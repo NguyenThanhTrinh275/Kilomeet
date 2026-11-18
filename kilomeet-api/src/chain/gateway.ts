@@ -37,7 +37,16 @@ export interface SendResult {
 /** Chưa gửi được lúc này nhưng không phải lỗi (vd. mùa on-chain đang đóng): giữ pending, không tính lần thử. */
 export class ChainRetryLater extends Error {}
 
+/** Giao dịch ĐÃ phát lên mạng nhưng chưa biết kết quả (vd. chờ receipt quá lâu): KHÔNG được gửi lại, phải tra receipt. */
+export class ChainTxUnknown extends Error {}
+
+/** Kết quả tra một giao dịch đã phát: xong (kèm kết quả), thất bại (revert/bị bỏ → gửi lại an toàn), hoặc chưa rõ. */
+export type RecoverResult = { state: 'done'; result: SendResult } | { state: 'failed' } | { state: 'unknown' };
+
 export interface ChainGateway {
   readonly name: 'fake' | 'fuji';
-  send(op: ResolvedOp): Promise<SendResult>;
+  /** `onBroadcast` được gọi ngay khi giao dịch lên mạng (trước khi chờ receipt) để lưu txHash. */
+  send(op: ResolvedOp, onBroadcast?: (txHash: string) => Promise<void>): Promise<SendResult>;
+  /** Tra giao dịch đã phát trước đó (tiến trình chết hoặc timeout giữa chừng). */
+  recover(op: ResolvedOp, txHash: string): Promise<RecoverResult>;
 }
