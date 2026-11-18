@@ -1109,7 +1109,7 @@ Tất cả endpoint ở bảng trên **đã có** trừ `/leaderboard?area=` l�
 | GET | `/vouchers?storeId=&lat=&lng=` | `VoucherTemplate` + `myQuestEligible`, `myPrice`, `distanceM`, `area`, `chainTokenId` | Có `lat,lng` thì sắp theo khoảng cách |
 | GET | `/seasons/current` | `SeasonInfo & { daysLeft }` hoặc `null` | |
 | GET | `/me/badges` | `{ seasonId, seasonName, highestRank, txHash, current }[]` | `current: true` = huy hiệu tạm của mùa đang chạy |
-| GET | `/me/wallet` | `{ address, explorerUrl, chain, tokenBalance, transactions[] }` | Mở Snowtrace khi demo |
+| GET | `/me/wallet` | `{ address, explorerUrl, chain, tokenBalance, transactions: ChainTx[] }` | Màn "Ví & giao dịch". `ChainTx = { id, op, label, amount, status: 'pending'\|'sent'\|'done'\|'failed', txHash, explorerUrl, createdAt }`; `label` tiếng Việt, `amount` = RUN thay đổi (âm: đốt) hoặc `null`. Cửa hàng thấy thêm lượt quét voucher của quán |
 | GET/POST | `/groups/auto-match` | `{ requestId, status, groupId }` | POST body như bảng trên; GET = yêu cầu gần nhất |
 | GET | `/groups/meeting-points` | `{ name, latitude, longitude, type: 'public' \| 'store' }[]` | Điểm hội tụ có sẵn |
 | POST | `/groups/location` | `{ success, arrived }` | Chỉ từ T−30' tới khi kết thúc |
@@ -1119,7 +1119,7 @@ Tất cả endpoint ở bảng trên **đã có** trừ `/leaderboard?area=` l�
 | GET | `/areas` | `{ code, name }[]` | Quận/huyện TP.HCM |
 | POST | `/admin/run-weekly-ranking` · `/admin/run-group-timeline` · `/admin/run-membership-expiry` · `/admin/process-chain-outbox` | `{ processed, ... }` | Kích hoạt job bằng tay khi demo |
 | GET/POST | `/admin/clock` | `{ now, offsetMs }` | POST `{ now: ISO }` hoặc `{ offsetMs }`. Chỉ khi `ALLOW_CLOCK_OVERRIDE=true` |
-| GET | `/admin/chain-txs` | 50 lệnh chain gần nhất kèm `txHash`, `explorerUrl` | |
+| GET | `/admin/chain-txs` | `ChainTx[]`: 50 lệnh chain gần nhất, `label` ghi kèm tên người | Màn "Chuỗi Avalanche Fuji" |
 
 ### 8.2 Hồ sơ quán (thêm 18/11/2026 — FE + mock + BE xong)
 

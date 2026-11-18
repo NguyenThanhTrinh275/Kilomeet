@@ -37,11 +37,13 @@ Mạng hội trường chặn LAN thì dùng `cloudflared tunnel --url http://lo
 
 Hợp đồng là của thư mục [`../blockchain`](../blockchain/README.md), đã deploy sẵn trên Fuji (`deployments/fuji.json`). BE không dùng SDK `sdk/api.ts` bên đó mà gọi thẳng hợp đồng qua outbox.
 
-1. Xin khoá ví **operator** (`0xEF15…7598`) từ người phụ trách blockchain, ghi vào `.env`: `CHAIN=fuji`, `SERVER_PRIVATE_KEY=0x...`.
+1. Ghi vào `.env`: `CHAIN=fuji`, `SERVER_PRIVATE_KEY=0x...` (khoá ví **operator** `0x4132…1128`, deploy lại 18/11) và một `WALLET_MNEMONIC` riêng (không dùng mnemonic dev công khai).
 2. `pnpm demo:reset` (seed ghi lệnh duyệt quán + tạo loại voucher + phát số dư mở đầu vào outbox), rồi `pnpm dev`.
-3. Job outbox gửi lần lượt mỗi 5 s. `pnpm chain:check` để đối chiếu DB với chain.
+3. Job outbox gửi lần lượt mỗi 5 s (~25 giao dịch seed, chờ xong trước khi demo). `pnpm chain:check` để đối chiếu DB với chain.
+   Mỗi lần `demo:reset` dùng dải ví HD mới nên số dư on-chain luôn bằng DB.
 
-Lệnh outbox ↔ hợp đồng: `mintToken` → `RunToken.reward` (khoá chống phát trùng), `purchaseVoucher` → `Voucher.purchase` (chain tự đốt token), `giftVoucher` → `giftFor`, `redeemVoucher` → `redeem`, `createVoucherType`/`approveMerchant`, `endSeason` → `settleSeason` từng ví → `recordBadge`, `startSeason`.
+Lệnh outbox ↔ hợp đồng: `mintToken` → `RunToken.reward` (khoá chống phát trùng), `purchaseVoucher` → `Voucher.purchase` (chain tự đốt token), `giftVoucher` → `giftFor`, `redeemVoucher` → `redeem`, `createVoucherType`/`approveMerchant`, `endSeason` → `settleSeason` theo lô (1 giao dịch cho mọi ví) → `recordBadges` theo lô, `startSeason`.
+Job lưu `txHash` ngay khi giao dịch lên mạng; tiến trình chết giữa chừng thì lượt sau tra receipt chứ không gửi lại.
 `RunToken.reward` chỉ chạy khi mùa on-chain đang mở; lúc mùa đóng, lệnh phát token chờ (không tính lần thử).
 
 ## Tài khoản demo (mật khẩu `demo123`)
@@ -60,15 +62,15 @@ Lệnh outbox ↔ hợp đồng: `mintToken` → `RunToken.reward` (khoá chốn
 
 Trước demo: `pnpm demo:reset`, `pnpm dev`, mở Snowtrace nếu `CHAIN=fuji`.
 
-1. **Đăng nhập** `lan@demo.com` → Hồ sơ: địa chỉ ví (chạm để mở Snowtrace).
-2. **Chạy 3 km**: tab Chạy → "Phát buổi chạy mẫu · 3 km" (hoặc `pnpm demo replay lan 3km`) → +10 token, km tuần ghi nhận.
+1. **Đăng nhập** `lan@demo.com` → Hồ sơ: địa chỉ ví (chạm để mở Snowtrace), mục **Ví & giao dịch** liệt kê giao dịch on-chain.
+2. **Chạy 3 km**: tab Chạy → "Phát buổi chạy mẫu · 3 km" (hoặc `pnpm demo replay lan 3km`) → +10 token, km tuần ghi nhận; chạm "+10 RUN ghi lên Avalanche" để thấy giao dịch chuyển sang *Đã xác nhận*.
 3. **Cao thủ**: đăng nhập `minh@demo.com` → hạng Cao thủ, 42/44 km mục tiêu tuần.
 4. **Chạy ngang quán**: Minh mở voucher Fuji (500 token) → "Phát buổi chạy mẫu · 5 km ngang Fuji + Highlands" → chọn **Fuji Coffee** → voucher còn **250 token**.
 5. **Mua + tặng**: mua (trừ 250) → "Tặng" → `lan@demo.com`.
-6. **Cửa hàng quét**: đăng nhập `quanfuji@demo.com` → Quét QR trên máy Lan → voucher bị đốt, +5.000 đ.
+6. **Cửa hàng quét**: đăng nhập `quanfuji@demo.com` → Quét QR trên máy Lan → voucher bị đốt, +5.000 đ; toast "Xem giao dịch" mở danh sách giao dịch của quán.
 7. **Nhóm**: Minh / An / Bình (hội viên) → "Ghép tự động" trên cả 3 máy (hoặc Minh tạo nhóm, 2 người tham gia) →
    `pnpm demo clock <T−20 phút>` → bản đồ hiện từng người đang tới.
-8. **Đóng mùa**: `admin@demo.com` → Mùa giải → Đóng mùa → Minh còn **500 token, Bạch kim**, có huy hiệu mùa.
+8. **Đóng mùa**: `admin@demo.com` → Mùa giải → Đóng mùa → Minh còn **500 token, Bạch kim**, có huy hiệu mùa; Quản trị → **Chuỗi Avalanche Fuji** thấy 1 giao dịch chốt mùa cho mọi ví.
 
 Tua tuần để khoe xếp hạng: `pnpm demo clock sunday && pnpm demo ranking`.
 

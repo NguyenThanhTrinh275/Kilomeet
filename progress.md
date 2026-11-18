@@ -10,8 +10,8 @@
 | | |
 |---|---|
 | **Cập nhật lần cuối** | 18/11/2026 |
-| **Đang ở** | Code xong S1–S8 + hồ sơ quán (8.2) + contract + FE nối BE. 161 test BE + 10 test contract xanh, typecheck BE/FE sạch, FE đóng gói Android được |
-| **Việc tiếp theo** | (0) Thử giao diện game (nhánh `feat/app-game-ui`) trên điện thoại thật · (1) Bạn thử trên điện thoại thật theo kịch bản demo · (2) duyệt quyết định tạm chốt #17–27 · (3) `pnpm demo:reset` (bắt buộc sau migration chain 12/11) |
+| **Đang ở** | Code xong S1–S8 + hồ sơ quán + màn Ví & giao dịch. **Chain chạy thật trên Fuji** (hợp đồng mới, verify Snowtrace). 174 test BE + 24 test contract xanh, typecheck BE/FE/blockchain sạch, FE đóng gói Android được |
+| **Việc tiếp theo** | (1) **Thử 8 bước demo trên điện thoại thật** (chưa lần nào) · (2) quay video · (3) push + PR `feat/app-game-ui` → `main` · (4) báo người phụ trách blockchain địa chỉ hợp đồng mới · (5) duyệt quyết định #17–27 |
 | **Đang vướng** | Không. Chain chạy thật trên Fuji bằng ví operator mới (18/11) |
 | **Hạn MVP** | ~20/11/2026 |
 
@@ -91,15 +91,15 @@
 **Contract (`blockchain/`, nhánh blockchain-layer, merge 12/11)**
 - [x] `RunToken` (reward có khoá chống trùng, settleSeason theo hạng), `Voucher` (purchase đốt token, giftFor 1 lần, redeem + phí), `SeasonBadge` — 24 test qua
 - [x] Đã deploy Fuji (`blockchain/deployments/fuji.json`): mùa on-chain 2 đang mở, operator đủ quyền, còn ~0,4 AVAX
-- [ ] Thiếu file `blockchain/sdk/kilomeet.ts` (sdk/api.ts import nó) và 1 file test (README ghi 34 test, repo có 24) → nhờ người phụ trách blockchain push
+- [x] Thiếu `blockchain/sdk/kilomeet.ts` → tự viết lại theo `sdk/api.ts` (18/11), `scripts/demo-api.ts` chạy đúng trên node Hardhat. README sửa 34 → 24 test
 - [x] Đã xoá `contracts/` (bản Claude viết trước khi có `blockchain/`), 12/11
-- [ ] Lấy khoá ví operator từ người phụ trách blockchain → `CHAIN=fuji` chạy thật
+- [-] Lấy khoá ví operator cũ → thay bằng deploy lại với ví mới (18/11)
 
 **Tích hợp chain trong BE**
 - [x] `ChainGateway` + `FakeChain` + `FujiChain` gọi đúng hợp đồng `blockchain/` (12/11): reward/purchase/giftFor/redeem/createVoucherType/setMerchantApproved/start-end-settleSeason/recordBadge
 - [x] `chain_outbox` ghi chung transaction + job gửi theo `seq`, lỗi thì dừng lô (giữ thứ tự), retry 5 lần; mùa on-chain đóng thì chờ; `createVoucherType` lưu `chain_token_id`
 - [x] Đã thử với hợp đồng `blockchain/` trên node Hardhat local: 33 giao dịch done (seed → chạy → mua → tặng → quét → tạo voucher → duyệt quán → đóng/mở mùa), `pnpm chain:check` khớp
-- [ ] Lệch làm tròn: chain tính giá giảm làm tròn **xuống**, BE `Math.round` → lệch ≤ 1 token khi giá × % không chẵn (seed không bị)
+- [-] Lệch làm tròn chain (xuống) vs BE (`Math.round`) ≤ 1 token/lượt mua giảm giá: chấp nhận (chain luôn ≥ DB, không làm giao dịch lỗi); `chain:check` đánh dấu `~`
 - [x] `GET /me/wallet`, `GET /admin/chain-txs` (link Snowtrace)
 
 **Rà soát 18/11 (đọc trạng thái Fuji thật)**: hợp đồng sống, mùa on-chain 2 mở, operator `0xEF15…7598` đủ quyền, ~0,4 AVAX, tổng cung 550 RUN. **BE chưa từng gửi giao dịch nào lên Fuji.**
@@ -107,10 +107,10 @@
 - [x] **P0** `WALLET_MNEMONIC` mới trong `kilomeet-api/.env` (ví người dùng sạch)
 - [x] **P0** `CHAIN=fuji` + `demo:reset`: 15 giao dịch seed done. Thử trên Fuji bằng Bình: mua ×2, tặng, quét QR, chạy 3 km → mint, đều done, `chain:check` khớp
 - [x] **P1** Verify source 3 hợp đồng trên Snowtrace
-- [ ] **P1** FE chưa hiện giao dịch nào: chưa có màn gọi `/me/wallet`, `/admin/chain-txs`; mục "Chuỗi Avalanche Fuji" của admin bấm không có tác dụng; mua/quét/nhận token không có link tx
-- [ ] **P1** Seed mint số dư mở đầu bằng khoá mới mỗi lần `demo:reset` → số dư trên chain cộng dồn, lệch với app
-- [ ] P2 Dòng outbox kẹt ở `sent` nếu tiến trình chết giữa chừng; `purchase/giftFor/redeem` gửi lại sau timeout có thể chạy 2 lần
-- [ ] P2 Vòng lặp đóng mùa không nằm trong một transaction: chết giữa chừng thì mùa đã đóng nhưng còn người chưa reset
+- [x] **P1** Màn Ví & giao dịch (runner `/(runner)/wallet`, cửa hàng `/(store)/wallet`, quản trị `/(admin)/chain`), BE thêm `label`/`amount`; nút "Xem giao dịch" sau chạy, tặng, quét, đóng mùa
+- [x] **P1** Mỗi lần seed dùng dải ví HD mới → số dư chain = DB sau `demo:reset`
+- [x] P2 Outbox lưu txHash ngay khi phát, dòng `sent` mồ côi tra receipt thay vì gửi lại. Sửa thêm lỗi nonce do cache 250 ms của ethers (lộ ra khi chạy trên node local)
+- [x] P2 Đóng mùa chốt từng người idempotent, bấm lại để chốt nốt; mở mùa tự chốt nốt mùa trước. Đóng mùa gửi theo lô: 4 giao dịch thay vì ~26
 
 **Chuẩn bị demo**
 - [x] Route mẫu 3 km (không qua quán) và 5 km qua đúng Fuji + Highlands (có test)
@@ -166,6 +166,7 @@ Thiết kế: Figma `RGHjgkkUPxUKr7fHlcZ8jo` (38 màn). Code trên nhánh `feat/
 
 Mới nhất ghi ở trên. Mỗi dòng: ngày · đã làm gì · còn dở gì.
 
+- **18/11/2026 (hoàn thiện chain)** · Màn Ví & giao dịch (3 vai) + link Snowtrace ở các bước demo; outbox chống gửi trùng (lưu txHash, tra receipt) + sửa lỗi nonce; đóng mùa idempotent + theo lô (đã chạy trên node Hardhat, số dư khớp); seed dùng ví mới mỗi lần; viết `sdk/kilomeet.ts`; README gốc cho giám khảo. 174 test BE xanh. Còn: thử máy thật, video, PR.
 - **18/11/2026 (P0 chain)** · Deploy lại 3 hợp đồng lên Fuji (RunToken `0x49D4…8225`, Voucher `0x22aB…215c`, SeasonBadge `0xf9C9…E8B0`), verify Snowtrace, mnemonic ví mới, BE chạy `CHAIN=fuji`, seed + luồng mua/tặng/quét/chạy lên chain thật, khớp số dư. `deploy.ts` tự `startSeason()`. Còn: P1 màn giao dịch trên FE, thử máy thật, video.
 - **18/11/2026 (rà soát)** · Rà toàn dự án, tập trung chain. 161 test BE + 24 test contract xanh, typecheck BE/FE sạch. Đọc trạng thái Fuji thật: BE chưa gửi giao dịch nào, ví người dùng dùng mnemonic công khai, hợp đồng chưa verify, FE chưa hiện giao dịch. Ghi việc P0–P2 ở Giai đoạn 3.
 
