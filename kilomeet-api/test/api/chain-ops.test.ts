@@ -191,3 +191,60 @@ describe('job chain-outbox', () => {
     expect((await prisma.voucherTemplate.findUniqueOrThrow({ where: { id: templateId } })).chainTokenId).toBe(99);
   });
 });
+
+describe('đóng mùa gửi theo lô', () => {
+  it('settleSeason / recordBadge của mọi ví → 1 giao dịch mỗi loại, đúng thứ tự endSeason → lô → startSeason', async () => {
+    const fake = new FakeChain();
+    setChain(fake);
+    await processChainOutbox(200); // seed
+    fake.sent.length = 0;
+
+    const admin = await ctx.login('admin@demo.com');
+    await ctx.post('/admin/season', { action: 'end' }, admin);
+    await ctx.post('/admin/season', { action: 'start' }, admin);
+    const runners = await prisma.runnerProfile.count();
+    const badges = await prisma.chainOutbox.count({ where: { op: 'recordBadge' } });
+
+    await processChainOutbox(200);
+    const ops = fake.sent.map((o) => o.op);
+    expect(ops).toEqual(['endSeason', 'settleSeasonBatch', 'recordBadgeBatch', 'startSeason']);
+    const settle = fake.sent[1] as Extract<ResolvedOp, { op: 'settleSeasonBatch' }>;
+    expect(settle.users).toHaveLength(runners);
+    expect(settle.users).toContain(await wallet('user-minh'));
+    expect(settle.ranks[settle.users.indexOf(await wallet('user-minh'))]).toBe(5);
+    const badge = fake.sent[2] as Extract<ResolvedOp, { op: 'recordBadgeBatch' }>;
+    expect(badge).toMatchObject({ season: 20263 });
+    expect(badge.users).toHaveLength(badges);
+
+    const rows = await prisma.chainOutbox.findMany({ where: { op: 'settleSeason' } });
+    expect(rows.every((r) => r.status === 'done')).toBe(true);
+    expect(new Set(rows.map((r) => r.txHash)).size).toBe(1); // chung 1 giao dịch
+  });
+
+  it('lô lỗi → cả nhóm về pending +1 lần thử, dừng lô; lần sau gửi lại cả nhóm', async () => {
+    const fake = new FakeChain();
+    setChain(fake);
+    await processChainOutbox(200);
+    await ctx.post('/admin/season', { action: 'end' }, await ctx.login('admin@demo.com'));
+
+    let fail = true;
+    const flaky: ChainGateway = {
+      name: 'fake',
+      async send(op, onBroadcast) {
+        if (op.op === 'settleSeasonBatch' && fail) throw new Error('RPC lỗi');
+        return fake.send(op, onBroadcast);
+      },
+      recover: (op, h) => fake.recover(op, h),
+    };
+    setChain(flaky);
+    const r = await processChainOutbox(200);
+    expect(r.failed).toBe(await prisma.runnerProfile.count());
+    const settles = await prisma.chainOutbox.findMany({ where: { op: 'settleSeason' } });
+    expect(settles.every((x) => x.status === 'pending' && x.attempts === 1 && x.lastError === 'RPC lỗi')).toBe(true);
+    expect(await prisma.chainOutbox.count({ where: { op: 'recordBadge', status: 'done' } })).toBe(0);
+
+    fail = false;
+    await processChainOutbox(200);
+    expect(await prisma.chainOutbox.count({ where: { op: { in: ['settleSeason', 'recordBadge'] }, status: { not: 'done' } } })).toBe(0);
+  });
+});

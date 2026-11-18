@@ -52,6 +52,8 @@ export const BADGE_ABI = [
   'function balanceOf(address owner) view returns (uint256)',
   'function badgeOf(address user, uint256 season) view returns (uint256)',
   'function recordBadge(address user, uint256 season, uint8 rank)',
+  'function recordBadges(address[] users, uint256 season, uint8[] ranks)',
+  'error LengthMismatch()',
   'error BadRank(uint8 rank)',
   'error AccessControlUnauthorizedAccount(address account, bytes32 neededRole)',
 ];
@@ -97,7 +99,9 @@ export class FujiChain implements ChainGateway {
     const key = config.SERVER_PRIVATE_KEY || config.OPERATOR_PRIVATE_KEY;
     if (!key) throw new Error('CHAIN=fuji cần SERVER_PRIVATE_KEY (khoá ví operator, xin người phụ trách blockchain)');
     const a = chainAddresses();
-    const provider = new JsonRpcProvider(config.FUJI_RPC_URL);
+    // cacheTimeout -1: tắt cache 250 ms của ethers, nếu không lần hỏi nonce kế tiếp có thể nhận số cũ
+    // khi giao dịch trước vừa xác nhận rất nhanh → "nonce has already been used".
+    const provider = new JsonRpcProvider(config.FUJI_RPC_URL, undefined, { cacheTimeout: -1 });
     this.signer = new Wallet(key, provider);
     this.token = new Contract(a.RunToken, TOKEN_ABI, this.signer);
     this.voucher = new Contract(a.Voucher, VOUCHER_ABI, this.signer);
@@ -171,7 +175,7 @@ export class FujiChain implements ChainGateway {
   }
 
   private typeIdOf(op: ResolvedOp): number {
-    if (op.typeId === undefined) throw new ChainRetryLater('Loại voucher chưa được tạo on-chain');
+    if (!('typeId' in op) || op.typeId === undefined) throw new ChainRetryLater('Loại voucher chưa được tạo on-chain');
     return op.typeId;
   }
 
@@ -211,6 +215,10 @@ export class FujiChain implements ChainGateway {
         return this.mined(t('settleSeason')([op.from], [op.rankIdx]));
       case 'recordBadge':
         return this.mined(this.badge.getFunction('recordBadge')(op.to, op.season, op.rankIdx));
+      case 'settleSeasonBatch':
+        return this.mined(t('settleSeason')(op.users, op.ranks));
+      case 'recordBadgeBatch':
+        return this.mined(this.badge.getFunction('recordBadges')(op.users, op.season, op.ranks));
     }
   }
 }

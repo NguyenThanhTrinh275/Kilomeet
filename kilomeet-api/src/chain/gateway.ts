@@ -24,8 +24,18 @@ export type ChainOp =
   /** SeasonBadge.recordBadge */
   | { op: 'recordBadge'; to: string; season: number; rankIdx: number };
 
+/**
+ * Lệnh theo lô do job ghép từ nhiều dòng outbox (không ghi thẳng vào outbox):
+ * đóng mùa cho cả trăm ví trong 1 giao dịch thay vì 1 giao dịch / ví.
+ */
+export type BatchOp =
+  /** RunToken.settleSeason(users[], ranks[]) — idempotent theo ví trên chain. */
+  | { op: 'settleSeasonBatch'; users: string[]; ranks: number[] }
+  /** SeasonBadge.recordBadges(users[], season, ranks[]) — cùng một mùa. */
+  | { op: 'recordBadgeBatch'; users: string[]; season: number; ranks: number[] };
+
 /** Lệnh đã được job bổ sung `typeId` (id loại voucher on-chain) nếu lệnh có templateId. */
-export type ResolvedOp = ChainOp & { typeId?: number };
+export type ResolvedOp = (ChainOp & { typeId?: number }) | BatchOp;
 
 export interface SendResult {
   /** null khi chain đã ở đúng trạng thái nên không cần gửi giao dịch (vd. phần thưởng đã phát). */

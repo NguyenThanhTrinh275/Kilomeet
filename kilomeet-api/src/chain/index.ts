@@ -22,4 +22,4 @@ export function setChain(c: ChainGateway | null): void {
 }
 
 export { ChainRetryLater, ChainTxUnknown } from './gateway.js';
-export type { ChainGateway, ChainOp, RecoverResult, ResolvedOp, SendResult } from './gateway.js';
+export type { BatchOp, ChainGateway, ChainOp, RecoverResult, ResolvedOp, SendResult } from './gateway.js';
