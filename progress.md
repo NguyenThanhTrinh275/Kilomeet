@@ -12,7 +12,7 @@
 | **Cập nhật lần cuối** | 18/11/2026 |
 | **Đang ở** | Code xong S1–S8 + hồ sơ quán (8.2) + contract + FE nối BE. 161 test BE + 10 test contract xanh, typecheck BE/FE sạch, FE đóng gói Android được |
 | **Việc tiếp theo** | (0) Thử giao diện game (nhánh `feat/app-game-ui`) trên điện thoại thật · (1) Bạn thử trên điện thoại thật theo kịch bản demo · (2) duyệt quyết định tạm chốt #17–27 · (3) `pnpm demo:reset` (bắt buộc sau migration chain 12/11) |
-| **Đang vướng** | Khoá ví operator của hợp đồng Fuji (`blockchain/`) nằm ở người phụ trách blockchain; `blockchain/sdk/kilomeet.ts` chưa được push |
+| **Đang vướng** | Không. Chain chạy thật trên Fuji bằng ví operator mới (18/11) |
 | **Hạn MVP** | ~20/11/2026 |
 
 ---
@@ -102,6 +102,16 @@
 - [ ] Lệch làm tròn: chain tính giá giảm làm tròn **xuống**, BE `Math.round` → lệch ≤ 1 token khi giá × % không chẵn (seed không bị)
 - [x] `GET /me/wallet`, `GET /admin/chain-txs` (link Snowtrace)
 
+**Rà soát 18/11 (đọc trạng thái Fuji thật)**: hợp đồng sống, mùa on-chain 2 mở, operator `0xEF15…7598` đủ quyền, ~0,4 AVAX, tổng cung 550 RUN. **BE chưa từng gửi giao dịch nào lên Fuji.**
+- [x] **P0** Tự deploy lại 18/11 bằng ví operator mới `0x4132…1128` (khoá trong `blockchain/.env` + `kilomeet-api/.env`), mùa on-chain 1 mở ngay khi deploy. Bản cũ lưu ở `deployments/fuji-v1.json`
+- [x] **P0** `WALLET_MNEMONIC` mới trong `kilomeet-api/.env` (ví người dùng sạch)
+- [x] **P0** `CHAIN=fuji` + `demo:reset`: 15 giao dịch seed done. Thử trên Fuji bằng Bình: mua ×2, tặng, quét QR, chạy 3 km → mint, đều done, `chain:check` khớp
+- [x] **P1** Verify source 3 hợp đồng trên Snowtrace
+- [ ] **P1** FE chưa hiện giao dịch nào: chưa có màn gọi `/me/wallet`, `/admin/chain-txs`; mục "Chuỗi Avalanche Fuji" của admin bấm không có tác dụng; mua/quét/nhận token không có link tx
+- [ ] **P1** Seed mint số dư mở đầu bằng khoá mới mỗi lần `demo:reset` → số dư trên chain cộng dồn, lệch với app
+- [ ] P2 Dòng outbox kẹt ở `sent` nếu tiến trình chết giữa chừng; `purchase/giftFor/redeem` gửi lại sau timeout có thể chạy 2 lần
+- [ ] P2 Vòng lặp đóng mùa không nằm trong một transaction: chết giữa chừng thì mùa đã đóng nhưng còn người chưa reset
+
 **Chuẩn bị demo**
 - [x] Route mẫu 3 km (không qua quán) và 5 km qua đúng Fuji + Highlands (có test)
 - [x] `pnpm demo replay ...` + nút "Phát buổi chạy mẫu" trên FE (`EXPO_PUBLIC_DEMO=true`)
@@ -155,6 +165,9 @@ Thiết kế: Figma `RGHjgkkUPxUKr7fHlcZ8jo` (38 màn). Code trên nhánh `feat/
 ## Nhật ký phiên làm việc
 
 Mới nhất ghi ở trên. Mỗi dòng: ngày · đã làm gì · còn dở gì.
+
+- **18/11/2026 (P0 chain)** · Deploy lại 3 hợp đồng lên Fuji (RunToken `0x49D4…8225`, Voucher `0x22aB…215c`, SeasonBadge `0xf9C9…E8B0`), verify Snowtrace, mnemonic ví mới, BE chạy `CHAIN=fuji`, seed + luồng mua/tặng/quét/chạy lên chain thật, khớp số dư. `deploy.ts` tự `startSeason()`. Còn: P1 màn giao dịch trên FE, thử máy thật, video.
+- **18/11/2026 (rà soát)** · Rà toàn dự án, tập trung chain. 161 test BE + 24 test contract xanh, typecheck BE/FE sạch. Đọc trạng thái Fuji thật: BE chưa gửi giao dịch nào, ví người dùng dùng mnemonic công khai, hợp đồng chưa verify, FE chưa hiện giao dịch. Ghi việc P0–P2 ở Giai đoạn 3.
 
 - **18/11/2026 (BE)** · Đối chiếu mọi endpoint FE gọi với BE: chỉ thiếu hồ sơ quán. Làm xong Mục 8.2 (migration + 3 endpoint + seed + 14 test). 161 test xanh, typecheck sạch, đã seed lại DB dev. Giờ FE và BE khớp hết endpoint. Còn: thử máy thật.
 - **18/11/2026** · Thiết kế lại giao diện kiểu game trên Figma (38 màn) và code toàn bộ FE theo thiết kế trên nhánh `feat/app-game-ui`. Thêm tính năng hồ sơ quán (FE + mock + hợp đồng 8.2). Typecheck sạch, bundle Android build được, đã xem trên web các màn chính. Còn: BE hồ sơ quán, thử máy thật.

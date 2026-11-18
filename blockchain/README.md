@@ -55,9 +55,11 @@ Biến môi trường:
 
 | Hợp đồng | Địa chỉ |
 |---|---|
-| RunToken (token) | `0x687498bA9E8Bf8eF7B244313cc636157b16b2FdE` |
-| Voucher | `0x5DfE90a1A47B023CDd1429AD278334a7210b9E62` |
-| SeasonBadge (huy hiệu) | `0x8Fab67bc7BfF2c4AD6398c422cF787aFA0e310dd` |
+| RunToken (token) | `0x49D4915957E5a5f24F47593eeb979d0b91398225` |
+| Voucher | `0x22aB8C48f9Efd3dD37d8c11a6A1f3281d567215c` |
+| SeasonBadge (huy hiệu) | `0xf9C9eE06142D4AB0ae7b0f440AdAe725279eE8B0` |
+
+Deploy lại 18/11/2026 (ví operator mới `0x4132…1128`, đã verify source trên Snowtrace). Bản cũ: `deployments/fuji-v1.json`.
 
 Ví người dùng chỉ cần **địa chỉ** (`0x...`, 42 ký tự). Người dùng **không cần AVAX**: ví server trả phí gas cho mọi giao dịch.
 

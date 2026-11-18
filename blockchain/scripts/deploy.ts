@@ -18,6 +18,10 @@ async function main() {
 
   await (await token.grantRole(await token.BURNER_ROLE(), await voucher.getAddress())).wait();
 
+  // Mùa on-chain phải mở thì reward() mới chạy. Deployer cũng là operator thì mở luôn.
+  const sameOperator = operatorAddr.toLowerCase() === deployer.address.toLowerCase();
+  if (sameOperator) await (await token.startSeason()).wait();
+
   const addrs = {
     network: network.name,
     chainId: Number((await ethers.provider.getNetwork()).chainId),
@@ -25,11 +29,12 @@ async function main() {
     Voucher: await voucher.getAddress(),
     SeasonBadge: await badge.getAddress(),
     operator: operatorAddr,
+    admin: deployer.address,
   };
   const dir = path.join(__dirname, "..", "deployments");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, `${network.name}.json`), JSON.stringify(addrs, null, 2));
   console.log(addrs);
-  console.log("Lưu ý: gọi startSeason() bằng ví operator để mở mùa 1.");
+  if (!sameOperator) console.log("Lưu ý: gọi startSeason() bằng ví operator để mở mùa 1.");
 }
 main().catch((e) => { console.error(e); process.exit(1); });
