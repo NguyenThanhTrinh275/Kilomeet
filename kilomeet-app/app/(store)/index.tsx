@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { toast } from 'sonner-native';
-import { Check, ChevronRight, Clock, LogOut, Mail, Plus, Receipt, RefreshCcw, ScanLine, Settings2, ShoppingBag, Store as StoreIcon, Wallet } from 'lucide-react-native';
+import { Check, ChevronRight, Clock, Link2, LogOut, Mail, Plus, Receipt, RefreshCcw, ScanLine, Settings2, ShoppingBag, Store as StoreIcon, Wallet } from 'lucide-react-native';
 import { api } from '../../src/api/client';
 import { useAuthStore } from '../../src/stores/auth';
 import type { Store, StoreDashboard, StoreProfile } from '../../src/api/types';
@@ -100,6 +100,7 @@ export default function StoreDashboardScreen() {
         <Card pad={[4, 0]} gap={0} style={{ overflow: 'hidden' }}>
           <MenuRow icon={StoreIcon} tile={C.orange300} title="Hồ sơ quán" subtitle="Giới thiệu quán cho người chạy" onPress={() => (setMenuOpen(false), router.push('/(store)/profile'))} />
           <MenuRow icon={ShoppingBag} tile={C.coin300} title="Voucher của tôi" subtitle="Danh sách voucher đang bán" onPress={() => (setMenuOpen(false), router.push('/(store)/vouchers'))} />
+          <MenuRow icon={Link2} tile={C.sky300} title="Giao dịch on-chain" subtitle="Lượt quét voucher ghi trên Avalanche" onPress={() => (setMenuOpen(false), router.push('/(store)/wallet'))} />
           <MenuRow icon={LogOut} tile={C.red300} title="Đăng xuất" titleColor={C.red700} onPress={() => (setMenuOpen(false), setLogoutOpen(true))} last />
         </Card>
       </GameSheet>

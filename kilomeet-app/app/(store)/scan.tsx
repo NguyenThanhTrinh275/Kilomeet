@@ -51,7 +51,10 @@ export default function ScanScreen() {
   const confirm = () => {
     setAt(new Date().toISOString());
     setPhase('confirmed');
-    toast.success('Đã xác nhận sử dụng voucher');
+    toast.success('Đã xác nhận sử dụng voucher', {
+      description: 'Voucher bị đốt on-chain, phí 5.000đ được ghi nhận.',
+      action: { label: 'Xem giao dịch', onClick: () => router.push('/(store)/wallet') },
+    });
   };
 
   // ─── Thành công ───────────────────────────────────────────────

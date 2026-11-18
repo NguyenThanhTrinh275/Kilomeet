@@ -132,7 +132,9 @@ export async function seedDemo(prisma: PrismaClient, now: Date = new Date()): Pr
   const season = seasonOf(now);
   await prisma.season.create({ data: { ...season, isActive: true } });
 
-  let walletIndex = 0;
+  // Mỗi lần seed dùng một dải chỉ số ví HD mới (theo phút kể từ 01/01/2026 × 1000, < 2^31 tới ~2030):
+  // ví demo luôn mới tinh trên chain → số dư on-chain = DB sau mỗi demo:reset, không cộng dồn.
+  let walletIndex = Math.max(0, Math.floor((now.getTime() - Date.UTC(2026, 0, 1)) / 60_000)) * 1000;
   const base = (id: string, email: string, name: string, role: Role, createdAt: string) => {
     walletIndex += 1;
     return { id, email, name, role, passwordHash, walletIndex, walletAddress: walletAddressFor(walletIndex), createdAt: new Date(createdAt) };
@@ -169,7 +171,7 @@ export async function seedDemo(prisma: PrismaClient, now: Date = new Date()): Pr
     if (r.tokenBalance > 0) {
       await prisma.tokenLedger.create({ data: { userId: r.id, delta: r.tokenBalance, reason: 'quest', refId: 'seed-opening-balance' } });
       // Số dư mở đầu cũng mint on-chain, để burn (mua voucher, reset mùa) sau này không thiếu số dư.
-      // Khoá thưởng khác nhau mỗi lần seed: sau demo:reset trên cùng hợp đồng, số dư chain ≥ DB (mua không bị thiếu).
+      // Ví mỗi lần seed là ví mới (xem walletIndex ở trên) nên số dư chain = DB; khoá thưởng vẫn khác nhau mỗi lần cho chắc.
       const key = `seed:${r.id}:${seedRun}`;
       await prisma.chainOutbox.create({
         data: { op: 'mintToken', payload: { to: walletAddressFor(walletIndex), amount: r.tokenBalance, key }, ref: key },

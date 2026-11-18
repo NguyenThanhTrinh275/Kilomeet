@@ -12,6 +12,7 @@ export default function RunnerLayout() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="history" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
       <Stack.Screen name="badges" options={{ headerShown: false }} />
+      <Stack.Screen name="wallet" options={{ headerShown: false }} />
       <Stack.Screen name="voucher/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="groups/create" options={{ headerShown: false }} />
       <Stack.Screen name="groups/[id]" options={{ headerShown: false }} />

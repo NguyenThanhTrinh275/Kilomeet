@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { router } from 'expo-router';
 import { toast } from 'sonner-native';
 import { Calendar, ChevronRight, Plus, RefreshCcw, ShoppingBag, Sun, TrendingDown, Trophy, Wallet } from 'lucide-react-native';
 import { api } from '../../src/api/client';
@@ -37,7 +38,10 @@ export default function SeasonScreen() {
       await api.post<SeasonInfo>('/admin/season', { action });
       setCloseOpen(false);
       setNewOpen(false);
-      toast.success(action === 'end' ? 'Đã đóng mùa giải hiện tại' : 'Đã mở mùa giải mới');
+      toast.success(action === 'end' ? 'Đã đóng mùa giải hiện tại' : 'Đã mở mùa giải mới', {
+        description: 'Giao dịch reset đang ghi lên Avalanche.',
+        action: { label: 'Xem giao dịch', onClick: () => router.push('/(admin)/chain') },
+      });
       await fetchSeasons();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : action === 'end' ? 'Không thể đóng mùa' : 'Không thể mở mùa mới');

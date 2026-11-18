@@ -179,7 +179,7 @@ export default function ProfileScreen() {
         <Card pad={[4, 0]} gap={0} style={{ overflow: 'hidden' }}>
           <MenuRow icon={History} tile={C.sky300} title="Lịch sử chạy" subtitle={`${runs.length} buổi chạy mùa này`} onPress={() => router.push('/(runner)/history')} />
           <MenuRow icon={Trophy} tile={C.coin300} title="Huy hiệu mùa" subtitle="Kệ cúp các mùa đã qua" onPress={() => router.push('/(runner)/badges')} />
-          <MenuRow icon={Wallet} tile={C.green300} title="Ví & giao dịch" subtitle="Xem trên Snowtrace" onPress={() => Linking.openURL(explorer)} />
+          <MenuRow icon={Wallet} tile={C.green300} title="Ví & giao dịch" subtitle="Token, voucher on-chain · Snowtrace" onPress={() => router.push('/(runner)/wallet')} />
           <MenuRow icon={Bell} tile={C.orange300} title="Thông báo nhắc chạy" subtitle="Nhiệm vụ mới, sắp hết mùa" right={<Toggle value={notify} onChange={setNotify} />} />
           <MenuRow icon={Info} tile={C.grape300} title="Phiên bản" subtitle="v1.0.0 (Avalanche)" last />
         </Card>

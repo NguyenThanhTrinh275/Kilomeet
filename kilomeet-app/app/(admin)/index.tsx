@@ -141,7 +141,7 @@ export default function AdminDashboard() {
             }
           />
           <MenuRow icon={RefreshCcw} tile={C.grape300} title="Quản lý mùa" subtitle="Mở / đóng mùa, chạy reset" onPress={() => router.push('/(admin)/season')} />
-          <MenuRow icon={Link2} tile={C.green300} title="Chuỗi Avalanche Fuji" subtitle="Token, voucher, huy hiệu ghi on-chain" last />
+          <MenuRow icon={Link2} tile={C.green300} title="Chuỗi Avalanche Fuji" subtitle="Token, voucher, huy hiệu ghi on-chain" onPress={() => router.push('/(admin)/chain')} last />
         </Card>
 
         <GButton label="Đăng xuất" type="secondary" icon={LogOut} onPress={() => setLogoutOpen(true)} block />

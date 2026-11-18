@@ -9,7 +9,7 @@ import { mockGetPendingStores, mockApproveStore, mockGetSeasons, mockSeasonContr
 import {
   mockCurrentSeason, mockMyBadges, mockPassedStores, mockClaimStore, mockConfirmGroup, mockLeaveGroup,
   mockLocations, mockShareLocation, mockAutoMatch, mockMeetingPoints, mockAdminStores, mockAdminStoreAction,
-  mockNotifications,
+  mockNotifications, mockMyWallet, mockChainTxs,
 } from './extra';
 import { mockGetStoreProfile, mockGetMyStoreProfile, mockUpdateMyStoreProfile } from './profile';
 
@@ -30,6 +30,8 @@ const GET_ROUTES: Record<string, Handler> = {
   '/admin/stores': () => mockAdminStores(),
   '/seasons/current': () => mockCurrentSeason(),
   '/me/badges': () => mockMyBadges(),
+  '/me/wallet': () => mockMyWallet(),
+  '/admin/chain-txs': () => mockChainTxs(),
   '/runs/passed-stores': () => mockPassedStores(),
   '/groups/locations': () => mockLocations(),
   '/groups/meeting-points': () => mockMeetingPoints(),

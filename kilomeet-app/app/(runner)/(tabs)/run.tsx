@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { toast } from 'sonner-native';
-import { Check, Clock, Crosshair, Flame, Gauge, Gift, Home, Navigation, Pause, Play, Sparkles, Square, Star, Store, Target, Timer, Trophy, X } from 'lucide-react-native';
+import { Check, ChevronRight, Clock, Crosshair, Flame, Gauge, Gift, Home, Link2, Navigation, Pause, Play, Sparkles, Square, Star, Store, Target, Timer, Trophy, X } from 'lucide-react-native';
 import { useRunnerStore, type PassedStore } from '../../../src/stores/runner';
 import { useAuthStore } from '../../../src/stores/auth';
 import { useVoucherStore } from '../../../src/stores/voucher';
@@ -414,6 +414,15 @@ export default function RunScreen() {
                     </GText>
                   </Card>
                 </Row>
+                {questReward ? (
+                  <Card row pad={[10, 14]} gap={8} fill={C.green300} depth="small" style={{ alignSelf: 'stretch' }} onPress={() => router.push('/(runner)/wallet')}>
+                    <Link2 size={18} color={C.green700} strokeWidth={2.5} />
+                    <GText v="bodyMStrong" style={{ flex: 1 }}>
+                      +{questReward} RUN ghi lên Avalanche · xem giao dịch
+                    </GText>
+                    <ChevronRight size={18} color={C.green700} strokeWidth={2.5} />
+                  </Card>
+                ) : null}
                 {weekly ? (
                   <Card pad={14} gap={8} style={{ alignSelf: 'stretch' }}>
                     <Row between>

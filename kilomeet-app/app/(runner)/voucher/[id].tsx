@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Linking, Modal, ScrollView, View } from 'react-native';
+import { Modal, ScrollView, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -77,7 +77,6 @@ export default function VoucherDetailScreen() {
   const fetchMyVouchers = useVoucherStore((s) => s.fetchMyVouchers);
   const fetchTemplates = useVoucherStore((s) => s.fetchTemplates);
   const refreshMe = useAuthStore((s) => s.refreshMe);
-  const me = useAuthStore((s) => s.user);
   const tokenBalance = useRunnerStore((s) => s.tokenBalance);
   const rank = useRunnerStore((s) => s.rank);
   const runs = useRunnerStore((s) => s.runs);
@@ -157,7 +156,10 @@ export default function VoucherDetailScreen() {
       await fetchMyVouchers();
       setGiftOpen(false);
       setUnlocked(null);
-      toast.success('Đã tặng thành công', { description: `Voucher đã được chuyển cho ${trimmed}.` });
+      toast.success('Đã tặng thành công', {
+        description: `Voucher đã được chuyển cho ${trimmed}. Giao dịch đang ghi lên Avalanche.`,
+        action: { label: 'Xem giao dịch', onClick: () => router.push('/(runner)/wallet') },
+      });
       router.back();
     } catch (e) {
       toast.error('Lỗi tặng voucher', { description: e instanceof Error ? e.message : 'Không thể tặng voucher' });
@@ -358,10 +360,10 @@ export default function VoucherDetailScreen() {
                 sw={2}
                 radius={12}
                 style={{ alignSelf: 'stretch' }}
-                onPress={me?.walletAddress ? () => Linking.openURL(`https://testnet.snowtrace.io/address/${me.walletAddress}`) : undefined}>
+                onPress={() => (setUnlocked(null), router.push('/(runner)/wallet'))}>
                 <Link2 size={16} color={C.sky700} strokeWidth={2.5} />
                 <GText v="bodyS" style={{ flex: 1 }}>
-                  Voucher ghi trên Avalanche Fuji · xem ví trên Snowtrace
+                  Voucher ghi trên Avalanche Fuji · xem giao dịch
                 </GText>
                 <ChevronRight size={16} color={C.sky700} strokeWidth={2.5} />
               </Card>

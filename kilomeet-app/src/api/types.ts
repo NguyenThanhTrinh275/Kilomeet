@@ -300,3 +300,30 @@ export type StoreProfileUpdate = Pick<
   StoreProfile,
   'storeName' | 'tagline' | 'description' | 'coverTheme' | 'tags' | 'openingHours' | 'highlights' | 'phone'
 >;
+
+// ─── Ví & giao dịch on-chain (GET /me/wallet, GET /admin/chain-txs) ─────
+
+/** Trạng thái lệnh chain: chờ gửi → đang gửi → xong (có txHash) / lỗi. */
+export type ChainTxStatus = 'pending' | 'sent' | 'done' | 'failed';
+
+export interface ChainTx {
+  id: string;
+  op: string;
+  /** Mô tả tiếng Việt do BE tạo, vd "Mua voucher «Giảm 20% toàn menu» (giá chạy ngang quán)" */
+  label: string;
+  /** Số RUN thay đổi (dương: nhận, âm: đốt), null nếu không đổi token */
+  amount: number | null;
+  status: ChainTxStatus;
+  txHash: string | null;
+  /** Link Snowtrace, null khi chưa gửi */
+  explorerUrl: string | null;
+  createdAt: string;
+}
+
+export interface WalletInfo {
+  address: string;
+  explorerUrl: string;
+  chain: 'fake' | 'fuji';
+  tokenBalance: number;
+  transactions: ChainTx[];
+}
