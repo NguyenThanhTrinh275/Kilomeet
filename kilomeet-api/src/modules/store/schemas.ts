@@ -21,6 +21,12 @@ export const CreateVoucherBody = z.object({
   area: z.string().nullish(),
 });
 
+export const TopupBody = z.object({
+  amountVnd: z.coerce.number({ error: 'Số tiền nạp không hợp lệ' }),
+  /** Mã do app sinh cho mỗi lần bấm "Nạp": gọi lặp cùng mã chỉ nạp 1 lần. */
+  requestId: z.string().max(64).optional(),
+});
+
 export const ScanBody = z.object({ qrCode: z.string({ error: 'QR không hợp lệ' }).trim().min(1, 'QR không hợp lệ') });
 
 // ─── Hồ sơ quán (Mục 8.2) ───────────────────────────────────────

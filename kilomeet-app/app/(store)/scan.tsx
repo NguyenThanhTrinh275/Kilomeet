@@ -52,7 +52,7 @@ export default function ScanScreen() {
     setAt(new Date().toISOString());
     setPhase('confirmed');
     toast.success('Đã xác nhận sử dụng voucher', {
-      description: 'Voucher bị đốt on-chain, phí 5.000đ được ghi nhận.',
+      description: `Voucher bị đốt on-chain, trừ ${fmtVnd(result?.feeVnd ?? 3000)} phí đã tạm giữ trong ví phí.`,
       action: { label: 'Xem giao dịch', onClick: () => router.push('/(store)/wallet') },
     });
   };
@@ -75,7 +75,7 @@ export default function ScanScreen() {
           <Card gap={10} style={{ alignSelf: 'stretch' }}>
             {[
               [Link2, 'Đốt voucher on-chain', code.length > 14 ? `${code.slice(0, 6)}…${code.slice(-4)}` : code, C.sky700],
-              [Wallet, 'Phí ghi nhận', `+${fmtVnd(result.feeVnd)}`, C.red700],
+              [Wallet, 'Trừ từ ví phí', `-${fmtVnd(result.feeVnd)}`, C.red700],
               [Clock, 'Thời điểm', `${fmtTime(at)} · ${new Date(at).toLocaleDateString('vi-VN')}`, C.ink900],
             ].map(([I, l, v, col]) => {
               const Icon = I as typeof Link2;
@@ -148,7 +148,7 @@ export default function ScanScreen() {
           <InfoRow label="Mã">{code.length > 18 ? `${code.slice(0, 10)}…` : code}</InfoRow>
           <InfoRow label="Phí nền tảng" last>
             <GText v="numS" color={C.red700}>
-              {fmtVnd(result?.feeVnd ?? 5000)}
+              {fmtVnd(result?.feeVnd ?? 3000)}
             </GText>
           </InfoRow>
         </Card>

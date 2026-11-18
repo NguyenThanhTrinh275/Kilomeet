@@ -1,7 +1,6 @@
 // Primitive kiểu game: chữ, thẻ chunky, nhãn, ô icon, nút icon, chip, công tắc.
 import * as React from 'react';
 import {
-  Pressable,
   Text,
   View,
   type PressableProps,
@@ -10,8 +9,9 @@ import {
   type ViewProps,
   type ViewStyle,
 } from 'react-native';
+import { Pressable } from './Press';
 import { Check, type LucideIcon } from 'lucide-react-native';
-import { C, DEPTH, STROKE, TONE, TYPE, type TextVariant, type Tone } from '../../theme/game';
+import { C, DEPTH, FONT, STROKE, TONE, TYPE, type TextVariant, type Tone } from '../../theme/game';
 
 // ─── Text ───────────────────────────────────────────────────────
 
@@ -22,12 +22,26 @@ export type GTextProps = TextProps & {
   strike?: boolean;
 };
 
-export function GText({ v = 'bodyM', color = C.ink900, align, strike, style, ...props }: GTextProps) {
+/**
+ * Font số Lilita One không có dấu thanh tiếng Việt (ộ, ủ, ơ, ư…): chữ như "Cao Thủ", "Đội" bị đổi sang font
+ * hệ thống. Kiểu num* gặp các ký tự đó thì dùng Baloo 2 (cùng phong cách, đủ tiếng Việt). đ/Đ, â, ê, ô, ă vẫn có sẵn.
+ */
+const NO_LILITA = /[\u01A0\u01A1\u01AF\u01B0\u0300-\u036F\u1EA0-\u1EF9]/;
+function textOf(children: React.ReactNode): string {
+  return React.Children.toArray(children)
+    .map((c) => (typeof c === 'string' || typeof c === 'number' ? String(c) : ''))
+    .join('');
+}
+
+export function GText({ v = 'bodyM', color = C.ink900, align, strike, style, children, ...props }: GTextProps) {
+  const fallback = v.startsWith('num') && NO_LILITA.test(textOf(children)) ? { fontFamily: FONT.display } : null;
   return (
     <Text
       {...props}
+      children={children}
       style={[
         TYPE[v],
+        fallback,
         { color },
         align ? { textAlign: align } : null,
         strike ? { textDecorationLine: 'line-through' } : null,

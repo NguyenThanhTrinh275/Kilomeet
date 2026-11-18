@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm } from 'react-hook-form';
@@ -8,9 +8,9 @@ import { toast } from 'sonner-native';
 import { Calendar, Info, MapPin, Percent, Route, ShoppingBag, Sparkles, Wallet, X } from 'lucide-react-native';
 import { api } from '../../../src/api/client';
 import { useAuthStore } from '../../../src/stores/auth';
-import { RANKS, type Rank, type Store, type VoucherTemplate } from '../../../src/api/types';
+import { RANKS, type Rank, type Store, type StoreFeeWallet, type VoucherTemplate } from '../../../src/api/types';
 import { C, DEPTH, RANK_COLOR } from '../../../src/theme/game';
-import { discountLabel } from '../../../src/lib/format';
+import { discountLabel, fmtVnd } from '../../../src/lib/format';
 import { Banner, Body, Card, GButton, GFormInput, GText, RankEmblem, Row, Screen, Segmented, TopBar, VoucherTicket } from '../../../src/components/game';
 
 const QUEST = 'Chạy ngang qua quán';
@@ -41,6 +41,10 @@ export default function CreateVoucherScreen() {
   const [questDiscount, setQuestDiscount] = useState(50);
   const [minRank, setMinRank] = useState<Rank>('đồng');
   const [submitting, setSubmitting] = useState(false);
+  const [fee, setFee] = useState<StoreFeeWallet | null>(null);
+  useEffect(() => {
+    api.get<StoreFeeWallet>('/store/fee').then(setFee).catch(() => undefined);
+  }, []);
 
   const { control, handleSubmit, watch } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -75,7 +79,7 @@ export default function CreateVoucherScreen() {
 
   return (
     <Screen>
-      <TopBar title="Tạo voucher mới" action={Info} onAction={() => toast.info('Bạn chỉ trả 5.000đ mỗi lượt voucher được dùng tại quầy.')} />
+      <TopBar title="Tạo voucher mới" action={Info} onAction={() => toast.info(`Mỗi voucher bán ra tạm giữ ${fmtVnd(fee?.feePerVoucherVnd ?? 3000)} trong ví phí; chỉ trừ khi khách dùng, hết hạn chưa dùng thì trả lại.`)} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <Body gap={14}>
           <GFormInput control={control} name="title" label="Tiêu đề *" icon={Sparkles} placeholder="VD: Giảm 20% mọi đồ uống" />
@@ -172,7 +176,33 @@ export default function CreateVoucherScreen() {
             leftLabel={`Còn ${quantity || '?'}`}
             questLabel={quest === 'pass' ? `Đã chạy ngang quán · -${questDiscount}%` : undefined}
           />
-          <Banner icon={Info} tone="coin" iconColor={C.ink900} text="Bạn chỉ trả 5.000đ mỗi lượt voucher được dùng tại quầy." />
+          {(() => {
+            const per = fee?.feePerVoucherVnd ?? 3000;
+            const want = (fee?.unsoldCount ?? 0) + (Number(quantity) || 0);
+            const short = fee ? Math.max(0, want * per - fee.availableVnd) : 0;
+            return (
+              <Banner
+                icon={Wallet}
+                tone={short > 0 ? 'orange' : 'coin'}
+                iconColor={C.ink900}
+                title={fee ? `Ví phí đủ cho ${fee.sellableCount} voucher bán ra` : undefined}
+                text={
+                  short > 0
+                    ? `Mỗi voucher bán ra tạm giữ ${fmtVnd(per)}. Nạp thêm ${fmtVnd(short)} để bán hết cả voucher mới.`
+                    : `Mỗi voucher bán ra tạm giữ ${fmtVnd(per)}; chỉ trừ khi khách dùng tại quầy, hết hạn chưa dùng thì trả lại.`
+                }
+                right={
+                  short > 0 ? (
+                    <Pressable onPress={() => router.push('/(store)/fee')}>
+                      <GText v="bodyMStrong" color={C.orange700}>
+                        Nạp ›
+                      </GText>
+                    </Pressable>
+                  ) : undefined
+                }
+              />
+            );
+          })()}
           <GButton label="Tạo voucher" type="accent" icon={Sparkles} loading={submitting} onPress={() => void onSubmit()} block />
         </Body>
       </KeyboardAvoidingView>

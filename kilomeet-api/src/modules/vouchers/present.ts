@@ -1,6 +1,7 @@
 import type { OwnedVoucher, Store, VoucherTemplate } from '@prisma/client';
 import { effectiveStatus } from '../../domain/pricing.js';
 import { rankName } from '../../domain/rank.js';
+import { storeCanSell } from '../store/fee.js';
 
 export type TemplateWithStore = VoucherTemplate & { store: { store: Store | null } };
 export const templateInclude = { store: { include: { store: true } } } as const;
@@ -27,6 +28,8 @@ export function toApiTemplate(t: TemplateWithStore) {
     // Thêm (FE bỏ qua):
     area: t.area,
     chainTokenId: t.chainTokenId,
+    /** Còn số lượng nhưng ví phí của quán không đủ giữ phí → FE hiện "Tạm hết" (quyết định #28). */
+    pausedForFee: t.remaining > 0 && !storeCanSell(s),
   };
 }
 

@@ -1,7 +1,7 @@
 import '../global.css';
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
+import { LogBox, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -16,6 +16,7 @@ import { C, FONT } from '../src/theme/game';
 import { Loading } from '../src/components/game';
 
 enableFreeze(true);
+LogBox.ignoreAllLogs(true);
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

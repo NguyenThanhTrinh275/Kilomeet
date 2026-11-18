@@ -1,5 +1,6 @@
 // Nút "chunky" kiểu game: viền mực 2.5, bóng đáy cứng 4px, nhấn xuống khi bấm.
-import { ActivityIndicator, Pressable, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable } from './Press';
 import type { LucideIcon } from 'lucide-react-native';
 import { C, DEPTH, STROKE } from '../../theme/game';
 import { GText } from './primitives';

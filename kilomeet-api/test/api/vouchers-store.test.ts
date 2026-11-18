@@ -125,17 +125,17 @@ describe('demo bước 6 — cửa hàng quét QR (S5)', () => {
     return { old: ov.qrCode as string, gifted: (await ctx.post('/vouchers/gift', { voucherId: ov.id, toUserId: 'lan@demo.com' }, minh)).json.data };
   }
 
-  it('quét → đốt voucher + phí 5.000đ; quét lại → "Voucher đã được sử dụng"', async () => {
+  it('quét → đốt voucher + phí 3.000đ; quét lại → "Voucher đã được sử dụng"', async () => {
     const { gifted, old } = await giftedToLan();
     const fuji = await ctx.login('quanfuji@demo.com');
     expect(FailZ.parse((await ctx.post('/store/scan', { qrCode: old }, fuji)).json).message).toBe('QR không hợp lệ');
 
     const r = await ctx.post('/store/scan', { qrCode: gifted.qrCode }, fuji);
-    expect(r.json.data).toMatchObject({ success: true, voucherTitle: 'Giảm 20% toàn menu', feeVnd: 5000 });
+    expect(r.json.data).toMatchObject({ success: true, voucherTitle: 'Giảm 20% toàn menu', feeVnd: 3000 });
     expect(FailZ.parse((await ctx.post('/store/scan', { qrCode: gifted.qrCode }, fuji)).json).message).toBe('Voucher đã được sử dụng');
 
     const dash = okZ(StoreDashboardZ).parse((await ctx.get('/store/dashboard', fuji)).json).data;
-    expect(dash).toMatchObject({ storeId: 'store-fuji', totalVouchersUsed: 48, totalFeesVnd: 240000, totalVouchersCreated: 100 });
+    expect(dash).toMatchObject({ storeId: 'store-fuji', totalVouchersUsed: 48, totalFeesVnd: 144000, totalVouchersCreated: 100 });
     expect(dash.recentUsages[0]).toMatchObject({ voucherTitle: 'Giảm 20% toàn menu', userName: 'Nguyễn Lan' });
 
     const lan = await ctx.login('lan@demo.com');

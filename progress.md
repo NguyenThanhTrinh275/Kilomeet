@@ -10,8 +10,8 @@
 | | |
 |---|---|
 | **Cập nhật lần cuối** | 18/11/2026 |
-| **Đang ở** | Code xong S1–S8 + hồ sơ quán + màn Ví & giao dịch. **Chain chạy thật trên Fuji** (hợp đồng mới, verify Snowtrace). 174 test BE + 24 test contract xanh, typecheck BE/FE/blockchain sạch, FE đóng gói Android được |
-| **Việc tiếp theo** | (1) **Thử 8 bước demo trên điện thoại thật** (chưa lần nào) · (2) quay video · (3) push + PR `feat/app-game-ui` → `main` · (4) báo người phụ trách blockchain địa chỉ hợp đồng mới · (5) duyệt quyết định #17–27 |
+| **Đang ở** | Code xong S1–S8 + hồ sơ quán + màn Ví & giao dịch + **ví phí trả trước của quán (quyết định #28, phí 3.000đ)**. **Chain chạy thật trên Fuji** (hợp đồng mới, verify Snowtrace, `feePerRedeemVnd = 3000`). 188 test BE + 24 test contract xanh, typecheck BE/FE sạch, FE đóng gói Android được |
+| **Việc tiếp theo** | (1) **Thử 8 bước demo trên điện thoại thật** (chưa lần nào) · (2) quay video · (3) push + PR `feat/app-game-ui` → `main` · (4) báo người phụ trách blockchain địa chỉ hợp đồng mới · (5) duyệt quyết định #17–29 |
 | **Đang vướng** | Không. Chain chạy thật trên Fuji bằng ví operator mới (18/11) |
 | **Hạn MVP** | ~20/11/2026 |
 
@@ -177,3 +177,5 @@ Mới nhất ghi ở trên. Mỗi dòng: ngày · đã làm gì · còn dở gì
 - **12/11/2026 (sáng)** · Chốt stack + A–D (#15, #16). Dựng `kilomeet-api/`: envelope, clock, JWT, auth, ví HD, seed, FakeChain. FE nối BE (client + auth store).
 - **11/11/2026 (tối)** · Đối chiếu FE mới với hợp đồng API, viết `docs/backend-plan.md`. Phát hiện 4 chỗ FE đổi hợp đồng.
 - **11/11/2026** · Viết `CLAUDE.md` và `progress.md`. Hợp đồng API và quy trình đã có sẵn trong `docs/`. Chưa có code BE.
+- **18/11/2026 (ví phí trả trước)** · Quyết định #28: phí 3.000đ/lượt, quán nạp ví phí; mua → giữ phí (UPDATE có điều kiện, chịu mua đồng thời), quét → trừ, hết hạn → trả lại (cron mỗi giờ + `/admin/run-fee-release`); ví không đủ → `pausedForFee` "Tạm hết". API `/store/fee`, `/store/fee/topup` (idempotent theo `requestId`). Figma: màn 33 · Ví phí + 26b · Tổng quan (ví phí) + 3 component. FE: màn Ví phí, banner thiếu tiền ở Tổng quan và Tạo voucher, "Tạm hết" phía người chạy. Sửa lỗi Pressable mất style trên Android (`components/game/Press.tsx`), nút tab giữa lệch/che chữ. Đặt phí on-chain 3.000đ (`pnpm chain:set-fee`). 188 test BE xanh.
+- **18/11/2026 (quyết định #29 + font)** · Bỏ khoá tìm nhóm khi vắng 2 lần: vắng/trễ chỉ giảm độ đúng hẹn. Sửa lỗi font: kiểu số (Lilita One) không có dấu tiếng Việt → `GText` tự dùng Baloo 2 khi chuỗi có ộ/ủ/ơ/ư….

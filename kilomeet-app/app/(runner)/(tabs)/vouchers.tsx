@@ -74,7 +74,7 @@ export default function VouchersScreen() {
   const shop = templates
     .filter(match)
     .filter((t) => (filter === 'quest' ? !!t.questDescription : filter === 'eligible' ? eligible(t) && t.questDiscountPercent > 0 : true))
-    .sort((a, b) => Number(b.remaining > 0) - Number(a.remaining > 0) || Number(eligible(b)) - Number(eligible(a)));
+    .sort((a, b) => Number(b.remaining > 0 && !b.pausedForFee) - Number(a.remaining > 0 && !a.pausedForFee) || Number(eligible(b)) - Number(eligible(a)));
   const mine = myVouchers.filter((v) => match(v.template));
   const usable = myVouchers.filter((v) => !ownedStatus(v).dim).length;
   const questStores = new Set(templates.filter((t) => t.questDescription).map((t) => t.storeId)).size;
@@ -132,6 +132,7 @@ export default function VouchersScreen() {
                 const deal = eligible(t) && t.questDiscountPercent > 0;
                 const dealPrice = t.myPrice ?? Math.round(t.priceTokens * (1 - t.questDiscountPercent / 100));
                 const soldOut = t.remaining <= 0;
+                const paused = !soldOut && !!t.pausedForFee;
                 const lockedRank = RANK_INDEX[rank] < RANK_INDEX[t.minRank];
                 return (
                   <VoucherTicket
@@ -142,12 +143,12 @@ export default function VouchersScreen() {
                     price={t.priceTokens}
                     dealPrice={deal ? dealPrice : undefined}
                     rank={t.minRank}
-                    leftLabel={soldOut ? 'Hết lượt' : lockedRank ? `Cần ${RANK_LABEL[t.minRank]}` : `Còn ${t.remaining}`}
-                    leftTone={soldOut || lockedRank ? 'red' : 'sky'}
-                    stub={deal ? C.grape500 : soldOut ? C.red500 : stubFor(t.storeId)}
+                    leftLabel={soldOut ? 'Hết lượt' : paused ? 'Tạm hết' : lockedRank ? `Cần ${RANK_LABEL[t.minRank]}` : `Còn ${t.remaining}`}
+                    leftTone={soldOut || paused || lockedRank ? 'red' : 'sky'}
+                    stub={deal ? C.grape500 : soldOut || paused ? C.red500 : stubFor(t.storeId)}
                     questLabel={deal ? `Đã chạy ngang quán · -${t.questDiscountPercent}%` : t.questDescription ? `Nhiệm vụ: ${t.questDescription.toLowerCase()} -${t.questDiscountPercent}%` : undefined}
-                    dim={soldOut}
-                    stamp={soldOut ? 'HẾT LƯỢT' : undefined}
+                    dim={soldOut || paused}
+                    stamp={soldOut ? 'HẾT LƯỢT' : paused ? 'TẠM HẾT' : undefined}
                     onPress={() => router.push(`/(runner)/voucher/${t.id}`)}
                   />
                 );

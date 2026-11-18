@@ -1,6 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
 import cron from 'node-cron';
 import { runMembershipExpiry } from '../modules/auth/membership.js';
+import { releaseExpiredHolds } from '../modules/store/fee.js';
 import { runGroupTimeline } from '../modules/groups/service.js';
 import { runWeeklyRanking } from '../modules/seasons/service.js';
 import { processChainOutbox } from './chain-outbox.js';
@@ -29,6 +30,7 @@ export function startJobs(log: FastifyBaseLogger) {
   const tasks = [
     cron.schedule('59 23 * * 0', wrap('weekly-ranking', () => runWeeklyRanking()), { timezone: TZ }),
     cron.schedule('5 0 * * *', wrap('membership-expiry', () => runMembershipExpiry()), { timezone: TZ }),
+    cron.schedule('10 * * * *', wrap('fee-release', () => releaseExpiredHolds()), { timezone: TZ }),
     cron.schedule('* * * * *', quiet('group-timeline', () => runGroupTimeline()), { timezone: TZ }),
     cron.schedule('*/5 * * * * *', quiet('chain-outbox', () => processChainOutbox()), { timezone: TZ }),
   ];

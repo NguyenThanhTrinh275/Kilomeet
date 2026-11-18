@@ -11,7 +11,7 @@ Token, voucher, lượt dùng voucher và huy hiệu mùa nằm trên **Avalanch
 | Vấn đề | Chuỗi bảo đảm |
 |---|---|
 | Quán sợ voucher bán quá số lượng hoặc bị dùng hai lần | `Voucher` (ERC-1155) đếm số đã bán, đốt voucher khi quét QR |
-| Quán cần đối chiếu số lượt dùng trước khi trả phí | Mỗi lượt quét ghi sự kiện `VoucherRedeemed` kèm phí 5.000 đ |
+| Quán cần đối chiếu số lượt dùng trước khi trả phí | Mỗi lượt quét ghi sự kiện `VoucherRedeemed` kèm phí 3.000 đ, khớp sổ ví phí trả trước |
 | Người chạy cần tin token không bị tạo ra tuỳ ý hay xoá lén | `RunToken` (ERC-20, không chuyển được) chỉ mint khi có khoá thưởng duy nhất; reset mùa công khai trong **một giao dịch** cho mọi ví |
 | Thành tích mùa | `SeasonBadge`: NFT soulbound ghi hạng cao nhất mỗi mùa |
 
@@ -39,6 +39,7 @@ flowchart LR
 - **DB là nguồn sự thật.** Mỗi thao tác đổi token hoặc voucher chạy trong một transaction, kèm một dòng `chain_outbox`. Job gửi giao dịch sau và lưu `txHash`, nên app không phải chờ chain.
 - **Không phát trùng, không gửi trùng.** Khoá thưởng `keccak256(key)` bị hợp đồng từ chối nếu dùng lại. Outbox lưu `txHash` ngay khi giao dịch lên mạng; nếu tiến trình chết giữa chừng, lượt sau tra receipt chứ không gửi lại.
 - **Không tin dữ liệu điện thoại.** BE tự tính km từ GPS (haversine, lọc tốc độ > 25 km/h), tự xét quán đi ngang (50 m) và quyền giảm giá. Trừ số lượng bằng `UPDATE … WHERE remaining > 0`.
+- **Ví phí trả trước (quán):** mua voucher → giữ 3.000 đ trong ví quán (`UPDATE … WHERE khả dụng ≥ 3000`), quét → trừ, hết hạn → trả lại. Ví không đủ thì voucher "Tạm hết", nền tảng không bao giờ bị nợ phí.
 - **Đóng mùa theo lô:** `endSeason` → `settleSeason(address[])` → `recordBadges(...)` → `startSeason`, tổng cộng 4 giao dịch cho mọi ví.
 
 ## Cấu trúc repo
@@ -88,7 +89,7 @@ Chạy với Avalanche Fuji: trong `kilomeet-api/.env`, đặt `CHAIN=fuji`, `SE
 3. Tài khoản Cao thủ: hạng và số km còn thiếu để giữ hạng.
 4. Voucher Fuji Coffee giá 500 token. Chạy 5 km ngang 2 quán, chọn Fuji: còn **250 token**.
 5. Mua (đốt 250 RUN), rồi tặng cho tài khoản thứ hai.
-6. Cửa hàng quét QR: voucher bị đốt, phí 5.000 đ ghi on-chain.
+6. Cửa hàng quét QR: voucher bị đốt, ví phí trả trước trừ 3.000 đ đã tạm giữ lúc bán, phí ghi on-chain. Màn **Ví phí**: nạp tiền, khả dụng, tạm giữ, "Còn N voucher chưa bán được".
 7. Hội viên ghép nhóm: bản đồ hiện từng người đang tới điểm hội tụ.
 8. Quản trị đóng mùa: Cao thủ 1.000 → **500 token**, xuống Bạch kim, nhận huy hiệu NFT.
 

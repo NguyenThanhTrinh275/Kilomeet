@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { toast } from 'sonner-native';
-import { Check, ChevronRight, Clock, Link2, LogOut, Mail, Plus, Receipt, RefreshCcw, ScanLine, Settings2, ShoppingBag, Store as StoreIcon, Wallet } from 'lucide-react-native';
+import { Check, ChevronRight, Clock, Info, Link2, LogOut, Mail, Plus, Receipt, RefreshCcw, ScanLine, Settings2, ShoppingBag, Store as StoreIcon, Wallet } from 'lucide-react-native';
 import { api } from '../../src/api/client';
 import { useAuthStore } from '../../src/stores/auth';
 import type { Store, StoreDashboard, StoreProfile } from '../../src/api/types';
@@ -99,6 +99,7 @@ export default function StoreDashboardScreen() {
         <GText v="titleL">Cửa hàng</GText>
         <Card pad={[4, 0]} gap={0} style={{ overflow: 'hidden' }}>
           <MenuRow icon={StoreIcon} tile={C.orange300} title="Hồ sơ quán" subtitle="Giới thiệu quán cho người chạy" onPress={() => (setMenuOpen(false), router.push('/(store)/profile'))} />
+          <MenuRow icon={Wallet} tile={C.green300} title="Ví phí" subtitle="Nạp tiền, tạm giữ và lịch sử phí" onPress={() => (setMenuOpen(false), router.push('/(store)/fee'))} />
           <MenuRow icon={ShoppingBag} tile={C.coin300} title="Voucher của tôi" subtitle="Danh sách voucher đang bán" onPress={() => (setMenuOpen(false), router.push('/(store)/vouchers'))} />
           <MenuRow icon={Link2} tile={C.sky300} title="Giao dịch on-chain" subtitle="Lượt quét voucher ghi trên Avalanche" onPress={() => (setMenuOpen(false), router.push('/(store)/wallet'))} />
           <MenuRow icon={LogOut} tile={C.red300} title="Đăng xuất" titleColor={C.red700} onPress={() => (setMenuOpen(false), setLogoutOpen(true))} last />
@@ -182,8 +183,30 @@ export default function StoreDashboardScreen() {
         <Row gap={12} center={false}>
           <StatTile value={String(d?.totalVouchersCreated ?? 0)} label="voucher tạo" icon={ShoppingBag} tile={C.orange300} onPress={() => router.push('/(store)/vouchers')} />
           <StatTile value={String(d?.totalVouchersUsed ?? 0)} label="lượt đã dùng" icon={Check} tile={C.green300} />
-          <StatTile value={fmtVndShort(d?.totalFeesVnd ?? 0)} label="phí còn nợ" icon={Wallet} tile={C.red300} />
+          <StatTile
+            value={fmtVndShort(d?.fee?.availableVnd ?? 0)}
+            label="ví phí khả dụng"
+            icon={Wallet}
+            tile={d?.fee && d.fee.sellableCount === 0 ? C.red300 : C.coin300}
+            onPress={() => router.push('/(store)/fee')}
+          />
         </Row>
+        {d?.fee && d.fee.shortfallVnd > 0 ? (
+          <Card row fill={C.orange300} pad={14} onPress={() => router.push('/(store)/fee')}>
+            <IconTile icon={Info} size={44} iconSize={22} fill={C.surface} radius={14} sw={2} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <GText v="titleS">
+                {d.fee.sellableCount === 0 ? 'Voucher đang tạm ngừng bán' : `Còn ${d.fee.unsoldCount - d.fee.sellableCount} voucher chưa bán được`}
+              </GText>
+              <GText v="bodyS" color={C.ink700}>
+                Ví phí đủ cho {d.fee.sellableCount} / {d.fee.unsoldCount} voucher. Nạp thêm {fmtVnd(d.fee.shortfallVnd)} để bán hết.
+              </GText>
+              <GText v="bodyMStrong" color={C.orange700}>
+                Nạp ngay ›
+              </GText>
+            </View>
+          </Card>
+        ) : null}
         <Row gap={12} center={false}>
           {[
             ['Quét QR', 'Xác nhận voucher tại quầy', ScanLine, C.orange300, C.orange500, () => router.push('/(store)/scan')],
@@ -229,7 +252,7 @@ export default function StoreDashboardScreen() {
             ))}
           </View>
           <GText v="bodyS" color={C.ink500}>
-            Phí nền tảng {fmtVnd(5000)} mỗi lượt voucher được dùng tại quầy.
+            Phí nền tảng {fmtVnd(d?.fee?.feePerVoucherVnd ?? 3000)} mỗi lượt voucher được dùng, trừ từ ví phí trả trước.
           </GText>
         </Card>
 
@@ -247,7 +270,7 @@ export default function StoreDashboardScreen() {
                     {u.userName} · {fmtDayMonth(u.usedAt)} {fmtTime(u.usedAt)}
                   </GText>
                 </View>
-                <Pill tone="red" label="-5.000đ" />
+                <Pill tone="red" label={`-${fmtVnd(u.feeVnd ?? d.fee?.feePerVoucherVnd ?? 3000)}`} />
               </Row>
             ))}
           </Card>

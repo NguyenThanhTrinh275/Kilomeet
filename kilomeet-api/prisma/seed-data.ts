@@ -3,6 +3,7 @@
 import { randomBytes } from 'node:crypto';
 import type { PrismaClient, Role, StoreStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { VOUCHER_FEE_VND } from '../src/domain/fee.js';
 import { seasonOf } from '../src/domain/season.js';
 import { addDays, vnDayStart, vnWeekStart } from '../src/domain/time.js';
 import { voucherTypeOp } from '../src/lib/outbox.js';
@@ -22,6 +23,8 @@ interface RunnerSeed {
 interface StoreSeed {
   id: string; email: string; name: string; createdAt: string; storeName: string; storeAddress: string;
   lat: number; lng: number; status: StoreStatus; totalUsages: number;
+  /** Ví phí trả trước ban đầu (VND, quyết định #28). */
+  feeVnd?: number;
 }
 
 const runners: RunnerSeed[] = [
@@ -42,15 +45,15 @@ const runners: RunnerSeed[] = [
 
 const stores: StoreSeed[] = [
   { id: 'store-fuji', email: 'quanfuji@demo.com', name: 'Quán Fuji Coffee', createdAt: '2026-09-15T08:00:00Z',
-    storeName: 'Fuji Coffee', storeAddress: '268 Lý Thường Kiệt, P.14, Q.10', lat: 10.773, lng: 106.66, status: 'approved', totalUsages: 47 },
+    storeName: 'Fuji Coffee', storeAddress: '268 Lý Thường Kiệt, P.14, Q.10', lat: 10.773, lng: 106.66, status: 'approved', totalUsages: 47, feeVnd: 150_000 },
   { id: 'store-highlands', email: 'highlands@demo.com', name: 'Highlands Lý Thường Kiệt', createdAt: '2026-09-20T08:00:00Z',
-    storeName: 'Highlands Coffee', storeAddress: '290 Lý Thường Kiệt, P.14, Q.10', lat: 10.775, lng: 106.662, status: 'approved', totalUsages: 12 },
+    storeName: 'Highlands Coffee', storeAddress: '290 Lý Thường Kiệt, P.14, Q.10', lat: 10.775, lng: 106.662, status: 'approved', totalUsages: 12, feeVnd: 90_000 },
   { id: 'store-phuclong', email: 'phuclong@demo.com', name: 'Phúc Long Bách Khoa', createdAt: '2026-09-21T08:00:00Z',
-    storeName: 'Phúc Long', storeAddress: '250 Lý Thường Kiệt, P.14, Q.10', lat: 10.771, lng: 106.658, status: 'approved', totalUsages: 8 },
+    storeName: 'Phúc Long', storeAddress: '250 Lý Thường Kiệt, P.14, Q.10', lat: 10.771, lng: 106.658, status: 'approved', totalUsages: 8, feeVnd: 60_000 },
   { id: 'store-cong', email: 'cong@demo.com', name: 'Cộng Cà Phê Tô Hiến Thành', createdAt: '2026-09-22T08:00:00Z',
-    storeName: 'Cộng Cà Phê', storeAddress: '1 Tô Hiến Thành, P.13, Q.10', lat: 10.776, lng: 106.664, status: 'approved', totalUsages: 5 },
+    storeName: 'Cộng Cà Phê', storeAddress: '1 Tô Hiến Thành, P.13, Q.10', lat: 10.776, lng: 106.664, status: 'approved', totalUsages: 5, feeVnd: 60_000 },
   { id: 'store-banhmi', email: 'banhmi@demo.com', name: 'Bánh Mì Huỳnh Hoa', createdAt: '2026-09-23T08:00:00Z',
-    storeName: 'Bánh Mì Huỳnh Hoa', storeAddress: '210 Lý Thường Kiệt, P.14, Q.10', lat: 10.77, lng: 106.656, status: 'approved', totalUsages: 20 },
+    storeName: 'Bánh Mì Huỳnh Hoa', storeAddress: '210 Lý Thường Kiệt, P.14, Q.10', lat: 10.77, lng: 106.656, status: 'approved', totalUsages: 20, feeVnd: 90_000 },
   { id: 'store-juice', email: 'juice@demo.com', name: 'Juice Factory', createdAt: '2026-09-24T08:00:00Z',
     storeName: 'Juice Factory', storeAddress: '275 Lý Thường Kiệt, P.14, Q.10', lat: 10.774, lng: 106.661, status: 'approved', totalUsages: 3 },
   { id: 'store-pending-1', email: 'newcafe@demo.com', name: 'Chủ New Café', createdAt: '2026-11-08T10:00:00Z',
@@ -200,7 +203,9 @@ export async function seedDemo(prisma: PrismaClient, now: Date = new Date()): Pr
         store: {
           create: {
             storeName: s.storeName, storeAddress: s.storeAddress, lat: s.lat, lng: s.lng, status: s.status,
-            appliedAt: new Date(s.createdAt), totalUsages: s.totalUsages, totalFeesVnd: s.totalUsages * 5000,
+            appliedAt: new Date(s.createdAt), totalUsages: s.totalUsages, totalFeesVnd: s.totalUsages * VOUCHER_FEE_VND,
+            feeBalanceVnd: s.feeVnd ?? 0,
+            ...(s.feeVnd ? { feeEntries: { create: { kind: 'topup', amountVnd: s.feeVnd, balanceDelta: s.feeVnd, heldDelta: 0, ref: `topup:${s.id}:seed-${seedRun}`, createdAt: new Date(now.getTime() - 86_400_000) } } } : {}),
             ...(storeProfiles[s.id] ?? {}),
           },
         },

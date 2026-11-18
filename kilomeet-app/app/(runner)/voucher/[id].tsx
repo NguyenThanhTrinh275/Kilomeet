@@ -169,6 +169,8 @@ export default function VoucherDetailScreen() {
   };
 
   const left = template.remaining;
+  /** Quán hết khả dụng trong ví phí (quyết định #28): còn hàng nhưng tạm ngừng bán. */
+  const paused = left > 0 && !!template.pausedForFee;
   const ticketProps = {
     discount: discountLabel(template.discountPercent),
     store: template.storeName,
@@ -279,7 +281,7 @@ export default function VoucherDetailScreen() {
             <Row gap={8}>
               <XPBar pct={template.totalSupply ? left / template.totalSupply : 0} tone="orange" height={14} style={{ width: 80 }} />
               <GText v="bodyMStrong">
-                {left} / {template.totalSupply}
+                {paused ? 'Tạm hết' : `${left} / ${template.totalSupply}`}
               </GText>
             </Row>
           </InfoRow>
@@ -316,11 +318,11 @@ export default function VoucherDetailScreen() {
               </Row>
             </View>
             <GButton
-              label={left <= 0 ? 'Hết lượt' : `Mua · ${price}`}
+              label={left <= 0 ? 'Hết lượt' : paused ? 'Tạm hết' : `Mua · ${price}`}
               type="coin"
               icon={ShoppingBag}
               loading={buying}
-              disabled={left <= 0}
+              disabled={left <= 0 || paused}
               onPress={() => void handleBuy()}
               flex
             />

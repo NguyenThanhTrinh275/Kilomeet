@@ -268,7 +268,9 @@ export default function StoreProfileScreen() {
                   price={t.priceTokens}
                   dealPrice={deal ? (t.myPrice ?? Math.round(t.priceTokens * (1 - t.questDiscountPercent / 100))) : undefined}
                   rank={t.minRank}
-                  leftLabel={`Còn ${t.remaining}`}
+                  leftLabel={t.pausedForFee ? 'Tạm hết' : `Còn ${t.remaining}`}
+                  dim={!!t.pausedForFee}
+                  stamp={t.pausedForFee ? 'TẠM HẾT' : undefined}
                   questLabel={deal ? `Đã chạy ngang quán · -${t.questDiscountPercent}%` : undefined}
                   onPress={() => router.push(`/(runner)/voucher/${t.id}`)}
                 />

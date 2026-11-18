@@ -361,7 +361,7 @@ export default function GroupsScreen() {
           </Row>
           <XPBar pct={runner!.punctuality / 100} tone={runner!.punctuality >= 80 ? 'green' : 'orange'} height={14} />
           <GText v="bodyS" color={C.ink500}>
-            Vắng 2 lần không báo trong một mùa sẽ bị khoá tìm nhóm 1 tuần.
+            Đến trễ hoặc vắng không báo sẽ làm giảm độ đúng hẹn. Có nhóm chỉ nhận người từ 80% trở lên.
           </GText>
         </Card>
 

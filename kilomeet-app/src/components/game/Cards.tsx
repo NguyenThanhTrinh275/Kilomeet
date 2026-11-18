@@ -1,6 +1,7 @@
 // Thẻ nghiệp vụ: ô chỉ số, thẻ nhiệm vụ, voucher dạng vé, dòng menu, thẻ giới thiệu quán.
 import * as React from 'react';
-import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable } from './Press';
 import { Check, ChevronRight, Flame, Route, Store, type LucideIcon } from 'lucide-react-native';
 import type { Rank } from '../../api/types';
 import { C, DEPTH, STROKE, TONE, type Tone } from '../../theme/game';

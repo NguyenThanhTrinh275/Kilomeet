@@ -67,7 +67,7 @@ Trước demo: `pnpm demo:reset`, `pnpm dev`, mở Snowtrace nếu `CHAIN=fuji`.
 3. **Cao thủ**: đăng nhập `minh@demo.com` → hạng Cao thủ, 42/44 km mục tiêu tuần.
 4. **Chạy ngang quán**: Minh mở voucher Fuji (500 token) → "Phát buổi chạy mẫu · 5 km ngang Fuji + Highlands" → chọn **Fuji Coffee** → voucher còn **250 token**.
 5. **Mua + tặng**: mua (trừ 250) → "Tặng" → `lan@demo.com`.
-6. **Cửa hàng quét**: đăng nhập `quanfuji@demo.com` → Quét QR trên máy Lan → voucher bị đốt, +5.000 đ; toast "Xem giao dịch" mở danh sách giao dịch của quán.
+6. **Cửa hàng quét**: đăng nhập `quanfuji@demo.com` → Quét QR trên máy Lan → voucher bị đốt, ví phí trừ 3.000 đ đã tạm giữ (menu → Ví phí để nạp thêm / xem sổ); toast "Xem giao dịch" mở danh sách giao dịch của quán.
 7. **Nhóm**: Minh / An / Bình (hội viên) → "Ghép tự động" trên cả 3 máy (hoặc Minh tạo nhóm, 2 người tham gia) →
    `pnpm demo clock <T−20 phút>` → bản đồ hiện từng người đang tới.
 8. **Đóng mùa**: `admin@demo.com` → Mùa giải → Đóng mùa → Minh còn **500 token, Bạch kim**, có huy hiệu mùa; Quản trị → **Chuỗi Avalanche Fuji** thấy 1 giao dịch chốt mùa cho mọi ví.

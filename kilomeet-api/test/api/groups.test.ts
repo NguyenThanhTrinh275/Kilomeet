@@ -148,14 +148,17 @@ describe('mốc thời gian + vị trí (S8)', () => {
     expect(d.status).toBe('cancelled');
   });
 
-  it('vắng 2 lần → khoá tìm nhóm 1 tuần', async () => {
+  it('vắng nhiều lần → chỉ giảm độ đúng hẹn, vẫn tìm / lập nhóm được (quyết định #29)', async () => {
     await prisma.runnerProfile.update({ where: { userId: 'user-binh' }, data: { noShowCount: 1 } });
+    const before = await prisma.runnerProfile.findUniqueOrThrow({ where: { userId: 'user-binh' } });
     const { g, binh } = await createWith3();
     await ctx.setNow(at(11));
     await ctx.get(`/groups/detail?groupId=${g.id}`, binh);
     const p = await prisma.runnerProfile.findUniqueOrThrow({ where: { userId: 'user-binh' } });
-    expect(p.groupBanUntil).not.toBeNull();
-    expect((await ctx.post('/groups/create', { ...body, date: '2026-11-14' }, binh)).json.message).toBe('Bạn đang bị khoá tìm nhóm');
+    expect(p.noShowCount).toBe(2);
+    expect(p.groupBanUntil).toBeNull();
+    expect(p.punctuality).toBeLessThan(before.punctuality);
+    expect((await ctx.post('/groups/create', { ...body, date: '2026-11-14' }, binh)).json.success).toBe(true);
   });
 });
 

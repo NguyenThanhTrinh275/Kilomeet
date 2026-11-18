@@ -1,6 +1,6 @@
 // Hộp thoại và bottom sheet kiểu game (dùng Modal của RN, không cần portal).
 import * as React from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { LucideIcon } from 'lucide-react-native';
 import { C, DEPTH } from '../../theme/game';
@@ -65,8 +65,10 @@ export function GameSheet({ open, onClose, children }: { open: boolean; onClose:
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(27,26,58,0.6)' }} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(27,26,58,0.6)' }}>
+        <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
         <View
           style={{
             backgroundColor: C.bg,
@@ -76,6 +78,7 @@ export function GameSheet({ open, onClose, children }: { open: boolean; onClose:
             borderBottomWidth: 0,
             borderColor: C.ink900,
             maxHeight: '88%',
+            overflow: 'hidden',
           }}>
           <View style={{ alignItems: 'center', paddingTop: 12 }}>
             <View style={{ width: 48, height: 6, borderRadius: 3, backgroundColor: C.ink300 }} />

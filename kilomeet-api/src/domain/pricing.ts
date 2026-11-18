@@ -2,7 +2,7 @@
 import { DAY_MS, isDateKey, vnDateTime } from './time.js';
 
 export const CLAIM_WINDOW_DAYS = 7;
-export const VOUCHER_USE_FEE_VND = 5000;
+export { VOUCHER_FEE_VND as VOUCHER_USE_FEE_VND } from './fee.js';
 export const DEFAULT_VOUCHER_DAYS = 90;
 
 /** Làm tròn giống JS ở FE: Math.round(price × (1 − %/100)). */

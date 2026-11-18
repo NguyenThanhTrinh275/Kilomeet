@@ -119,7 +119,7 @@ Gọi lại cùng `key` thì chuỗi từ chối với `AlreadyRewarded` (không
 | `getPrice(id, withDiscount)` | id, có giảm không | `number` | Giá phải trả (token) |
 | `buyVoucher(wallet, id, withDiscount)` | ví, id, có giảm giá không | `Tx` | **Mua**: đốt token, cấp voucher |
 | `giftVoucher(from, to, id)` | ví tặng, ví nhận, id | `Tx` | **Tặng** (đúng 1 lần) |
-| `useVoucher(holder, id)` | ví giữ, id | `{feeVnd, txHash, link}` | **Quét QR**: đốt voucher, ghi phí 5.000đ |
+| `useVoucher(holder, id)` | ví giữ, id | `{feeVnd, txHash, link}` | **Quét QR**: đốt voucher, ghi phí (`feePerRedeemVnd`, đang đặt 3.000đ) |
 | `listMyVouchers(wallet)` | ví | `{id, amount}[]` | Voucher đang giữ |
 | `countVoucher(wallet, id)` | | `number` | Số voucher loại id |
 | `countGiftable(wallet, id)` | | `number` | Còn tặng được mấy cái |
@@ -205,7 +205,7 @@ Mức giảm của voucher **đã tạo** thì không đổi được; muốn đ
 ## 9. Lưu ý khi tích hợp
 
 - Dùng **một** tiến trình giữ kết nối chuỗi. Các hàm đã tự quản lý thứ tự giao dịch, gọi song song được, nhưng đừng chạy nhiều tiến trình dùng chung một khóa operator.
-- Phí 5.000đ của mỗi lượt dùng voucher chỉ được **ghi sổ** trên chuỗi. Thu tiền thật do backend lo.
+- Phí mỗi lượt dùng voucher (3.000đ, đặt bằng `setFeePerRedeemVnd`, xem `pnpm chain:set-fee` ở kilomeet-api) chỉ được **ghi sổ** trên chuỗi. Thu tiền thật do backend lo qua ví phí trả trước của quán.
 - Token `RUN` không chuyển được giữa người dùng. Đây là chủ ý, không phải lỗi.
 - Người dùng nhìn token và voucher ở đâu: ví Core không tự hiện token tùy chỉnh, nên hãy hiển thị số liệu ngay trong app bằng `getToken` / `listMyVouchers`. Dùng link `Tx.link` để chứng minh với giám khảo.
 

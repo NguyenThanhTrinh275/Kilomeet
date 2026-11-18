@@ -153,6 +153,32 @@ export const StoreDashboardZ = z.looseObject({
   ),
 });
 
+/** GET /store/fee · POST /store/fee/topup — ví phí trả trước (Mục 5.5b). */
+export const StoreFeeWalletZ = z.looseObject({
+  balanceVnd: IntZ,
+  heldVnd: IntZ,
+  availableVnd: IntZ,
+  feePerVoucherVnd: IntZ,
+  sellableCount: IntZ,
+  unsoldCount: IntZ,
+  shortfallVnd: IntZ,
+  heldCount: IntZ,
+  totalPaidVnd: IntZ,
+  presetsVnd: z.array(IntZ),
+  entries: z.array(
+    z.looseObject({
+      id: z.string(),
+      kind: z.enum(['topup', 'hold', 'charge', 'release']),
+      title: z.string(),
+      subtitle: z.string(),
+      amountVnd: IntZ,
+      balanceDeltaVnd: IntZ,
+      heldDeltaVnd: IntZ,
+      createdAt: IsoZ,
+    }),
+  ),
+});
+
 export const SeasonInfoZ = z.looseObject({
   id: z.string(),
   name: z.string(),
