@@ -175,6 +175,27 @@ export const AdminStoreZ = PendingStoreZ.extend({
   status: z.enum(['pending', 'approved', 'rejected']),
 });
 
+const HhmmZ = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+
+/** types.ts `StoreProfile` (Mục 8.2) */
+export const StoreProfileZ = z.looseObject({
+  storeId: z.string(),
+  storeName: z.string(),
+  tagline: z.string().max(60),
+  description: z.string().max(500),
+  address: z.string(),
+  latitude: z.number(),
+  longitude: z.number(),
+  coverTheme: z.enum(['coffee', 'tea', 'gym']),
+  tags: z.array(z.string()),
+  openingHours: z.array(z.looseObject({ label: z.string(), open: HhmmZ, close: HhmmZ, enabled: z.boolean() })),
+  highlights: z.array(z.looseObject({ name: z.string(), priceVnd: IntZ })),
+  phone: z.string(),
+  verified: z.boolean(),
+  totalUsages: IntZ,
+  runnerSharePercent: IntZ.min(0).max(100),
+});
+
 /** Envelope thành công bọc schema `data`. */
 export const okZ = <T extends z.ZodType>(data: T) =>
   z.object({ success: z.literal(true), data });

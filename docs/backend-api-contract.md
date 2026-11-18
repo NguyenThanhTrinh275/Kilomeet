@@ -346,6 +346,9 @@ Tổng quan:
 | Store | GET | `/store/dashboard` | store |
 | Store | POST | `/store/vouchers` | store (đã duyệt) |
 | Store | POST | `/store/scan` | store (đã duyệt) |
+| Store | GET | `/store/profile` | store (kể cả chưa duyệt) |
+| Store | POST | `/store/profile` | store (kể cả chưa duyệt) |
+| Store | GET | `/stores/profile?storeId=` | mọi vai trò đã đăng nhập |
 | Group | GET | `/groups` | member |
 | Group | GET | `/groups/detail` | member |
 | Group | POST | `/groups/create` | member |
@@ -1118,7 +1121,7 @@ Tất cả endpoint ở bảng trên **đã có** trừ `/leaderboard?area=` l�
 | GET/POST | `/admin/clock` | `{ now, offsetMs }` | POST `{ now: ISO }` hoặc `{ offsetMs }`. Chỉ khi `ALLOW_CLOCK_OVERRIDE=true` |
 | GET | `/admin/chain-txs` | 50 lệnh chain gần nhất kèm `txHash`, `explorerUrl` | |
 
-### 8.2 Hồ sơ quán (thêm 18/11/2026 — FE + mock xong, BE chưa làm)
+### 8.2 Hồ sơ quán (thêm 18/11/2026 — FE + mock + BE xong)
 
 Trang "Giới thiệu quán" cho người chạy đọc trước khi mua voucher, và trang "Hồ sơ quán" để chủ quán tự viết. Kiểu `StoreProfile` nằm trong `kilomeet-app/src/api/types.ts`:
 
@@ -1148,6 +1151,11 @@ interface StoreProfile {
 - Không cho đổi toạ độ qua endpoint này (đổi vị trí cần quản trị duyệt lại).
 - Lỗi: `"Không tìm thấy cửa hàng"`, `"Không phải tài khoản cửa hàng"`, `"Câu giới thiệu ngắn tối đa 60 ký tự"`, `"Giới thiệu chi tiết tối đa 500 ký tự"`, `"Giờ mở cửa phải theo dạng HH:mm"`.
 - Khi BE chưa có `/stores/profile`, FE dựng hồ sơ tối thiểu từ `VoucherTemplate` nên màn vẫn hiện (`src/lib/storeProfile.ts`).
+- `POST /store/profile` **chỉ cập nhật field được gửi** (gửi một phần cũng được). Field chỉ đọc (`address`, `latitude`, `longitude`, `verified`, `totalUsages`, `runnerSharePercent`) gửi lên thì bị bỏ qua. Đổi `storeName` thì tên mới hiện luôn ở `/vouchers`.
+- Quán chưa duyệt: chủ quán vẫn xem/sửa hồ sơ của mình; người chạy gọi `/stores/profile` thì nhận `"Không tìm thấy cửa hàng"`.
+- `tags` trùng thì gộp lại. Giới hạn: `tags` ≤ 6, `highlights` ≤ 3, `openingHours` ≤ 7 dòng.
+- Lỗi thêm (BE, 18/11): `"Thiếu storeId"`, `"Vui lòng nhập tên quán"`, `"Ảnh bìa không hợp lệ"`, `"Chọn tối đa 6 thẻ tiện ích"`, `"Tối đa 3 món nổi bật"`, `"Giá món phải là số nguyên không âm"`, `"Số điện thoại không hợp lệ"`.
+- BE: cột hồ sơ nằm trên bảng `stores` (migration `store_profile`), code ở `kilomeet-api/src/modules/store/profile.ts`, hàm thuần ở `src/domain/store-profile.ts`.
 
 ---
 

@@ -92,6 +92,15 @@ model Store {
   totalUsages  Int         @default(0) @map("total_usages")
   totalFeesVnd Int         @default(0) @map("total_fees_vnd")
 
+  // Hồ sơ quán (hợp đồng Mục 8.2). openingHours/highlights là mảng JSON; null = dùng mặc định.
+  tagline      String      @default("")
+  description  String      @default("")
+  coverTheme   String      @default("coffee") @map("cover_theme")
+  tags         String[]    @default([])
+  openingHours Json?       @map("opening_hours")
+  highlights   Json        @default("[]")
+  phone        String      @default("")
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("stores")
