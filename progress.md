@@ -9,9 +9,9 @@
 
 | | |
 |---|---|
-| **Cập nhật lần cuối** | 12/11/2026 |
+| **Cập nhật lần cuối** | 18/11/2026 |
 | **Đang ở** | Code xong S1–S8 + contract + FE nối BE. 137 test BE + 10 test contract xanh, typecheck BE/FE sạch, FE đóng gói Android được |
-| **Việc tiếp theo** | (1) Bạn thử trên điện thoại thật theo kịch bản demo · (2) duyệt quyết định tạm chốt #17–27 · (3) `pnpm demo:reset` (bắt buộc sau migration chain 12/11) |
+| **Việc tiếp theo** | (0) Thử giao diện game (nhánh `feat/app-game-ui`) trên điện thoại thật, làm BE cho hồ sơ quán (Mục 8.2) · (1) Bạn thử trên điện thoại thật theo kịch bản demo · (2) duyệt quyết định tạm chốt #17–27 · (3) `pnpm demo:reset` (bắt buộc sau migration chain 12/11) |
 | **Đang vướng** | Khoá ví operator của hợp đồng Fuji (`blockchain/`) nằm ở người phụ trách blockchain; `blockchain/sdk/kilomeet.ts` chưa được push |
 | **Hạn MVP** | ~20/11/2026 |
 
@@ -112,6 +112,18 @@
 
 ---
 
+## Giai đoạn 4 — Giao diện game "Arcade Light" (FE)
+
+Thiết kế: Figma `RGHjgkkUPxUKr7fHlcZ8jo` (38 màn). Code trên nhánh `feat/app-game-ui`.
+
+- [x] Token màu/font/bóng đổ `src/theme/game.ts`; font Baloo 2 · Nunito · Lilita One
+- [x] Thư viện component `src/components/game/` (nút chunky, thẻ, đồng xu, huy hiệu hạng, XP bar, tab bar nổi, dialog, sheet, ghim bản đồ, ảnh bìa quán)
+- [x] Viết lại toàn bộ màn Runner / Cửa hàng / Quản trị / Đăng nhập, giữ nguyên logic store + API
+- [x] Màn mới: Giới thiệu quán `/(runner)/store/[id]`, Hồ sơ quán `/(store)/profile`, Tổng kết mùa `/(runner)/season-result`
+- [x] Mock `/stores/profile`, `/store/profile` + hợp đồng Mục 8.2
+- [ ] **BE**: module hồ sơ quán (Mục 8.2) — FE đã gọi, chưa có thì nút "Lưu hồ sơ" báo lỗi
+- [ ] Thử trên điện thoại thật, đặc biệt các màn có bản đồ (Chạy, Phòng chờ nhóm, Giới thiệu quán)
+
 ## Mốc kiểm tra theo ngày
 
 | Ngày | Mốc cuối ngày | Đạt? |
@@ -143,6 +155,8 @@
 ## Nhật ký phiên làm việc
 
 Mới nhất ghi ở trên. Mỗi dòng: ngày · đã làm gì · còn dở gì.
+
+- **18/11/2026** · Thiết kế lại giao diện kiểu game trên Figma (38 màn) và code toàn bộ FE theo thiết kế trên nhánh `feat/app-game-ui`. Thêm tính năng hồ sơ quán (FE + mock + hợp đồng 8.2). Typecheck sạch, bundle Android build được, đã xem trên web các màn chính. Còn: BE hồ sơ quán, thử máy thật.
 
 - **12/11/2026 (chiều)** · Làm hết S1–S8: 1 migration domain + 1 migration chỉnh, 7 module domain (68 test), API đủ mọi endpoint FE gọi + Mục 8 (137 test tổng, contract test). Contracts 3 hợp đồng (10 test), FujiChain thử với node local khớp số dư. FE: màn chạy (GPS thật, chọn quán, phát route mẫu), voucher (myPrice, tặng email), đăng ký cửa hàng, mùa/huy hiệu, nhóm (bản đồ, chia sẻ vị trí, huỷ, ghép tự động), mock cho endpoint mới. Còn: thử máy thật, deploy Fuji, duyệt #17–27. Chưa commit.
 - **12/11/2026 (sáng)** · Chốt stack + A–D (#15, #16). Dựng `kilomeet-api/`: envelope, clock, JWT, auth, ví HD, seed, FakeChain. FE nối BE (client + auth store).

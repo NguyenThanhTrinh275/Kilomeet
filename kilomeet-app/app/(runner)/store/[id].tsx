@@ -297,7 +297,7 @@ export default function StoreProfileScreen() {
                 <GText v="numM">{minPrice}</GText>
               </Row>
             </View>
-            <GButton label="Xem voucher của quán" type="coin" icon={ShoppingBag} onPress={() => scrollRef.current?.scrollTo({ y: vouchersY + 200, animated: true })} flex />
+            <GButton label="Xem voucher" type="coin" icon={ShoppingBag} onPress={() => scrollRef.current?.scrollTo({ y: vouchersY + 200, animated: true })} flex />
           </StickyBar>
         </View>
       ) : null}

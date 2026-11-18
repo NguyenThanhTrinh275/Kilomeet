@@ -333,9 +333,11 @@ export default function VoucherDetailScreen() {
           <Confetti />
           <SafeAreaView style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={{ padding: 24, gap: 16, alignItems: 'center' }}>
-              <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 24, borderRadius: 16, backgroundColor: C.green500, borderWidth: 3, borderColor: C.ink900 }, DEPTH.button]}>
-                <Sparkles size={24} color={C.ink900} strokeWidth={2.5} />
-                <GText v="titleL">MỞ KHOÁ VẬT PHẨM!</GText>
+              <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 18, borderRadius: 16, backgroundColor: C.green500, borderWidth: 3, borderColor: C.ink900 }, DEPTH.button]}>
+                <Sparkles size={22} color={C.ink900} strokeWidth={2.5} />
+                <GText v="titleL" style={{ fontSize: 22 }}>
+                  MỞ KHOÁ VẬT PHẨM!
+                </GText>
               </View>
               <GText v="bodyL" color={C.ink700} align="center">
                 Bạn đã đổi {unlocked?.paidTokens ?? price} token{showDeal ? ` (giảm ${template.questDiscountPercent}% nhờ nhiệm vụ)` : ''}.
@@ -364,9 +366,10 @@ export default function VoucherDetailScreen() {
                 <ChevronRight size={16} color={C.sky700} strokeWidth={2.5} />
               </Card>
               <Row gap={12} style={{ alignSelf: 'stretch' }}>
-                <GButton label="Tặng bạn" type="secondary" icon={Gift} onPress={() => setGiftOpen(true)} flex />
+                <GButton label="Tặng bạn" type="secondary" size="M" icon={Gift} onPress={() => setGiftOpen(true)} flex />
                 <GButton
                   label="Xong"
+                  size="M"
                   icon={Check}
                   onPress={() => {
                     const v = unlocked;

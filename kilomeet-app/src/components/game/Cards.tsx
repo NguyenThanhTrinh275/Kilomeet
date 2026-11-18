@@ -27,7 +27,7 @@ export function StatTile({
   return (
     <Card onPress={onPress} pad={[12, 14]} gap={4} radius={18} style={[{ flex: 1 }, style]}>
       <IconTile icon={icon} size={32} iconSize={18} fill={tile} radius={10} />
-      <GText v="numL" numberOfLines={1} adjustsFontSizeToFit>
+      <GText v={value.length > 4 ? 'numM' : 'numL'} numberOfLines={1} adjustsFontSizeToFit style={value.length > 4 ? { fontSize: 24, lineHeight: 36 } : null}>
         {value}
       </GText>
       <GText v="bodyS" color={C.ink500} numberOfLines={1}>

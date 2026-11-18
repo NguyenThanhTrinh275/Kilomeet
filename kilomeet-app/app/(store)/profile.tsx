@@ -352,8 +352,8 @@ export default function StoreProfileEditor() {
       </KeyboardAvoidingView>
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
         <StickyBar>
-          <GButton label="Xem trước" type="secondary" icon={Eye} onPress={() => router.push(`/(runner)/store/${p.storeId}`)} flex />
-          <GButton label="Lưu hồ sơ" icon={Check} loading={saving} onPress={() => void save()} flex />
+          <GButton label="Xem trước" type="secondary" size="M" icon={Eye} onPress={() => router.push(`/(runner)/store/${p.storeId}`)} flex />
+          <GButton label="Lưu hồ sơ" size="M" icon={Check} loading={saving} onPress={() => void save()} flex />
         </StickyBar>
       </View>
     </Screen>

@@ -1118,6 +1118,37 @@ Tất cả endpoint ở bảng trên **đã có** trừ `/leaderboard?area=` l�
 | GET/POST | `/admin/clock` | `{ now, offsetMs }` | POST `{ now: ISO }` hoặc `{ offsetMs }`. Chỉ khi `ALLOW_CLOCK_OVERRIDE=true` |
 | GET | `/admin/chain-txs` | 50 lệnh chain gần nhất kèm `txHash`, `explorerUrl` | |
 
+### 8.2 Hồ sơ quán (thêm 18/11/2026 — FE + mock xong, BE chưa làm)
+
+Trang "Giới thiệu quán" cho người chạy đọc trước khi mua voucher, và trang "Hồ sơ quán" để chủ quán tự viết. Kiểu `StoreProfile` nằm trong `kilomeet-app/src/api/types.ts`:
+
+```ts
+interface StoreProfile {
+  storeId: string; storeName: string;
+  tagline: string;        // ≤ 60 ký tự, hiện trên thẻ quán
+  description: string;    // ≤ 500 ký tự
+  address: string; latitude: number; longitude: number;   // chỉ đọc, lấy từ Store
+  coverTheme: 'coffee' | 'tea' | 'gym';                    // ảnh bìa minh hoạ
+  tags: string[];                                          // ≤ 6
+  openingHours: { label: string; open: 'HH:mm'; close: 'HH:mm'; enabled: boolean }[];
+  highlights: { name: string; priceVnd: number }[];        // ≤ 3
+  phone: string;
+  verified: boolean; totalUsages: number; runnerSharePercent: number;  // chỉ đọc, BE tính
+}
+```
+
+| Method | Endpoint | Ai gọi | Request | Response `data` |
+|---|---|---|---|---|
+| GET | `/stores/profile?storeId=` | Người chạy (mọi vai trò đã đăng nhập) | — | `StoreProfile` |
+| GET | `/store/profile` | Tài khoản cửa hàng | — | `StoreProfile` của chính quán |
+| POST | `/store/profile` | Tài khoản cửa hàng | `Pick<StoreProfile, 'storeName' \| 'tagline' \| 'description' \| 'coverTheme' \| 'tags' \| 'openingHours' \| 'highlights' \| 'phone'>` | `StoreProfile` sau khi lưu |
+
+- Quán chưa có hồ sơ: trả hồ sơ mặc định (`tagline`, `description` rỗng, `coverTheme: 'coffee'`, `openingHours` 3 dòng T2–T6 / Thứ 7 / Chủ nhật), **không** trả 404.
+- `runnerSharePercent` = % lượt dùng voucher của quán có `questCompletedAt` khác `null`. `totalUsages` = số lượt quét QR.
+- Không cho đổi toạ độ qua endpoint này (đổi vị trí cần quản trị duyệt lại).
+- Lỗi: `"Không tìm thấy cửa hàng"`, `"Không phải tài khoản cửa hàng"`, `"Câu giới thiệu ngắn tối đa 60 ký tự"`, `"Giới thiệu chi tiết tối đa 500 ký tự"`, `"Giờ mở cửa phải theo dạng HH:mm"`.
+- Khi BE chưa có `/stores/profile`, FE dựng hồ sơ tối thiểu từ `VoucherTemplate` nên màn vẫn hiện (`src/lib/storeProfile.ts`).
+
 ---
 
 ## 9. Phần Avalanche

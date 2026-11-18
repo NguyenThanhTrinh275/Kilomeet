@@ -198,7 +198,8 @@ export function Avatar({ initials, fill = C.grape300, size = 44, style, dim }: {
 
 export function XPBar({ pct, tone = 'green', height = 22, style }: { pct: number; tone?: Tone; height?: number; style?: StyleProp<ViewStyle> }) {
   const p = Math.max(0, Math.min(1, pct));
-  const inner = height - 6 - 5;
+  const pad = height <= 16 ? 2 : 3;
+  const inner = Math.max(4, height - pad * 2 - STROKE * 2);
   return (
     <View
       style={[
@@ -208,7 +209,7 @@ export function XPBar({ pct, tone = 'green', height = 22, style }: { pct: number
           backgroundColor: C.sunken,
           borderWidth: STROKE,
           borderColor: C.ink900,
-          padding: 3,
+          padding: pad,
           justifyContent: 'center',
           overflow: 'hidden',
         },
