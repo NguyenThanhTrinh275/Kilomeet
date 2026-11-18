@@ -12,7 +12,7 @@ async function main() {
   const bao = chain.newWallet().address;
   const shop = chain.newWallet().address;
 
-  await chain.openSeason();
+  if (!(await chain.getSeason()).active) await chain.openSeason(); // deploy.ts đã tự mở mùa 1
   await chain.giveToken(lan, 1000, "demo:lan:1");
   console.log("token Lan:", await chain.getToken(lan));
 

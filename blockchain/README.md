@@ -214,7 +214,7 @@ Mức giảm của voucher **đã tạo** thì không đổi được; muốn đ
 ## 10. Dành cho người phụ trách blockchain
 
 ```bash
-npm test                  # 34 test hợp đồng, độ phủ ~100% số dòng
+npm test                  # 24 test hợp đồng
 npm run compile           # biên dịch
 npm run build:sdk         # xuất ABI ra sdk/abi (chạy lại khi đổi giao diện hợp đồng)
 npm run deploy:fuji       # deploy 3 hợp đồng, ghi deployments/fuji.json
