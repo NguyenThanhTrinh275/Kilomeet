@@ -14,8 +14,7 @@ KILOMeet là app chạy bộ theo mùa trên Avalanche (UniHack 2026). Người 
 |---|---|
 | Nghiệp vụ, luật chơi, kịch bản demo 3 phút | [`docs/KILOMeet.md`](./docs/KILOMeet.md) |
 | BE phải nhận/trả gì, thuật toán, quyết định đã chốt | [`docs/backend-api-contract.md`](./docs/backend-api-contract.md) |
-| Làm theo thứ tự nào, test ra sao, khi nào là xong | [`docs/backend-implementation-process.md`](./docs/backend-implementation-process.md) |
-| Kế hoạch thi công theo FE mới, chỗ FE đổi hợp đồng, lý thuyết cần biết | [`docs/backend-plan.md`](./docs/backend-plan.md) |
+| Danh sách tính năng cần test và kết quả test trên máy thật | [`docs/test-checklist.md`](./docs/test-checklist.md) |
 | Hình dạng dữ liệu FE đang dùng | `kilomeet-app/src/api/types.ts` |
 | Hành vi mong đợi của từng endpoint | `kilomeet-app/src/api/mock/*.ts` (định tuyến ở `mock/router.ts`) |
 | Tiến độ, việc tiếp theo, chỗ đang vướng | [`progress.md`](./progress.md) |
@@ -152,7 +151,7 @@ Trước khi báo xong, chạy `pnpm typecheck && pnpm test`. Nếu test fail th
 
 - **Không tự đổi hình dạng response.** Cần đổi thì: sửa `docs/backend-api-contract.md` trước, rồi sửa Zod schema BE và `kilomeet-app/src/api/types.ts` **trong cùng PR**. Thêm field mới thì không cần qua bước này.
 - Gặp điểm nghiệp vụ chưa rõ: **hỏi người dùng**, đừng tự đoán. Chốt xong thì thêm một dòng vào bảng quyết định (Mục 11 của hợp đồng API) rồi mới code tiếp. 14 quyết định đã chốt ngày 11/11/2026 nằm ở bảng đó.
-- Thứ tự ưu tiên lấy theo kịch bản demo 3 phút. Thứ gì không có trong demo thì để sau. Khi trễ, cắt theo Mục 10 của tài liệu quy trình, và **không bao giờ cắt** phần lõi: auth + ví, chạy → nhiệm vụ → token, xếp hạng + reset mùa, mua/tặng/quét voucher kèm giảm giá khi chạy ngang quán, RunToken on-chain.
+- Thứ tự ưu tiên lấy theo kịch bản demo 3 phút. Thứ gì không có trong demo thì để sau. Khi trễ, **không bao giờ cắt** phần lõi: auth + ví, chạy → nhiệm vụ → token, xếp hạng + reset mùa, mua/tặng/quét voucher kèm giảm giá khi chạy ngang quán, RunToken on-chain.
 
 ---
 
