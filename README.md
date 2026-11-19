@@ -4,7 +4,31 @@
 
 Token, voucher, lượt dùng voucher và huy hiệu mùa nằm trên **Avalanche C-Chain (Fuji)**. GPS, nhiệm vụ, hạng và ghép nhóm chạy trên máy chủ.
 
-> 🎬 Video demo: _(điền link)_
+> 🎬 Video demo: _(điền link)_ · 📊 Slide: _(điền link)_
+
+## Giám khảo nên xem gì trước
+
+| Muốn xem | Ở đâu |
+|---|---|
+| App chạy thật trong 3 phút | Video demo ở trên, hoặc [Kịch bản demo](#kịch-bản-demo-3-phút) |
+| Hợp đồng trên Fuji (đã verify source) | [Bảng địa chỉ](#hợp-đồng-trên-fuji-đã-verify-source), mở thẳng trên Snowtrace |
+| Tự chạy app trên điện thoại | [Cách A](#cách-a-chỉ-xem-giao-diện-5-phút-không-cần-backend) mất 5 phút; [Cách B](#cách-b-đầy-đủ-với-backend-15-phút) chạy cả backend |
+| Chất lượng code | [Kiểm thử](#kiểm-thử): 189 test backend, 24 test hợp đồng |
+| Luật chơi đầy đủ | [docs/KILOMeet.md](docs/KILOMeet.md) |
+
+## Vấn đề và người dùng
+
+- **Người chạy bộ** khó giữ thói quen: chạy một mình, không có mục tiêu, không có phần thưởng thật. KILOMeet giao nhiệm vụ ngày và tuần, xếp hạng theo mùa, thưởng token đổi được voucher ở quán gần đường chạy. **Hội viên** được ghép nhóm với người chạy gần mình.
+- **Quán cà phê, quán ăn** cần khách mới nhưng ngại khuyến mãi bị lạm dụng. Quán tự phát hành voucher và chỉ trả **3.000 đ mỗi lượt voucher được dùng**, trả trước qua ví phí. Mỗi voucher là token trên chain nên không bán quá số lượng, không dùng hai lần, và đối soát được.
+
+### Hiện đã chạy được
+
+| Vai trò | Tính năng |
+|---|---|
+| Người chạy | Đăng ký, ghi buổi chạy bằng GPS trên bản đồ, nhiệm vụ ngày/tuần, nhận token on-chain, hạng 6 bậc theo tuần, mua voucher (giảm giá khi đã chạy ngang quán), tặng voucher, xem ví và giao dịch trên Snowtrace |
+| Hội viên | Tất cả tính năng trên, cộng ghép nhóm theo vị trí và khung giờ, xác nhận tham gia, theo dõi bản đồ hội tụ, điểm uy tín |
+| Cửa hàng | Đăng ký chờ duyệt, tạo và quản lý voucher, quét QR để dùng voucher, ví phí trả trước (nạp, tạm giữ, trừ, trả lại), thống kê lượt dùng |
+| Quản trị | Duyệt cửa hàng, theo dõi mùa, đóng mùa (reset token, xuống hạng, phát huy hiệu NFT) |
 
 ## Vì sao dùng blockchain
 
@@ -48,39 +72,91 @@ flowchart LR
 kilomeet-app/   App di động: Expo 58, expo-router, NativeWind, Zustand. Runner · Cửa hàng · Quản trị
 kilomeet-api/   Backend: Fastify, Prisma (PostgreSQL), Zod 4, Vitest. domain/ hàm thuần, modules/, chain/, jobs/
 blockchain/     Hardhat + OpenZeppelin 5: 3 hợp đồng, test, script deploy, SDK
-docs/           Nghiệp vụ, hợp đồng API, quy trình
+docs/           Nghiệp vụ, hợp đồng API, quy trình, checklist kiểm thử
 ```
 
 ## Chạy thử
 
-Cần Node 24, pnpm, Docker.
+**Cần có:**
+
+- Máy tính: Node 24, pnpm (`corepack enable pnpm`), Docker (chỉ cần cho Cách B).
+- Điện thoại Android hoặc iOS: cài **Expo Go** bản mới nhất (hỗ trợ Expo SDK 58), cùng mạng Wi-Fi với máy tính.
+
+App đã được kiểm thử trên Android (Samsung Galaxy S23+).
+
+### Cách A: chỉ xem giao diện (5 phút, không cần backend)
+
+App có sẵn dữ liệu giả lập (mock) để xem đủ các màn hình. Ở cách này không có giao dịch on-chain thật.
 
 ```bash
-# Backend
-cd kilomeet-api
-cp .env.example .env          # đặt JWT_SECRET; CHAIN=fake chạy không cần chain
-docker compose up -d          # PostgreSQL 16, cổng 5433
+cd kilomeet-app
 pnpm install
-pnpm demo:reset               # migrate + seed tài khoản demo
-pnpm dev                      # http://0.0.0.0:3000
-
-# App
-cd ../kilomeet-app
-pnpm install
-echo "EXPO_PUBLIC_API_URL=http://<IP LAN của máy chạy BE>:3000" > .env.local   # bỏ trống = dùng mock
-pnpm start                    # quét QR bằng Expo Go
+cp .env.example .env.local     # để trống EXPO_PUBLIC_API_URL = dùng mock
+pnpm start -c                  # quét QR bằng Expo Go (Android) hoặc Camera (iOS)
 ```
 
-Chạy với Avalanche Fuji: trong `kilomeet-api/.env`, đặt `CHAIN=fuji`, `SERVER_PRIVATE_KEY` (khoá ví operator) và `WALLET_MNEMONIC`. Sau đó chạy `pnpm demo:reset` rồi `pnpm chain:check` để đối chiếu số dư DB với chain. Chi tiết xem [`kilomeet-api/README.md`](kilomeet-api/README.md) và [`blockchain/README.md`](blockchain/README.md).
+Đăng nhập bằng `lan@demo.com`, `minh@demo.com`, `quanfuji@demo.com` hoặc `admin@demo.com`, mật khẩu `demo123`.
+
+### Cách B: đầy đủ với backend (15 phút)
+
+**1. Backend**
+
+```bash
+cd kilomeet-api
+cp .env.example .env           # mặc định CHAIN=fake: chạy được ngay, không cần khoá ví
+docker compose up -d           # PostgreSQL 16 ở cổng 5433
+pnpm install
+pnpm demo:reset                # tạo bảng + nạp tài khoản demo
+pnpm dev                       # API ở http://0.0.0.0:3000
+```
+
+Kiểm tra: mở `http://localhost:3000/health` trên trình duyệt.
+
+**2. App**
+
+Tìm IP LAN của máy tính: Linux dùng `hostname -I`, macOS dùng `ipconfig getifaddr en0`, Windows dùng `ipconfig`.
+
+```bash
+cd kilomeet-app
+pnpm install
+cat > .env.local <<'EOF'
+EXPO_PUBLIC_API_URL=http://<IP LAN>:3000
+EXPO_PUBLIC_DEMO=true
+EOF
+pnpm start -c                  # -c xoá cache để app đọc biến môi trường mới
+```
+
+`EXPO_PUBLIC_DEMO=true` bật nút **Mẫu 3 km** và **Mẫu qua quán** ở tab Chạy. Hai nút này phát lại buổi chạy GPS ghi sẵn quanh HCMUT, nên có thể thử nhiệm vụ, token và giảm giá khi đi ngang quán mà không cần ra đường chạy.
+
+**Gặp lỗi khi chạy**
+
+| Hiện tượng | Cách xử lý |
+|---|---|
+| App báo "Không kết nối được máy chủ" | Điện thoại và máy tính phải chung Wi-Fi. Dùng IP LAN, không dùng `localhost`. Mở cổng 3000 trên tường lửa, ví dụ `sudo ufw allow 3000` (Linux). |
+| Sửa `.env.local` nhưng app không đổi | Tắt Expo rồi chạy lại `pnpm start -c` |
+| Expo Go báo không hỗ trợ SDK | Cập nhật Expo Go lên bản mới nhất |
+| `docker compose` báo cổng 5433 đang dùng | Tắt PostgreSQL khác đang chạy ở cổng đó, hoặc sửa cổng trong `docker-compose.yml` và `DATABASE_URL` |
+
+### Cách C: với Avalanche Fuji
+
+Cần khoá ví operator của hợp đồng, nên chỉ nhóm chạy được cách này. Nhóm dùng cách này khi quay video. Giám khảo có thể xem các giao dịch đã gửi trên Snowtrace theo địa chỉ hợp đồng ở trên.
+
+Trong `kilomeet-api/.env`, đặt `CHAIN=fuji`, `SERVER_PRIVATE_KEY` và `WALLET_MNEMONIC`, rồi chạy `pnpm demo:reset` và `pnpm dev`. Chờ khoảng 1 phút để các giao dịch ban đầu lên chain, rồi chạy `pnpm chain:check` để đối chiếu số dư trong DB với chain. Chi tiết xem [kilomeet-api/README.md](kilomeet-api/README.md) và [blockchain/README.md](blockchain/README.md).
 
 ### Tài khoản demo (mật khẩu `demo123`)
 
-| Email | Vai trò | Trạng thái |
+| Email | Vai trò | Trạng thái ban đầu |
 |---|---|---|
-| `lan@demo.com` | Người chạy | Đồng, 0 token |
-| `minh@demo.com` | Hội viên | Cao thủ, 1.000 token |
-| `quanfuji@demo.com` | Cửa hàng | Fuji Coffee, gần HCMUT |
+| `lan@demo.com` | Người chạy | Hạng Đồng, 0 token, chưa là hội viên |
+| `minh@demo.com` | Hội viên | Hạng Cao thủ, 1.000 token, 42 km tuần này |
+| `an@demo.com`, `binh@demo.com` | Hội viên | Ở gần Minh, để thử ghép nhóm |
+| `quanfuji@demo.com` | Cửa hàng | Fuji Coffee gần HCMUT, ví phí 150.000 đ |
+| `highlands@demo.com`, `phuclong@demo.com`, `cong@demo.com`, `banhmi@demo.com` | Cửa hàng | Quán đối tác đã duyệt |
+| `juice@demo.com` | Cửa hàng | Ví phí 0 đ: voucher hiện "Tạm hết" |
+| `newcafe@demo.com`, `juicebar@demo.com` | Cửa hàng | Đang chờ quản trị duyệt |
 | `admin@demo.com` | Quản trị | |
+
+Muốn đưa dữ liệu về trạng thái ban đầu thì chạy lại `pnpm demo:reset` trong `kilomeet-api`.
 
 ## Kịch bản demo 3 phút
 
@@ -98,13 +174,23 @@ Bước nào có giao dịch đều có nút **Xem giao dịch**, mở danh sác
 ## Kiểm thử
 
 ```bash
-cd kilomeet-api && pnpm typecheck && pnpm test   # 189 test: domain, API, contract với FE, outbox, ví phí
-cd blockchain && npm test                        # 24 test hợp đồng
-cd kilomeet-app && pnpm exec tsc --noEmit
+cd kilomeet-api && pnpm typecheck && pnpm test   # 189 test: domain, API, contract với FE, outbox, ví phí (cần docker compose up -d)
+cd blockchain && npm install && npm test         # 24 test hợp đồng
+cd kilomeet-app && pnpm exec tsc --noEmit        # kiểm kiểu toàn bộ app
 ```
+
+Kiểm thử thủ công trên điện thoại thật: đạt 147/153 mục trong [docs/test-checklist.md](docs/test-checklist.md).
+
+## Giới hạn hiện tại
+
+- Chưa thử ghi GPS khi chạy ngoài trời thật. Phần tính km, đi ngang quán và nhiệm vụ đã được kiểm bằng buổi chạy ghi sẵn và test tự động.
+- Nạp tiền vào ví phí của quán là thanh toán giả lập, chưa nối cổng thanh toán thật.
+- Ví người dùng do server quản lý (custodial) để người dùng không phải cầm khoá hay trả gas.
+- Hợp đồng đang chạy trên testnet Fuji, chưa lên mainnet.
 
 ## Tài liệu
 
 - [Nghiệp vụ và luật chơi](docs/KILOMeet.md)
 - [Hợp đồng API giữa app và backend](docs/backend-api-contract.md)
 - [Hệ thống blockchain chi tiết](blockchain/HE-THONG-BLOCKCHAIN-KILOMEET.md)
+- [Checklist kiểm thử](docs/test-checklist.md)
