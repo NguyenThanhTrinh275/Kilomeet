@@ -2,6 +2,38 @@
 
 App chạy bộ theo mùa trên Avalanche Fuji (UniHack 2026). README này chỉ hướng dẫn cách chạy hệ thống để thử.
 
+## Giao diện
+
+Ảnh chụp trên Samsung S23+, chạy với backend thật và `CHAIN=fuji`.
+
+**Người chạy: chạy bộ, nhận token, leo hạng**
+
+| Sảnh | Nhiệm vụ ngày và tuần | Bắt đầu chạy |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/home.jpg" width="230" alt="Sảnh: hạng Cao thủ, 42 km tuần này"> | <img src="docs/screenshots/quests.jpg" width="230" alt="Nhiệm vụ ngày và tuần"> | <img src="docs/screenshots/run_ready.jpg" width="230" alt="Bản đồ chạy bộ với các quán đối tác"> |
+| **Kết thúc buổi chạy** | **Chọn quán để nhận giảm giá** | **Ví và giao dịch trên Fuji** |
+| <img src="docs/screenshots/run_result.jpg" width="230" alt="Hoàn thành buổi chạy 5 km, +318 token"> | <img src="docs/screenshots/store_pick.jpg" width="230" alt="Chạy ngang 2 quán, chọn 1 quán"> | <img src="docs/screenshots/wallet.jpg" width="230" alt="Giao dịch on-chain có link Snowtrace"> |
+
+**Voucher: chạy ngang quán thì được giảm giá, mua rồi dùng bằng QR**
+
+| Danh sách voucher | Giá còn 250 sau khi chạy ngang quán | Mã QR của voucher |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/vouchers.jpg" width="230" alt="Danh sách voucher gần bạn"> | <img src="docs/screenshots/voucher_discount.jpg" width="230" alt="Voucher Fuji Coffee 500 còn 250 token"> | <img src="docs/screenshots/voucher_qr.jpg" width="230" alt="Mã QR voucher sau khi mua"> |
+
+**Hội viên: nhóm chạy**
+
+| Nhóm chạy | Chi tiết nhóm và điểm hội tụ | Hồ sơ và ví |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/groups.jpg" width="230" alt="Tự lập nhóm hoặc ghép tự động"> | <img src="docs/screenshots/group_detail.jpg" width="230" alt="Đếm ngược giờ xuất phát và lịch trình"> | <img src="docs/screenshots/profile.jpg" width="230" alt="Hồ sơ với địa chỉ ví Fuji"> |
+
+**Cửa hàng và quản trị**
+
+| Tổng quan cửa hàng | Quét voucher thành công | Ví phí trả trước |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/store_dashboard.jpg" width="230" alt="Tổng quan cửa hàng Fuji Coffee"> | <img src="docs/screenshots/store_redeemed.jpg" width="230" alt="Voucher bị đốt on-chain, trừ 3.000 đồng"> | <img src="docs/screenshots/store_fee.jpg" width="230" alt="Ví phí: khả dụng, tạm giữ, đã trả"> |
+| **Quản trị: quản lý mùa** | **Người chạy: kết thúc mùa** | **Đăng nhập** |
+| <img src="docs/screenshots/admin_season.jpg" width="230" alt="Đóng mùa và bậc thang hạng"> | <img src="docs/screenshots/season_end.jpg" width="230" alt="Cao thủ xuống Bạch kim, nhận huy hiệu mùa"> | <img src="docs/screenshots/login.jpg" width="230" alt="Đăng nhập và chọn nhân vật demo"> |
+
 ## Cần có
 
 - **Máy tính:** Node 24, pnpm (`corepack enable pnpm`), Docker. Docker chỉ cần cho Cách 2.
