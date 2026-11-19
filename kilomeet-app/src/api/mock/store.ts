@@ -2,6 +2,7 @@
 import type { StoreDashboard, VoucherTemplate } from '../types';
 import { getCurrentUserId, MOCK_STORE } from './data';
 import { VOUCHER_TEMPLATES } from './vouchers';
+import { mockChargeFee, mockFeeSummary } from './fee';
 
 export function mockGetStoreDashboard(): StoreDashboard {
   const userId = getCurrentUserId();
@@ -12,12 +13,13 @@ export function mockGetStoreDashboard(): StoreDashboard {
     storeName: MOCK_STORE.storeName,
     totalVouchersCreated: 100,
     totalVouchersUsed: 47,
-    totalFeesVnd: 235_000,
+    totalFeesVnd: 141_000,
     recentUsages: [
-      { voucherTitle: 'Giảm 20% toàn menu', usedAt: '2026-11-09T14:30:00Z', userName: 'Trần Minh' },
-      { voucherTitle: 'Giảm 20% toàn menu', usedAt: '2026-11-08T09:15:00Z', userName: 'Phạm Hoa' },
-      { voucherTitle: 'Giảm 20% toàn menu', usedAt: '2026-11-07T16:45:00Z', userName: 'Lê Tuấn' },
+      { voucherTitle: 'Giảm 20% toàn menu', usedAt: '2026-11-09T14:30:00Z', userName: 'Trần Minh', feeVnd: 3000 },
+      { voucherTitle: 'Giảm 20% toàn menu', usedAt: '2026-11-08T09:15:00Z', userName: 'Phạm Hoa', feeVnd: 3000 },
+      { voucherTitle: 'Giảm 20% toàn menu', usedAt: '2026-11-07T16:45:00Z', userName: 'Lê Tuấn', feeVnd: 3000 },
     ],
+    fee: mockFeeSummary(),
   };
 }
 
@@ -60,6 +62,6 @@ export function mockScanQR(body: unknown): { success: boolean; voucherTitle: str
   return {
     success: true,
     voucherTitle: 'Giảm 20% toàn menu',
-    feeVnd: 5_000,
+    feeVnd: mockChargeFee('Giảm 20% toàn menu'),
   };
 }

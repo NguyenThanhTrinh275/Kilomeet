@@ -19,13 +19,19 @@ const types = await prisma.voucherTemplate.count({ where: { chainTokenId: null }
 if (types) console.log(`${types} mẫu voucher chưa có loại on-chain`);
 console.log('');
 
+// ✓ bằng nhau · ~ chain nhiều hơn ≤ 1 token/lượt mua giảm giá (chain làm tròn giá xuống, BE Math.round) · ✗ lệch thật
 let mismatch = 0;
+let drift = 0;
 for (const u of await prisma.user.findMany({ where: { runner: { isNot: null } }, include: { runner: true }, orderBy: { walletIndex: 'asc' } })) {
   const onChain = Number(await token.getFunction('balanceOf')(u.walletAddress));
   const badges = Number(await badge.getFunction('balanceOf')(u.walletAddress));
-  const ok = onChain >= u.runner!.tokenBalance ? '✓' : '✗';
-  if (ok === '✗') mismatch++;
-  console.log(`${ok} ${u.email.padEnd(18)} DB ${String(u.runner!.tokenBalance).padStart(5)} · chain ${String(onChain).padStart(5)} · huy hiệu ${badges}`);
+  const db = u.runner!.tokenBalance;
+  const discounted = await prisma.ownedVoucher.count({ where: { buyerId: u.id, discounted: true } });
+  const mark = onChain === db ? '✓' : onChain > db && onChain - db <= discounted ? '~' : '✗';
+  if (mark === '✗') mismatch++;
+  if (mark === '~') drift++;
+  console.log(`${mark} ${u.email.padEnd(18)} DB ${String(db).padStart(5)} · chain ${String(onChain).padStart(5)} · huy hiệu ${badges}`);
 }
-console.log(mismatch ? `\n${mismatch} tài khoản lệch (chain < DB)` : '\nKhớp. (chain có thể > DB nếu đã demo:reset trên cùng hợp đồng)');
+if (pending) console.log(`\n${pending} lệnh chưa gửi: số dư chain có thể chưa cập nhật, chạy lại sau.`);
+console.log(mismatch ? `\n✗ ${mismatch} tài khoản lệch` : drift ? `\nKhớp (${drift} tài khoản lệch ≤ 1 token do làm tròn giá giảm)` : '\nKhớp hoàn toàn.');
 await prisma.$disconnect();

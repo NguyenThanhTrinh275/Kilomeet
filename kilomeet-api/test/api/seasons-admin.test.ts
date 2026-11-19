@@ -141,3 +141,48 @@ describe('chain outbox', () => {
     expect(badge.txHash).toMatch(/^0x/);
   });
 });
+
+describe('đóng mùa bị dừng giữa chừng', () => {
+  /** Giả lập: transaction đóng mùa đã chạy (mùa tắt, có endSeason) nhưng tiến trình chết trước khi chốt từng người. */
+  async function crashAfterClose() {
+    const s = await prisma.season.findFirstOrThrow({ where: { isActive: true } });
+    await prisma.season.update({ where: { id: s.id }, data: { isActive: false, endedAt: new Date('2026-11-12T03:00:00Z') } });
+    await prisma.chainOutbox.create({ data: { op: 'endSeason', payload: {}, ref: `season-end:${s.id}` } });
+    return s.id;
+  }
+  const minh = async () => (await ctx.get('/auth/me', await ctx.login('minh@demo.com'))).json.data;
+
+  it('bấm Đóng mùa lại → chốt nốt người còn dở; lần sau nữa báo lỗi', async () => {
+    const admin = await ctx.login('admin@demo.com');
+    const seasonId = await crashAfterClose();
+    expect((await minh()).tokenBalance).toBe(1000);
+
+    const resumed = await ctx.post('/admin/season', { action: 'end' }, admin);
+    expect(resumed.json.success).toBe(true);
+    expect(await minh()).toMatchObject({ tokenBalance: 500, rank: 'bạch_kim' });
+    expect(await prisma.chainOutbox.count({ where: { ref: `season_reset:${seasonId}:user-minh` } })).toBe(1);
+
+    const again = await ctx.post('/admin/season', { action: 'end' }, admin);
+    expect(again.json).toEqual({ success: false, message: 'Không có mùa đang chạy' });
+    expect(await prisma.chainOutbox.count({ where: { ref: `season_reset:${seasonId}:user-minh` } })).toBe(1);
+  });
+
+  it('bấm Mở mùa khi mùa trước chốt dở → chốt nốt rồi mới mở', async () => {
+    const admin = await ctx.login('admin@demo.com');
+    await crashAfterClose();
+    const opened = await ctx.post('/admin/season', { action: 'start' }, admin);
+    expect(opened.json.success).toBe(true);
+    expect(await minh()).toMatchObject({ tokenBalance: 500, rank: 'bạch_kim' });
+    const ops = (await prisma.chainOutbox.findMany({ orderBy: { seq: 'asc' } })).map((r) => r.op);
+    expect(ops.lastIndexOf('settleSeason')).toBeLessThan(ops.indexOf('startSeason'));
+  });
+
+  it('2 request đóng mùa song song → mỗi người chỉ chốt 1 lần', async () => {
+    const admin = await ctx.login('admin@demo.com');
+    const [a, b] = await Promise.all([ctx.post('/admin/season', { action: 'end' }, admin), ctx.post('/admin/season', { action: 'end' }, admin)]);
+    expect([a.json.success, b.json.success].filter(Boolean).length).toBeGreaterThanOrEqual(1);
+    expect(await minh()).toMatchObject({ tokenBalance: 500, rank: 'bạch_kim' });
+    const settles = await prisma.chainOutbox.groupBy({ by: ['ref'], where: { op: 'settleSeason' }, _count: true });
+    expect(settles.every((g) => g._count === 1)).toBe(true);
+  });
+});

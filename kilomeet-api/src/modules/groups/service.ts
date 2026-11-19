@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import { haversineKm } from '../../domain/geo.js';
 import {
   arrivedWithin50m, autoMatch, dueMilestones, etaMinutes, GROUP_MAX, GROUP_MIN_CONFIRMED, locationSharingOpen,
-  MATCH_RADIUS_KM, NO_SHOW_BAN_DAYS, NO_SHOW_BAN_THRESHOLD, pickMeetingPoint, PUBLIC_MEETING_POINTS,
+  MATCH_RADIUS_KM, pickMeetingPoint, PUBLIC_MEETING_POINTS,
   punctuality, rankCompatible, type MilestoneKey,
 } from '../../domain/group.js';
 import { rankName } from '../../domain/rank.js';
@@ -127,7 +127,6 @@ async function applyMilestone(tx: Tx, groupId: string, key: MilestoneKey, now: D
           where: { userId: m.userId },
           data: {
             groupsJoined: joined, groupsOnTime: onTime, punctuality: punctuality(joined, onTime), noShowCount: noShow,
-            ...(!m.arrived && noShow >= NO_SHOW_BAN_THRESHOLD ? { groupBanUntil: new Date(now.getTime() + NO_SHOW_BAN_DAYS * DAY_MS) } : {}),
           },
         });
         if (!m.arrived) await tx.groupMember.update({ where: { groupId_userId: { groupId: g.id, userId: m.userId } }, data: { absent: true } });
@@ -176,9 +175,6 @@ async function me(userId: string) {
   return { user: u, p: u.runner! };
 }
 
-function assertNotBanned(p: RunnerProfile, now: Date) {
-  if (p.groupBanUntil && p.groupBanUntil.getTime() > now.getTime()) throw forbidden('Bạn đang bị khoá tìm nhóm');
-}
 
 /** Hạng của người mới hợp với MỌI thành viên (hai chiều). */
 function fitsGroup(g: GroupFull, rank: number, range: RankRange): boolean {
@@ -231,7 +227,6 @@ export async function groupDetail(groupId: string) {
 export async function createGroup(userId: string, b: z.output<typeof CreateGroupBody>) {
   const now = clock.now();
   const { p } = await me(userId);
-  assertNotBanned(p, now);
   const startsAt = vnDateTime(b.date, b.timeSlot);
   if (startsAt.getTime() <= now.getTime()) throw badRequest('Giờ xuất phát phải ở tương lai');
   const g = await prisma.group.create({
@@ -251,7 +246,6 @@ export async function joinGroup(userId: string, groupId: string) {
   const now = clock.now();
   await advanceGroup(groupId, now);
   const { p } = await me(userId);
-  assertNotBanned(p, now);
   await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM groups WHERE id = ${groupId} FOR UPDATE`; // chống vượt 6 người
     const g = await tx.group.findUnique({ where: { id: groupId }, include: groupInclude });
@@ -299,7 +293,6 @@ export async function leaveGroup(userId: string, groupId: string) {
         where: { userId },
         data: {
           noShowCount: noShow, groupsJoined: joined, punctuality: punctuality(joined, p.groupsOnTime),
-          ...(noShow >= NO_SHOW_BAN_THRESHOLD ? { groupBanUntil: new Date(now.getTime() + NO_SHOW_BAN_DAYS * DAY_MS) } : {}),
         },
       });
     }
@@ -356,7 +349,6 @@ export async function listLocations(userId: string, groupId: string) {
 export async function requestAutoMatch(userId: string, b: z.output<typeof AutoMatchBody>) {
   const now = clock.now();
   const { p } = await me(userId);
-  assertNotBanned(p, now);
   const future = b.timeSlots.filter((s) => vnDateTime(b.date, s).getTime() > now.getTime() + 120 * MINUTE_MS);
   if (!future.length) throw badRequest('Khung giờ phải cách hiện tại ít nhất 2 tiếng');
 

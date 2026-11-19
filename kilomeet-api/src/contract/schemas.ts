@@ -153,6 +153,32 @@ export const StoreDashboardZ = z.looseObject({
   ),
 });
 
+/** GET /store/fee · POST /store/fee/topup — ví phí trả trước (Mục 5.5b). */
+export const StoreFeeWalletZ = z.looseObject({
+  balanceVnd: IntZ,
+  heldVnd: IntZ,
+  availableVnd: IntZ,
+  feePerVoucherVnd: IntZ,
+  sellableCount: IntZ,
+  unsoldCount: IntZ,
+  shortfallVnd: IntZ,
+  heldCount: IntZ,
+  totalPaidVnd: IntZ,
+  presetsVnd: z.array(IntZ),
+  entries: z.array(
+    z.looseObject({
+      id: z.string(),
+      kind: z.enum(['topup', 'hold', 'charge', 'release']),
+      title: z.string(),
+      subtitle: z.string(),
+      amountVnd: IntZ,
+      balanceDeltaVnd: IntZ,
+      heldDeltaVnd: IntZ,
+      createdAt: IsoZ,
+    }),
+  ),
+});
+
 export const SeasonInfoZ = z.looseObject({
   id: z.string(),
   name: z.string(),
@@ -173,6 +199,27 @@ export const PendingStoreZ = z.looseObject({
 
 export const AdminStoreZ = PendingStoreZ.extend({
   status: z.enum(['pending', 'approved', 'rejected']),
+});
+
+const HhmmZ = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+
+/** types.ts `StoreProfile` (Mục 8.2) */
+export const StoreProfileZ = z.looseObject({
+  storeId: z.string(),
+  storeName: z.string(),
+  tagline: z.string().max(60),
+  description: z.string().max(500),
+  address: z.string(),
+  latitude: z.number(),
+  longitude: z.number(),
+  coverTheme: z.enum(['coffee', 'tea', 'gym']),
+  tags: z.array(z.string()),
+  openingHours: z.array(z.looseObject({ label: z.string(), open: HhmmZ, close: HhmmZ, enabled: z.boolean() })),
+  highlights: z.array(z.looseObject({ name: z.string(), priceVnd: IntZ })),
+  phone: z.string(),
+  verified: z.boolean(),
+  totalUsages: IntZ,
+  runnerSharePercent: IntZ.min(0).max(100),
 });
 
 /** Envelope thành công bọc schema `data`. */

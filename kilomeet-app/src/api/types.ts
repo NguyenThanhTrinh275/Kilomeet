@@ -23,7 +23,7 @@ export const DAILY_QUEST_KM = 2;
 export const DAILY_QUEST_REWARD = 10;
 export const WEEKLY_QUEST_TOKEN_PER_KM = 7;
 export const MEMBERSHIP_VND = 39_000;
-export const VOUCHER_USE_FEE_VND = 5_000;
+export const VOUCHER_USE_FEE_VND = 3_000; // quyết định #28: trừ từ ví phí trả trước
 export const STORE_PROXIMITY_M = 50;
 
 export const GROUP_TIME_SLOTS = [
@@ -70,7 +70,7 @@ export interface Store extends User {
   approved: boolean;
   /** Total voucher usages at this store */
   totalUsages: number;
-  /** Total fees owed (usages * 5000 VND) */
+  /** Tổng phí ĐÃ TRẢ (trừ từ ví phí trả trước khi quét, 3.000đ/lượt — quyết định #28) */
   totalFeesVnd: number;
 }
 
@@ -156,6 +156,8 @@ export interface VoucherTemplate {
   myQuestEligible?: boolean;
   /** BE trả thêm: giá thực sẽ trả nếu mua bây giờ */
   myPrice?: number;
+  /** BE trả thêm: còn số lượng nhưng ví phí của quán không đủ → hiện "Tạm hết" (quyết định #28) */
+  pausedForFee?: boolean;
 }
 
 export interface OwnedVoucher {
@@ -223,7 +225,48 @@ export interface StoreDashboard {
     voucherTitle: string;
     usedAt: string;
     userName: string;
+    /** BE trả thêm: phí đã trừ cho lượt này */
+    feeVnd?: number;
   }[];
+  /** BE trả thêm: tóm tắt ví phí trả trước (quyết định #28) */
+  fee?: StoreFeeSummary;
+}
+
+// ─── Ví phí trả trước của cửa hàng (quyết định #28) ─────────────
+// Quán nạp tiền vào ví phí. Người chạy mua 1 voucher → giữ 3.000đ; quán quét → trừ thật;
+// voucher hết hạn chưa dùng → trả lại. Khả dụng = số dư − tạm giữ.
+
+export interface StoreFeeSummary {
+  balanceVnd: number;
+  heldVnd: number;
+  availableVnd: number;
+  feePerVoucherVnd: number;
+  /** Số voucher còn bán được nhờ ví phí */
+  sellableCount: number;
+  /** Voucher còn trong kho (chưa bán, chưa hết hạn) */
+  unsoldCount: number;
+  /** Cần nạp thêm để bán hết kho */
+  shortfallVnd: number;
+}
+
+export type StoreFeeKind = 'topup' | 'hold' | 'charge' | 'release';
+
+export interface StoreFeeEntry {
+  id: string;
+  kind: StoreFeeKind;
+  title: string;
+  subtitle: string;
+  amountVnd: number;
+  balanceDeltaVnd: number;
+  heldDeltaVnd: number;
+  createdAt: string;
+}
+
+export interface StoreFeeWallet extends StoreFeeSummary {
+  heldCount: number;
+  totalPaidVnd: number;
+  presetsVnd: number[];
+  entries: StoreFeeEntry[];
 }
 
 // ─── Admin ──────────────────────────────────────────────────────
@@ -252,4 +295,78 @@ export interface ApiResponse<T> {
   data: T;
   success: boolean;
   message?: string;
+}
+
+// ─── Store profile (trang giới thiệu quán) ──────────────────────
+
+export type StoreCoverTheme = 'coffee' | 'tea' | 'gym';
+
+export interface StoreOpeningHours {
+  /** Nhãn nhóm ngày, ví dụ "T2 – T6", "Thứ 7", "Chủ nhật" */
+  label: string;
+  /** HH:mm */
+  open: string;
+  /** HH:mm */
+  close: string;
+  enabled: boolean;
+}
+
+export interface StoreHighlight {
+  name: string;
+  priceVnd: number;
+}
+
+/** GET /stores/profile?storeId=… (người chạy) · GET/POST /store/profile (chủ quán) */
+export interface StoreProfile {
+  storeId: string;
+  storeName: string;
+  /** Câu giới thiệu ngắn, tối đa 60 ký tự — hiện trên thẻ quán */
+  tagline: string;
+  /** Giới thiệu chi tiết, tối đa 500 ký tự */
+  description: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  coverTheme: StoreCoverTheme;
+  tags: string[];
+  openingHours: StoreOpeningHours[];
+  highlights: StoreHighlight[];
+  phone: string;
+  /** Chỉ đọc — BE tính */
+  verified: boolean;
+  totalUsages: number;
+  /** % lượt dùng voucher đến từ người đã chạy ngang quán */
+  runnerSharePercent: number;
+}
+
+export type StoreProfileUpdate = Pick<
+  StoreProfile,
+  'storeName' | 'tagline' | 'description' | 'coverTheme' | 'tags' | 'openingHours' | 'highlights' | 'phone'
+>;
+
+// ─── Ví & giao dịch on-chain (GET /me/wallet, GET /admin/chain-txs) ─────
+
+/** Trạng thái lệnh chain: chờ gửi → đang gửi → xong (có txHash) / lỗi. */
+export type ChainTxStatus = 'pending' | 'sent' | 'done' | 'failed';
+
+export interface ChainTx {
+  id: string;
+  op: string;
+  /** Mô tả tiếng Việt do BE tạo, vd "Mua voucher «Giảm 20% toàn menu» (giá chạy ngang quán)" */
+  label: string;
+  /** Số RUN thay đổi (dương: nhận, âm: đốt), null nếu không đổi token */
+  amount: number | null;
+  status: ChainTxStatus;
+  txHash: string | null;
+  /** Link Snowtrace, null khi chưa gửi */
+  explorerUrl: string | null;
+  createdAt: string;
+}
+
+export interface WalletInfo {
+  address: string;
+  explorerUrl: string;
+  chain: 'fake' | 'fuji';
+  tokenBalance: number;
+  transactions: ChainTx[];
 }

@@ -29,7 +29,7 @@ describe('POST /auth/login', () => {
     const store = await post('/auth/login', { email: 'quanfuji@demo.com', password: 'demo123' });
     expect(StoreZ.parse(store.json().data.user)).toMatchObject({
       id: 'store-fuji', storeName: 'Fuji Coffee', latitude: 10.773, longitude: 106.66,
-      approved: true, totalUsages: 47, totalFeesVnd: 235000,
+      approved: true, totalUsages: 47, totalFeesVnd: 141000,
     });
     const admin = await post('/auth/login', { email: 'admin@demo.com', password: 'demo123' });
     AdminZ.parse(admin.json().data.user);

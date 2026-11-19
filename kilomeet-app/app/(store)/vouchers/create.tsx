@@ -1,37 +1,25 @@
-import { useState } from 'react';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner-native';
-import { colors } from '../../../src/theme/colors';
+import { Calendar, Info, MapPin, Percent, Route, ShoppingBag, Sparkles, Wallet, X } from 'lucide-react-native';
 import { api } from '../../../src/api/client';
-import { RANKS } from '../../../src/api/types';
-import type { Rank, VoucherTemplate } from '../../../src/api/types';
-import { FormInput } from '@/components/ui/form-input';
-import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
-import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useAuthStore } from '../../../src/stores/auth';
+import { RANKS, type Rank, type Store, type StoreFeeWallet, type VoucherTemplate } from '../../../src/api/types';
+import { C, DEPTH, RANK_COLOR } from '../../../src/theme/game';
+import { discountLabel, fmtVnd } from '../../../src/lib/format';
+import { Banner, Body, Card, GButton, GFormInput, GText, RankEmblem, Row, Screen, Segmented, TopBar, VoucherTicket } from '../../../src/components/game';
 
-const RANK_LABELS: Record<string, string> = {
-  đồng: 'Đồng', bạc: 'Bạc', vàng: 'Vàng',
-  bạch_kim: 'Bạch kim', kim_cương: 'Kim cương', cao_thủ: 'Cao thủ',
-};
-
-const QUEST_OPTIONS = [
-  { label: 'Không có', value: '' },
-  { label: 'Chạy ngang qua quán', value: 'Chạy ngang qua quán' },
-];
+const QUEST = 'Chạy ngang qua quán';
+const QUEST_STEPS = [20, 30, 40, 50];
 
 const positiveInt = (label: string) =>
-  z.string().trim().min(1, `Nhập ${label}`).refine((v) => /^\d+$/.test(v) && Number(v) > 0, `${label} phải > 0`);
+  z.string().trim().min(1, `Nhập ${label}`).refine((v) => /^\d+$/.test(v) && Number(v) > 0, `${label[0]!.toUpperCase()}${label.slice(1)} phải là số nguyên dương`);
 
-const createVoucherSchema = z.object({
+const schema = z.object({
   title: z.string().trim().min(2, 'Nhập tiêu đề voucher'),
   description: z.string().optional(),
   priceTokens: positiveInt('giá token'),
@@ -40,49 +28,45 @@ const createVoucherSchema = z.object({
     .trim()
     .min(1, 'Nhập % giảm giá')
     .refine((v) => /^\d+$/.test(v) && Number(v) >= 1 && Number(v) <= 100, 'Giảm giá từ 1-100%'),
-  questDiscount: z.string().optional(),
   quantity: positiveInt('số lượng'),
   expiryDate: z.string().optional(),
   area: z.string().optional(),
 });
-
-type CreateVoucherForm = z.infer<typeof createVoucherSchema>;
+type Form = z.infer<typeof schema>;
 
 export default function CreateVoucherScreen() {
   const router = useRouter();
-  const [questType, setQuestType] = useState('');
+  const user = useAuthStore((s) => s.user) as Store | null;
+  const [quest, setQuest] = useState<'none' | 'pass'>('pass');
+  const [questDiscount, setQuestDiscount] = useState(50);
   const [minRank, setMinRank] = useState<Rank>('đồng');
   const [submitting, setSubmitting] = useState(false);
+  const [fee, setFee] = useState<StoreFeeWallet | null>(null);
+  useEffect(() => {
+    api.get<StoreFeeWallet>('/store/fee').then(setFee).catch(() => undefined);
+  }, []);
 
-  const { control, handleSubmit, watch } = useForm<CreateVoucherForm>({
-    resolver: zodResolver(createVoucherSchema),
-    defaultValues: {
-      title: '',
-      description: '',
-      priceTokens: '',
-      discountPercent: '',
-      questDiscount: '',
-      quantity: '',
-      expiryDate: '',
-      area: '',
-    },
+  const { control, handleSubmit, watch } = useForm<Form>({
+    resolver: zodResolver(schema),
+    defaultValues: { title: '', description: '', priceTokens: '', discountPercent: '', quantity: '', expiryDate: '', area: '' },
   });
+  const [title, price, discount, quantity] = watch(['title', 'priceTokens', 'discountPercent', 'quantity']);
+  const priceN = Number(price) || 0;
+  const dealPrice = Math.round(priceN * (1 - questDiscount / 100));
 
-  const [title, priceTokens, discountPercent] = watch(['title', 'priceTokens', 'discountPercent']);
-
-  const onSubmit = handleSubmit(async (values) => {
+  const onSubmit = handleSubmit(async (v) => {
     setSubmitting(true);
     try {
       await api.post<VoucherTemplate>('/store/vouchers', {
-        title: values.title,
-        description: values.description ?? '',
-        priceTokens: Number(values.priceTokens),
-        discountPercent: Number(values.discountPercent),
-        questType: questType || undefined,
-        questDiscountPercent: questType && values.questDiscount ? Number(values.questDiscount) : 0,
-        quantity: Number(values.quantity),
+        title: v.title,
+        description: v.description ?? '',
+        priceTokens: Number(v.priceTokens),
+        discountPercent: Number(v.discountPercent),
+        questType: quest === 'pass' ? QUEST : undefined,
+        questDiscountPercent: quest === 'pass' ? questDiscount : 0,
+        quantity: Number(v.quantity),
         minRank,
-        expiryDate: values.expiryDate ?? '',
+        expiryDate: v.expiryDate ?? '',
       });
       toast.success('Đã tạo voucher thành công');
       router.back();
@@ -94,178 +78,134 @@ export default function CreateVoucherScreen() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
-      {/* Header */}
-      <View className="flex-row items-center px-4 py-3">
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text className="text-foreground text-xl font-bold ml-3">Tạo voucher mới</Text>
-      </View>
-
-      <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
-        <View className="gap-4">
-          <FormInput
-            control={control}
-            name="title"
-            label="Tiêu đề *"
-            placeholder="VD: Giảm 20% cà phê"
-          />
-
-          <FormInput
-            control={control}
-            name="description"
-            label="Mô tả"
-            placeholder="Mô tả chi tiết voucher"
-            multiline
-          />
-
-          <View className="flex-row gap-3">
-            <FormInput
-              control={control}
-              name="priceTokens"
-              label="Giá (token) *"
-              placeholder="50"
-              keyboardType="number-pad"
-              containerClassName="flex-1"
-            />
-            <FormInput
-              control={control}
-              name="discountPercent"
-              label="Giảm giá (%) *"
-              placeholder="20"
-              keyboardType="number-pad"
-              containerClassName="flex-1"
-            />
-          </View>
-
-          {/* Quest type */}
-          <View className="gap-2">
-            <Label>Loại quest</Label>
-            <View className="flex-row gap-2">
-              {QUEST_OPTIONS.map((opt) => (
-                <Button
-                  key={opt.value}
-                  variant={questType === opt.value ? 'default' : 'outline'}
-                  size="sm"
-                  onPress={() => setQuestType(opt.value)}>
-                  <Text>{opt.label}</Text>
-                </Button>
-              ))}
+    <Screen>
+      <TopBar title="Tạo voucher mới" action={Info} onAction={() => toast.info(`Mỗi voucher bán ra tạm giữ ${fmtVnd(fee?.feePerVoucherVnd ?? 3000)} trong ví phí; chỉ trừ khi khách dùng, hết hạn chưa dùng thì trả lại.`)} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <Body gap={14}>
+          <GFormInput control={control} name="title" label="Tiêu đề *" icon={Sparkles} placeholder="VD: Giảm 20% mọi đồ uống" />
+          <GFormInput control={control} name="description" label="Mô tả" icon={Info} placeholder="Áp dụng tất cả đồ uống tại quầy" />
+          <Row gap={12} center={false}>
+            <View style={{ flex: 1 }}>
+              <GFormInput control={control} name="priceTokens" label="Giá (token) *" icon={Wallet} placeholder="500" keyboardType="number-pad" />
             </View>
-          </View>
+            <View style={{ flex: 1 }}>
+              <GFormInput control={control} name="discountPercent" label="Giảm giá (%) *" icon={Percent} placeholder="20" keyboardType="number-pad" />
+            </View>
+          </Row>
 
-          {questType !== '' && (
-            <FormInput
-              control={control}
-              name="questDiscount"
-              label="Giảm giá quest (% trên giá token)"
-              placeholder="50"
-              keyboardType="number-pad"
-            />
-          )}
-
-          <View className="flex-row gap-3">
-            <FormInput
-              control={control}
-              name="quantity"
-              label="Số lượng *"
-              placeholder="100"
-              keyboardType="number-pad"
-              containerClassName="flex-1"
-            />
-            <FormInput
-              control={control}
-              name="expiryDate"
-              label="Hạn sử dụng"
-              placeholder="31/12/2026"
-              containerClassName="flex-1"
-            />
-          </View>
-
-          {/* Min rank selector */}
-          <View className="gap-2">
-            <Label>Hạng tối thiểu</Label>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View className="flex-row gap-2">
-                {RANKS.map((rank) => {
-                  const isSelected = minRank === rank;
-                  const rankColor = colors.rank[rank];
+          <GText v="caps" color={C.ink500}>
+            Nhiệm vụ giảm giá
+          </GText>
+          <Segmented
+            value={quest}
+            onChange={setQuest}
+            radius={16}
+            activeFill={C.grape500}
+            activeText={C.white}
+            options={[
+              { value: 'none', label: 'Không có', icon: X },
+              { value: 'pass', label: 'Chạy ngang quán', icon: Route },
+            ]}
+          />
+          {quest === 'pass' ? (
+            <Card fill={C.grape300} gap={10} pad={14} depth="small">
+              <Row between>
+                <GText v="bodyMStrong">Giảm trên giá token</GText>
+                <GText v="numM" color={C.grape700}>
+                  {questDiscount}%
+                </GText>
+              </Row>
+              <Row gap={8} center={false}>
+                {QUEST_STEPS.map((p) => {
+                  const on = p === questDiscount;
                   return (
-                    <TouchableOpacity
-                      key={rank}
-                      className="px-3 py-2 rounded-xl"
-                      style={{
-                        backgroundColor: isSelected ? rankColor + '20' : colors.bgSecondary,
-                        borderWidth: isSelected ? 1 : 0,
-                        borderColor: rankColor,
-                      }}
-                      onPress={() => setMinRank(rank)}>
-                      <Text
-                        className="text-sm font-semibold"
-                        style={{ color: isSelected ? rankColor : colors.textSecondary }}>
-                        {RANK_LABELS[rank]}
-                      </Text>
-                    </TouchableOpacity>
+                    <Pressable
+                      key={p}
+                      onPress={() => setQuestDiscount(p)}
+                      style={[{ flex: 1, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.ink900, backgroundColor: on ? C.grape500 : C.surface }, on ? DEPTH.small : null]}>
+                      <GText v="numS" color={on ? C.white : C.ink900}>
+                        -{p}%
+                      </GText>
+                    </Pressable>
                   );
                 })}
-              </View>
-            </ScrollView>
-          </View>
-
-          <FormInput
-            control={control}
-            name="area"
-            label="Khu vực"
-            placeholder="VD: Quận 1, TP.HCM"
-          />
-
-          {/* Preview Card */}
-          <View className="gap-2 mt-1">
-            <Label>Xem trước</Label>
-            <Card className="p-0 overflow-hidden gap-0">
-              <View className="h-1 bg-km-accent" />
-              <View className="p-4 gap-3">
-                <View className="flex-row items-start justify-between">
-                  <View className="flex-1 mr-3">
-                    <Text className="text-muted-foreground text-xs mb-1">Cà phê Sài Gòn</Text>
-                    <Text className="text-foreground text-base font-semibold">{title || 'Tiêu đề voucher'}</Text>
-                  </View>
-                  <Badge
-                    variant="outline"
-                    style={{
-                      backgroundColor: colors.rank[minRank] + '20',
-                      borderColor: colors.rank[minRank] + '50',
-                    }}>
-                    <Text style={{ color: colors.rank[minRank] }}>{RANK_LABELS[minRank]}+</Text>
-                  </Badge>
-                </View>
-
-                {questType !== '' && (
-                  <View className="flex-row items-center bg-km-surface/50 rounded-lg p-2">
-                    <Ionicons name="flag-outline" size={16} color={colors.textMuted} />
-                    <Text className="text-muted-foreground text-xs ml-2 flex-1">{questType}</Text>
-                  </View>
-                )}
-
-                <View className="flex-row items-center">
-                  <Ionicons name="pricetag" size={16} color={colors.accent} />
-                  <Text className="text-foreground text-lg font-bold ml-2">{priceTokens || '0'}</Text>
-                  <Text className="text-muted-foreground text-xs ml-1">token</Text>
-                  {discountPercent ? (
-                    <Text className="text-km-primary text-sm font-bold ml-3">-{discountPercent}%</Text>
-                  ) : null}
-                </View>
-              </View>
+              </Row>
+              <GText v="bodyS" color={C.ink700}>
+                Khách chạy ngang trong 50 m chỉ trả {priceN ? `${dealPrice} token (thay vì ${priceN})` : `${100 - questDiscount}% giá token`}.
+              </GText>
             </Card>
-          </View>
+          ) : null}
 
-          <Button size="lg" className="mb-8" onPress={() => void onSubmit()} disabled={submitting}>
-            <Text>{submitting ? 'Đang tạo...' : 'Tạo voucher'}</Text>
-          </Button>
-        </View>
-        <View className="h-8" />
-      </ScrollView>
-    </SafeAreaView>
+          <Row gap={12} center={false}>
+            <View style={{ flex: 1 }}>
+              <GFormInput control={control} name="quantity" label="Số lượng *" icon={ShoppingBag} placeholder="100" keyboardType="number-pad" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <GFormInput control={control} name="expiryDate" label="Hạn sử dụng" icon={Calendar} placeholder="31/12/2026" />
+            </View>
+          </Row>
+
+          <GText v="caps" color={C.ink500}>
+            Hạng tối thiểu
+          </GText>
+          <Row gap={6} center={false}>
+            {RANKS.map((r) => {
+              const on = r === minRank;
+              return (
+                <Pressable
+                  key={r}
+                  onPress={() => setMinRank(r)}
+                  style={[{ flex: 1, alignItems: 'center', padding: 6, borderRadius: 14, borderWidth: on ? 2.5 : 1.5, borderColor: C.ink900, backgroundColor: on ? RANK_COLOR[r] : C.surface }, on ? DEPTH.small : null]}>
+                  <RankEmblem rank={r} size={34} />
+                </Pressable>
+              );
+            })}
+          </Row>
+          <GFormInput control={control} name="area" label="Khu vực" icon={MapPin} placeholder="VD: Quận 10, TP.HCM" />
+
+          <GText v="caps" color={C.ink500}>
+            Xem trước trong cửa hàng
+          </GText>
+          <VoucherTicket
+            discount={discount ? discountLabel(Number(discount)) : '-?%'}
+            store={user?.storeName ?? 'Cửa hàng của bạn'}
+            title={title || 'Tiêu đề voucher'}
+            price={priceN || '?'}
+            dealPrice={quest === 'pass' && priceN ? dealPrice : undefined}
+            rank={minRank}
+            leftLabel={`Còn ${quantity || '?'}`}
+            questLabel={quest === 'pass' ? `Đã chạy ngang quán · -${questDiscount}%` : undefined}
+          />
+          {(() => {
+            const per = fee?.feePerVoucherVnd ?? 3000;
+            const want = (fee?.unsoldCount ?? 0) + (Number(quantity) || 0);
+            const short = fee ? Math.max(0, want * per - fee.availableVnd) : 0;
+            return (
+              <Banner
+                icon={Wallet}
+                tone={short > 0 ? 'orange' : 'coin'}
+                iconColor={C.ink900}
+                title={fee ? `Ví phí đủ cho ${fee.sellableCount} voucher bán ra` : undefined}
+                text={
+                  short > 0
+                    ? `Mỗi voucher bán ra tạm giữ ${fmtVnd(per)}. Nạp thêm ${fmtVnd(short)} để bán hết cả voucher mới.`
+                    : `Mỗi voucher bán ra tạm giữ ${fmtVnd(per)}; chỉ trừ khi khách dùng tại quầy, hết hạn chưa dùng thì trả lại.`
+                }
+                right={
+                  short > 0 ? (
+                    <Pressable onPress={() => router.push('/(store)/fee')}>
+                      <GText v="bodyMStrong" color={C.orange700}>
+                        Nạp ›
+                      </GText>
+                    </Pressable>
+                  ) : undefined
+                }
+              />
+            );
+          })()}
+          <GButton label="Tạo voucher" type="accent" icon={Sparkles} loading={submitting} onPress={() => void onSubmit()} block />
+        </Body>
+      </KeyboardAvoidingView>
+    </Screen>
   );
 }

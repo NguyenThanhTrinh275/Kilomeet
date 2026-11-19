@@ -48,7 +48,7 @@ export const MOCK_STORE: Store = {
   longitude: 106.660,
   approved: true,
   totalUsages: 47,
-  totalFeesVnd: 235_000,
+  totalFeesVnd: 141_000,
 };
 
 export const MOCK_ADMIN: Admin = {

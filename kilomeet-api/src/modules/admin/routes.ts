@@ -6,6 +6,7 @@ import { parse } from '../../lib/validate.js';
 import { processChainOutbox } from '../../jobs/chain-outbox.js';
 import { runGroupTimeline } from '../groups/service.js';
 import { runMembershipExpiry } from '../auth/membership.js';
+import { releaseExpiredHolds } from '../store/fee.js';
 import * as seasons from '../seasons/service.js';
 import * as admin from './service.js';
 
@@ -44,5 +45,6 @@ export async function adminRoutes(app: FastifyInstance) {
   app.post('/admin/run-weekly-ranking', a, async () => ok(await seasons.runWeeklyRanking()));
   app.post('/admin/run-group-timeline', a, async () => ok(await runGroupTimeline()));
   app.post('/admin/run-membership-expiry', a, async () => ok(await runMembershipExpiry()));
+  app.post('/admin/run-fee-release', a, async () => ok(await releaseExpiredHolds()));
   app.post('/admin/process-chain-outbox', a, async () => ok(await processChainOutbox()));
 }

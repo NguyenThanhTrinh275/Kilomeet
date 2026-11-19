@@ -24,7 +24,9 @@ export async function applyTokenDelta(
     await tx.runnerProfile.update({ where: { userId: p.userId }, data: { tokenBalance: { increment: p.delta } } });
   }
   if (p.delta > 0) {
-    const key = `${p.reason}:${p.refId}:${p.userId}`;
+    // Khoá thưởng on-chain kèm ví: hợp đồng chặn trùng theo keccak(key) TOÀN CỤC. Id nhiệm vụ cố định theo ngày,
+    // nên sau `demo:reset` (ví mới) khoá cũ đã dùng → chain bỏ qua mint. Gắn ví để mỗi ví một khoá, vẫn idempotent.
+    const key = `${p.reason}:${p.refId}:${p.userId}:${p.wallet.toLowerCase()}`;
     await enqueueChain(tx, { op: 'mintToken', to: p.wallet, amount: p.delta, key }, key);
   }
   return true;

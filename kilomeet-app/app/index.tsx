@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../src/stores/auth';
+import { Loading } from '../src/components/game';
 
 export default function Index() {
   const user = useAuthStore((s) => s.user);
@@ -23,13 +23,5 @@ export default function Index() {
     });
   }, []);
 
-  if (checking) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#F4F6F9', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#16A34A" />
-      </View>
-    );
-  }
-
-  return null;
+  return checking ? <Loading /> : null;
 }

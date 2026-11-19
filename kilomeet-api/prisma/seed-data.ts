@@ -3,6 +3,7 @@
 import { randomBytes } from 'node:crypto';
 import type { PrismaClient, Role, StoreStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { VOUCHER_FEE_VND } from '../src/domain/fee.js';
 import { seasonOf } from '../src/domain/season.js';
 import { addDays, vnDayStart, vnWeekStart } from '../src/domain/time.js';
 import { voucherTypeOp } from '../src/lib/outbox.js';
@@ -22,6 +23,8 @@ interface RunnerSeed {
 interface StoreSeed {
   id: string; email: string; name: string; createdAt: string; storeName: string; storeAddress: string;
   lat: number; lng: number; status: StoreStatus; totalUsages: number;
+  /** Ví phí trả trước ban đầu (VND, quyết định #28). */
+  feeVnd?: number;
 }
 
 const runners: RunnerSeed[] = [
@@ -42,15 +45,15 @@ const runners: RunnerSeed[] = [
 
 const stores: StoreSeed[] = [
   { id: 'store-fuji', email: 'quanfuji@demo.com', name: 'Quán Fuji Coffee', createdAt: '2026-09-15T08:00:00Z',
-    storeName: 'Fuji Coffee', storeAddress: '268 Lý Thường Kiệt, P.14, Q.10', lat: 10.773, lng: 106.66, status: 'approved', totalUsages: 47 },
+    storeName: 'Fuji Coffee', storeAddress: '268 Lý Thường Kiệt, P.14, Q.10', lat: 10.773, lng: 106.66, status: 'approved', totalUsages: 47, feeVnd: 150_000 },
   { id: 'store-highlands', email: 'highlands@demo.com', name: 'Highlands Lý Thường Kiệt', createdAt: '2026-09-20T08:00:00Z',
-    storeName: 'Highlands Coffee', storeAddress: '290 Lý Thường Kiệt, P.14, Q.10', lat: 10.775, lng: 106.662, status: 'approved', totalUsages: 12 },
+    storeName: 'Highlands Coffee', storeAddress: '290 Lý Thường Kiệt, P.14, Q.10', lat: 10.775, lng: 106.662, status: 'approved', totalUsages: 12, feeVnd: 90_000 },
   { id: 'store-phuclong', email: 'phuclong@demo.com', name: 'Phúc Long Bách Khoa', createdAt: '2026-09-21T08:00:00Z',
-    storeName: 'Phúc Long', storeAddress: '250 Lý Thường Kiệt, P.14, Q.10', lat: 10.771, lng: 106.658, status: 'approved', totalUsages: 8 },
+    storeName: 'Phúc Long', storeAddress: '250 Lý Thường Kiệt, P.14, Q.10', lat: 10.771, lng: 106.658, status: 'approved', totalUsages: 8, feeVnd: 60_000 },
   { id: 'store-cong', email: 'cong@demo.com', name: 'Cộng Cà Phê Tô Hiến Thành', createdAt: '2026-09-22T08:00:00Z',
-    storeName: 'Cộng Cà Phê', storeAddress: '1 Tô Hiến Thành, P.13, Q.10', lat: 10.776, lng: 106.664, status: 'approved', totalUsages: 5 },
+    storeName: 'Cộng Cà Phê', storeAddress: '1 Tô Hiến Thành, P.13, Q.10', lat: 10.776, lng: 106.664, status: 'approved', totalUsages: 5, feeVnd: 60_000 },
   { id: 'store-banhmi', email: 'banhmi@demo.com', name: 'Bánh Mì Huỳnh Hoa', createdAt: '2026-09-23T08:00:00Z',
-    storeName: 'Bánh Mì Huỳnh Hoa', storeAddress: '210 Lý Thường Kiệt, P.14, Q.10', lat: 10.77, lng: 106.656, status: 'approved', totalUsages: 20 },
+    storeName: 'Bánh Mì Huỳnh Hoa', storeAddress: '210 Lý Thường Kiệt, P.14, Q.10', lat: 10.77, lng: 106.656, status: 'approved', totalUsages: 20, feeVnd: 90_000 },
   { id: 'store-juice', email: 'juice@demo.com', name: 'Juice Factory', createdAt: '2026-09-24T08:00:00Z',
     storeName: 'Juice Factory', storeAddress: '275 Lý Thường Kiệt, P.14, Q.10', lat: 10.774, lng: 106.661, status: 'approved', totalUsages: 3 },
   { id: 'store-pending-1', email: 'newcafe@demo.com', name: 'Chủ New Café', createdAt: '2026-11-08T10:00:00Z',
@@ -58,6 +61,48 @@ const stores: StoreSeed[] = [
   { id: 'store-pending-2', email: 'juicebar@demo.com', name: 'Chủ Fresh Juice', createdAt: '2026-11-09T09:00:00Z',
     storeName: 'Fresh Juice Corner', storeAddress: '15 Tô Hiến Thành, P.15, Q.10', lat: 10.7768, lng: 106.6655, status: 'pending', totalUsages: 0 },
 ];
+
+/** Hồ sơ quán (Mục 8.2) — giống mock FE `mock/profile.ts`. Quán không có ở đây dùng hồ sơ mặc định. */
+const storeProfiles: Record<string, {
+  tagline: string; description: string; coverTheme: 'coffee' | 'tea' | 'gym'; tags: string[];
+  highlights: { name: string; priceVnd: number }[]; phone: string;
+}> = {
+  'store-fuji': {
+    tagline: 'Cà phê rang xay cạnh HCMUT',
+    description:
+      'Fuji Coffee là quán cà phê nhỏ do hai cựu sinh viên Bách Khoa mở. Hạt cà phê được rang mỗi sáng ngay tại quán.\n\nQuán mở từ 6:00 để đón người chạy sáng sớm quanh HCMUT: có nước lọc miễn phí, chỗ gửi xe và góc ngồi ngoài trời để giãn cơ sau buổi chạy.',
+    coverTheme: 'coffee',
+    tags: ['Cà phê', 'Wifi', 'Gửi xe', 'Ngồi ngoài trời', 'Nước free cho runner'],
+    highlights: [{ name: 'Cà phê muối', priceVnd: 35_000 }, { name: 'Cold brew cam sả', priceVnd: 45_000 }],
+    phone: '0909 123 456',
+  },
+  'store-highlands': {
+    tagline: 'Cà phê phin & trà đào cho buổi sáng',
+    description: 'Highlands Lý Thường Kiệt nằm ngay cung chạy quanh HCMUT. Không gian rộng, máy lạnh mát, có chỗ để xe và ổ cắm sạc điện thoại.',
+    coverTheme: 'coffee', tags: ['Cà phê', 'Trà', 'Máy lạnh', 'Gửi xe'],
+    highlights: [{ name: 'Trà đào cam sả', priceVnd: 49_000 }, { name: 'Phin sữa đá', priceVnd: 35_000 }], phone: '',
+  },
+  'store-phuclong': {
+    tagline: 'Trà & nước ép mát lạnh sau buổi chạy',
+    description: 'Phúc Long Bách Khoa phục vụ trà sữa, trà trái cây và nước ép. Ghé sau buổi chạy để nạp lại năng lượng.',
+    coverTheme: 'tea', tags: ['Trà', 'Trà sữa', 'Mang đi'], highlights: [{ name: 'Trà sữa Phúc Long', priceVnd: 55_000 }], phone: '',
+  },
+  'store-cong': {
+    tagline: 'Cà phê cốt dừa, không gian hoài cổ',
+    description: 'Cộng Cà Phê Tô Hiến Thành có tầng lầu yên tĩnh để ngồi nghỉ, phù hợp hẹn nhóm chạy sau buổi tập.',
+    coverTheme: 'coffee', tags: ['Cà phê', 'Wifi', 'Ngồi lâu'], highlights: [{ name: 'Cốt dừa cà phê', priceVnd: 55_000 }], phone: '',
+  },
+  'store-banhmi': {
+    tagline: 'Bữa sáng nhanh cho dân chạy bộ',
+    description: 'Bánh mì thập cẩm đầy đặn, làm nhanh trong 2 phút. Mở từ 5:30 sáng cho người chạy sớm.',
+    coverTheme: 'gym', tags: ['Ăn sáng', 'Mang đi'], highlights: [{ name: 'Bánh mì đặc biệt', priceVnd: 68_000 }], phone: '',
+  },
+  'store-juice': {
+    tagline: 'Smoothie & nước ép trái cây tươi',
+    description: 'Juice Factory ép trái cây tươi mỗi ngày, có smoothie bowl giàu năng lượng cho người vừa chạy xong.',
+    coverTheme: 'tea', tags: ['Nước ép', 'Smoothie', 'Healthy'], highlights: [{ name: 'Smoothie bowl', priceVnd: 65_000 }], phone: '',
+  },
+};
 
 const RUN_QUEST = 'Chạy ngang qua quán';
 const templates = [
@@ -90,7 +135,9 @@ export async function seedDemo(prisma: PrismaClient, now: Date = new Date()): Pr
   const season = seasonOf(now);
   await prisma.season.create({ data: { ...season, isActive: true } });
 
-  let walletIndex = 0;
+  // Mỗi lần seed dùng một dải chỉ số ví HD mới (theo phút kể từ 01/01/2026 × 1000, < 2^31 tới ~2030):
+  // ví demo luôn mới tinh trên chain → số dư on-chain = DB sau mỗi demo:reset, không cộng dồn.
+  let walletIndex = Math.max(0, Math.floor((now.getTime() - Date.UTC(2026, 0, 1)) / 60_000)) * 1000;
   const base = (id: string, email: string, name: string, role: Role, createdAt: string) => {
     walletIndex += 1;
     return { id, email, name, role, passwordHash, walletIndex, walletAddress: walletAddressFor(walletIndex), createdAt: new Date(createdAt) };
@@ -127,7 +174,7 @@ export async function seedDemo(prisma: PrismaClient, now: Date = new Date()): Pr
     if (r.tokenBalance > 0) {
       await prisma.tokenLedger.create({ data: { userId: r.id, delta: r.tokenBalance, reason: 'quest', refId: 'seed-opening-balance' } });
       // Số dư mở đầu cũng mint on-chain, để burn (mua voucher, reset mùa) sau này không thiếu số dư.
-      // Khoá thưởng khác nhau mỗi lần seed: sau demo:reset trên cùng hợp đồng, số dư chain ≥ DB (mua không bị thiếu).
+      // Ví mỗi lần seed là ví mới (xem walletIndex ở trên) nên số dư chain = DB; khoá thưởng vẫn khác nhau mỗi lần cho chắc.
       const key = `seed:${r.id}:${seedRun}`;
       await prisma.chainOutbox.create({
         data: { op: 'mintToken', payload: { to: walletAddressFor(walletIndex), amount: r.tokenBalance, key }, ref: key },
@@ -156,7 +203,10 @@ export async function seedDemo(prisma: PrismaClient, now: Date = new Date()): Pr
         store: {
           create: {
             storeName: s.storeName, storeAddress: s.storeAddress, lat: s.lat, lng: s.lng, status: s.status,
-            appliedAt: new Date(s.createdAt), totalUsages: s.totalUsages, totalFeesVnd: s.totalUsages * 5000,
+            appliedAt: new Date(s.createdAt), totalUsages: s.totalUsages, totalFeesVnd: s.totalUsages * VOUCHER_FEE_VND,
+            feeBalanceVnd: s.feeVnd ?? 0,
+            ...(s.feeVnd ? { feeEntries: { create: { kind: 'topup', amountVnd: s.feeVnd, balanceDelta: s.feeVnd, heldDelta: 0, ref: `topup:${s.id}:seed-${seedRun}`, createdAt: new Date(now.getTime() - 86_400_000) } } } : {}),
+            ...(storeProfiles[s.id] ?? {}),
           },
         },
       },

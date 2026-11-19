@@ -313,7 +313,7 @@ interface PendingStore {
 | Nhiệm vụ ngày | chạy ≥ 2 km → 10 token |
 | Nhiệm vụ tuần | mục tiêu = TB 4 tuần gần nhất + 10%; thưởng 7 token / km mục tiêu |
 | Phí Hội viên | 39.000 đ/tháng (thanh toán giả lập) |
-| Phí cửa hàng | 5.000 đ / lượt voucher được dùng |
+| Phí cửa hàng | 3.000 đ / lượt voucher được dùng, trừ từ **ví phí trả trước** (quyết định #28, Mục 5.5b) |
 | Bán kính "chạy ngang quán" | 50 m |
 | Hạn dùng quyền giảm giá voucher | 7 ngày sau khi làm xong nhiệm vụ |
 | Khung giờ nhóm chạy | `05:00 05:30 06:00 06:30 07:00 17:00 17:30 18:00 18:30 19:00 19:30 20:00` |
@@ -346,6 +346,9 @@ Tổng quan:
 | Store | GET | `/store/dashboard` | store |
 | Store | POST | `/store/vouchers` | store (đã duyệt) |
 | Store | POST | `/store/scan` | store (đã duyệt) |
+| Store | GET | `/store/profile` | store (kể cả chưa duyệt) |
+| Store | POST | `/store/profile` | store (kể cả chưa duyệt) |
+| Store | GET | `/stores/profile?storeId=` | mọi vai trò đã đăng nhập |
 | Group | GET | `/groups` | member |
 | Group | GET | `/groups/detail` | member |
 | Group | POST | `/groups/create` | member |
@@ -736,10 +739,37 @@ BE phải làm:
 - Kiểm tra voucher **thuộc đúng quán đang quét**.
 - `status` là `owned` hoặc `gifted` (chưa dùng), chưa hết hạn.
 - Đặt `status = "used"`, `usedAt = now`.
-- Ghi một lượt dùng + phí 5.000 đ; tăng `totalUsages`, `totalFeesVnd` của quán.
-- Đốt voucher trên chuỗi.
+- Ghi một lượt dùng; **trừ thật** khoản phí đã tạm giữ lúc bán (3.000 đ) khỏi ví phí; tăng `totalUsages`, `totalFeesVnd` (= phí đã trả) của quán.
+- Đốt voucher trên chuỗi (sự kiện `VoucherRedeemed` ghi `feeVnd = 3000`).
 
 Lỗi gợi ý: `"QR không hợp lệ"`, `"Voucher đã được sử dụng"`, `"Voucher không thuộc cửa hàng này"`, `"Voucher đã hết hạn"`.
+
+### 5.5b Ví phí trả trước của cửa hàng (quyết định #28)
+
+Quán nạp tiền vào ví phí. Phát hành voucher **không** tốn gì. Mỗi lượt **mua** giữ 3.000 đ trong ví quán; **quét** thì trừ thật; voucher **hết hạn chưa dùng** thì trả lại. Khả dụng = số dư − tạm giữ. Ví không đủ 3.000 đ khả dụng → voucher của quán "Tạm hết" (`VoucherTemplate.pausedForFee = true`), `POST /vouchers/buy` trả `"Voucher tạm hết, quán đang bổ sung. Vui lòng quay lại sau"` và không trừ token / số lượng.
+
+| Method | Path | Body | Trả về |
+|---|---|---|---|
+| GET | `/store/fee` | — | `StoreFeeWallet` |
+| POST | `/store/fee/topup` | `{ amountVnd, requestId? }` | `StoreFeeWallet` (sau khi nạp) |
+| POST | `/admin/run-fee-release` | — | `{ processed }` — trả lại phí voucher hết hạn (cron chạy mỗi giờ) |
+
+```ts
+interface StoreFeeWallet {
+  balanceVnd: number; heldVnd: number; availableVnd: number; feePerVoucherVnd: number; // 3000
+  sellableCount: number;   // floor(available / fee)
+  unsoldCount: number;     // tổng remaining của voucher còn hạn
+  shortfallVnd: number;    // cần nạp thêm để bán hết
+  heldCount: number; totalPaidVnd: number; presetsVnd: number[];
+  entries: { id; kind: 'topup' | 'hold' | 'charge' | 'release'; title; subtitle; amountVnd; balanceDeltaVnd; heldDeltaVnd; createdAt }[];
+}
+```
+
+- Nạp: số nguyên, bội số 1.000 đ, 10.000 đ – 10.000.000 đ (lỗi: `"Nạp tối thiểu 10.000đ"`, `"Nạp tối đa 10.000.000đ mỗi lần"`, `"Số tiền nạp phải là bội số của 1.000đ"`). Thanh toán **giả lập**. `requestId` trùng → chỉ nạp 1 lần.
+- Giữ phí bằng `UPDATE stores SET fee_held = fee_held + 3000 WHERE fee_balance − fee_held ≥ 3000` trong transaction mua → mua đồng thời không giữ quá số dư.
+- Mỗi thay đổi ghi `store_fee_entries` với `ref` duy nhất (`hold:<ownedVoucherId>`, `charge:…`, `release:…`, `topup:<storeId>:<requestId>`) → gọi lặp không ghi 2 lần.
+- `GET /store/dashboard` trả thêm `fee: { balanceVnd, heldVnd, availableVnd, feePerVoucherVnd, sellableCount, unsoldCount, shortfallVnd }` và `recentUsages[].feeVnd`.
+- Ví phí chỉ nằm trong DB; trên chain chỉ ghi phí ở sự kiện `VoucherRedeemed` (`pnpm chain:set-fee` đặt `feePerRedeemVnd = 3000`).
 
 ---
 
@@ -816,7 +846,7 @@ Response `data`: `GroupRun` sau khi tham gia.
 
 BE phải làm:
 - Thêm người vào với `confirmed: false`, `arrived: false`.
-- Lỗi: `"Nhóm đã đầy"`, `"Bạn đã trong nhóm"`, `"Hạng của bạn không phù hợp"`, `"Bạn đang bị khoá tìm nhóm"`.
+- Lỗi: `"Nhóm đã đầy"`, `"Bạn đã trong nhóm"`, `"Hạng của bạn không phù hợp"`. (Không còn lỗi khoá tìm nhóm — quyết định #29.)
 
 ---
 
@@ -1009,7 +1039,7 @@ Ví dụ trong spec: voucher giá 500 token, nhiệm vụ giảm 50% → làm xo
 ```
 [Đang bán] --mua (đốt token)--> [owned] --tặng 1 lần--> [gifted]
                                    |                       |
-                                   +------quét QR----------+--> [used]  (đốt voucher, ghi phí 5.000đ)
+                                   +------quét QR----------+--> [used]  (đốt voucher, trừ 3.000đ đã giữ trong ví phí)
                                    |                       |
                                    +------quá hạn----------+--> [expired] (không hoàn token)
 ```
@@ -1033,7 +1063,7 @@ Tính từ giờ xuất phát `T`:
 
 **Độ đúng hẹn:**
 - `punctuality = số lần tới đúng giờ / số nhóm đã xác nhận tham gia × 100`.
-- Vắng **2 lần không báo** trong một mùa → khoá tìm nhóm 1 tuần.
+- Vắng hoặc trễ hẹn **chỉ làm giảm** `punctuality`, **không** khoá tìm nhóm (quyết định #29). `groupBanUntil` luôn `null`.
 - Người tự lập nhóm có thể chỉ nhận người có `punctuality ≥ 80`.
 
 **Phạm vi hạng (hai chiều):**
@@ -1106,7 +1136,7 @@ Tất cả endpoint ở bảng trên **đã có** trừ `/leaderboard?area=` l�
 | GET | `/vouchers?storeId=&lat=&lng=` | `VoucherTemplate` + `myQuestEligible`, `myPrice`, `distanceM`, `area`, `chainTokenId` | Có `lat,lng` thì sắp theo khoảng cách |
 | GET | `/seasons/current` | `SeasonInfo & { daysLeft }` hoặc `null` | |
 | GET | `/me/badges` | `{ seasonId, seasonName, highestRank, txHash, current }[]` | `current: true` = huy hiệu tạm của mùa đang chạy |
-| GET | `/me/wallet` | `{ address, explorerUrl, chain, tokenBalance, transactions[] }` | Mở Snowtrace khi demo |
+| GET | `/me/wallet` | `{ address, explorerUrl, chain, tokenBalance, transactions: ChainTx[] }` | Màn "Ví & giao dịch". `ChainTx = { id, op, label, amount, status: 'pending'\|'sent'\|'done'\|'failed', txHash, explorerUrl, createdAt }`; `label` tiếng Việt, `amount` = RUN thay đổi (âm: đốt) hoặc `null`. Cửa hàng thấy thêm lượt quét voucher của quán |
 | GET/POST | `/groups/auto-match` | `{ requestId, status, groupId }` | POST body như bảng trên; GET = yêu cầu gần nhất |
 | GET | `/groups/meeting-points` | `{ name, latitude, longitude, type: 'public' \| 'store' }[]` | Điểm hội tụ có sẵn |
 | POST | `/groups/location` | `{ success, arrived }` | Chỉ từ T−30' tới khi kết thúc |
@@ -1116,7 +1146,43 @@ Tất cả endpoint ở bảng trên **đã có** trừ `/leaderboard?area=` l�
 | GET | `/areas` | `{ code, name }[]` | Quận/huyện TP.HCM |
 | POST | `/admin/run-weekly-ranking` · `/admin/run-group-timeline` · `/admin/run-membership-expiry` · `/admin/process-chain-outbox` | `{ processed, ... }` | Kích hoạt job bằng tay khi demo |
 | GET/POST | `/admin/clock` | `{ now, offsetMs }` | POST `{ now: ISO }` hoặc `{ offsetMs }`. Chỉ khi `ALLOW_CLOCK_OVERRIDE=true` |
-| GET | `/admin/chain-txs` | 50 lệnh chain gần nhất kèm `txHash`, `explorerUrl` | |
+| GET | `/admin/chain-txs` | `ChainTx[]`: 50 lệnh chain gần nhất, `label` ghi kèm tên người | Màn "Chuỗi Avalanche Fuji" |
+
+### 8.2 Hồ sơ quán (thêm 18/11/2026 — FE + mock + BE xong)
+
+Trang "Giới thiệu quán" cho người chạy đọc trước khi mua voucher, và trang "Hồ sơ quán" để chủ quán tự viết. Kiểu `StoreProfile` nằm trong `kilomeet-app/src/api/types.ts`:
+
+```ts
+interface StoreProfile {
+  storeId: string; storeName: string;
+  tagline: string;        // ≤ 60 ký tự, hiện trên thẻ quán
+  description: string;    // ≤ 500 ký tự
+  address: string; latitude: number; longitude: number;   // chỉ đọc, lấy từ Store
+  coverTheme: 'coffee' | 'tea' | 'gym';                    // ảnh bìa minh hoạ
+  tags: string[];                                          // ≤ 6
+  openingHours: { label: string; open: 'HH:mm'; close: 'HH:mm'; enabled: boolean }[];
+  highlights: { name: string; priceVnd: number }[];        // ≤ 3
+  phone: string;
+  verified: boolean; totalUsages: number; runnerSharePercent: number;  // chỉ đọc, BE tính
+}
+```
+
+| Method | Endpoint | Ai gọi | Request | Response `data` |
+|---|---|---|---|---|
+| GET | `/stores/profile?storeId=` | Người chạy (mọi vai trò đã đăng nhập) | — | `StoreProfile` |
+| GET | `/store/profile` | Tài khoản cửa hàng | — | `StoreProfile` của chính quán |
+| POST | `/store/profile` | Tài khoản cửa hàng | `Pick<StoreProfile, 'storeName' \| 'tagline' \| 'description' \| 'coverTheme' \| 'tags' \| 'openingHours' \| 'highlights' \| 'phone'>` | `StoreProfile` sau khi lưu |
+
+- Quán chưa có hồ sơ: trả hồ sơ mặc định (`tagline`, `description` rỗng, `coverTheme: 'coffee'`, `openingHours` 3 dòng T2–T6 / Thứ 7 / Chủ nhật), **không** trả 404.
+- `runnerSharePercent` = % lượt dùng voucher của quán có `questCompletedAt` khác `null`. `totalUsages` = số lượt quét QR.
+- Không cho đổi toạ độ qua endpoint này (đổi vị trí cần quản trị duyệt lại).
+- Lỗi: `"Không tìm thấy cửa hàng"`, `"Không phải tài khoản cửa hàng"`, `"Câu giới thiệu ngắn tối đa 60 ký tự"`, `"Giới thiệu chi tiết tối đa 500 ký tự"`, `"Giờ mở cửa phải theo dạng HH:mm"`.
+- Khi BE chưa có `/stores/profile`, FE dựng hồ sơ tối thiểu từ `VoucherTemplate` nên màn vẫn hiện (`src/lib/storeProfile.ts`).
+- `POST /store/profile` **chỉ cập nhật field được gửi** (gửi một phần cũng được). Field chỉ đọc (`address`, `latitude`, `longitude`, `verified`, `totalUsages`, `runnerSharePercent`) gửi lên thì bị bỏ qua. Đổi `storeName` thì tên mới hiện luôn ở `/vouchers`.
+- Quán chưa duyệt: chủ quán vẫn xem/sửa hồ sơ của mình; người chạy gọi `/stores/profile` thì nhận `"Không tìm thấy cửa hàng"`.
+- `tags` trùng thì gộp lại. Giới hạn: `tags` ≤ 6, `highlights` ≤ 3, `openingHours` ≤ 7 dòng.
+- Lỗi thêm (BE, 18/11): `"Thiếu storeId"`, `"Vui lòng nhập tên quán"`, `"Ảnh bìa không hợp lệ"`, `"Chọn tối đa 6 thẻ tiện ích"`, `"Tối đa 3 món nổi bật"`, `"Giá món phải là số nguyên không âm"`, `"Số điện thoại không hợp lệ"`.
+- BE: cột hồ sơ nằm trên bảng `stores` (migration `store_profile`), code ở `kilomeet-api/src/modules/store/profile.ts`, hàm thuần ở `src/domain/store-profile.ts`.
 
 ---
 
@@ -1210,6 +1276,8 @@ token_ledger       (id, user_id, delta, reason[quest|buy|season_reset], ref_id, 
 | 25 | Chống gian lận km? | Bỏ đoạn GPS có vận tốc **> 25 km/h** (khi có timestamp) | `domain/geo.ts` `routeDistanceKm` |
 | 26 | `GET /runs?userId=` của người khác? | **Bỏ qua** tham số, chỉ trả lịch sử của chính mình | `runs/routes.ts` |
 | 27 | Hạn voucher khi FE gửi `dd/mm/yyyy` | 23:59:59.999 giờ VN ngày đó | `domain/pricing.ts` `parseExpiryInput` |
+| 28 | Quán không quét mà vẫn giảm giá để né phí; quán nợ phí không trả? (chốt 18/11/2026) | **Ví phí trả trước, 3.000 đ/lượt**: mua → giữ phí, quét → trừ, hết hạn → trả lại; ví không đủ → voucher "Tạm hết". Phát hành không tốn phí | `domain/fee.ts`, `store/fee.ts`, Mục 5.5b |
+| 29 | Vắng 2 lần có khoá tìm nhóm 1 tuần? (chốt 18/11/2026) | **Không.** Vắng / trễ hẹn chỉ làm giảm độ đúng hẹn; người lập nhóm tự lọc bằng `minPunctuality` | `groups/service.ts` |
 
 ---
 

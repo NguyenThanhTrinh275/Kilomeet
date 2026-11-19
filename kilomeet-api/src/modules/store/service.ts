@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { z } from 'zod';
-import { parseExpiryInput, redeemError, VOUCHER_USE_FEE_VND } from '../../domain/pricing.js';
+import { parseExpiryInput, redeemError } from '../../domain/pricing.js';
+import { chargeFee, feeWallet } from './fee.js';
 import { rankIndex } from '../../domain/rank.js';
 import { clock } from '../../lib/clock.js';
 import { badRequest, forbidden } from '../../lib/errors.js';
@@ -19,6 +20,7 @@ async function approvedStore(userId: string) {
 export async function dashboard(userId: string) {
   const store = await prisma.store.findUnique({ where: { userId } });
   if (!store) throw forbidden('Không phải tài khoản cửa hàng');
+  const fee = await feeWallet(userId);
   const [supply, usages] = await Promise.all([
     prisma.voucherTemplate.aggregate({ where: { storeId: userId }, _sum: { totalSupply: true } }),
     prisma.voucherUsage.findMany({
@@ -33,14 +35,17 @@ export async function dashboard(userId: string) {
     storeName: store.storeName,
     totalVouchersCreated: supply._sum.totalSupply ?? 0, // quyết định #12: tổng số lượng phát hành
     totalVouchersUsed: store.totalUsages,
-    totalFeesVnd: store.totalFeesVnd,
+    totalFeesVnd: store.totalFeesVnd, // phí ĐÃ TRẢ (trừ từ ví phí khi quét)
     recentUsages: usages.map((u) => ({
       voucherTitle: u.ownedVoucher.template.title,
       usedAt: u.usedAt.toISOString(),
       userName: u.ownedVoucher.owner.name,
+      feeVnd: u.feeVnd, // thêm: phí đã trừ cho lượt này
     })),
     // Thêm (FE bỏ qua):
     approved: store.status === 'approved',
+    fee: { balanceVnd: fee.balanceVnd, heldVnd: fee.heldVnd, availableVnd: fee.availableVnd, feePerVoucherVnd: fee.feePerVoucherVnd,
+      sellableCount: fee.sellableCount, unsoldCount: fee.unsoldCount, shortfallVnd: fee.shortfallVnd },
   };
 }
 
@@ -88,7 +93,7 @@ export async function createVoucher(userId: string, b: z.output<typeof CreateVou
   return toApiTemplate(t);
 }
 
-/** Quét QR = đốt voucher luôn (bước "Xác nhận" ở FE chỉ là hiệu ứng). Ghi phí 5.000đ. */
+/** Quét QR = đốt voucher luôn (bước "Xác nhận" ở FE chỉ là hiệu ứng). Trừ phí đã tạm giữ trong ví phí. */
 export async function scan(userId: string, qrCode: string) {
   const now = clock.now();
   await approvedStore(userId);
@@ -104,12 +109,10 @@ export async function scan(userId: string, qrCode: string) {
     });
     if (burned.count === 0) throw badRequest('Voucher đã được sử dụng');
 
-    await tx.voucherUsage.create({ data: { ownedVoucherId: v.id, storeId: userId, userId: v.ownerId, usedAt: now, feeVnd: VOUCHER_USE_FEE_VND } });
-    await tx.store.update({
-      where: { userId },
-      data: { totalUsages: { increment: 1 }, totalFeesVnd: { increment: VOUCHER_USE_FEE_VND } },
-    });
+    // Ví phí (quyết định #28): trừ thật khoản đã tạm giữ lúc bán.
+    const feeVnd = await chargeFee(tx, userId, v.id, v.feeHeldVnd, now);
+    await tx.voucherUsage.create({ data: { ownedVoucherId: v.id, storeId: userId, userId: v.ownerId, usedAt: now, feeVnd } });
     await enqueueChain(tx, { op: 'redeemVoucher', from: v.owner.walletAddress, templateId: v.templateId }, `usage:${v.id}`);
-    return { success: true, voucherTitle: v.template.title, feeVnd: VOUCHER_USE_FEE_VND, userName: v.owner.name };
+    return { success: true, voucherTitle: v.template.title, feeVnd, userName: v.owner.name };
   });
 }

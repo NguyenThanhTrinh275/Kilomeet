@@ -78,3 +78,26 @@ export function mockAdminStoreAction(id: string, body: unknown) {
 }
 
 export const mockNotifications = () => [];
+
+const MOCK_TX_HASH = '0x9f3c5a1e7b2d4c6f8a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f';
+const mockTxs = (who: string) => [
+  { id: 'tx-3', op: 'purchaseVoucher', label: `Mua voucher «Giảm 20% toàn menu» (giá chạy ngang quán)${who}`, amount: -250, status: 'pending', txHash: null, explorerUrl: null, createdAt: new Date().toISOString() },
+  { id: 'tx-2', op: 'mintToken', label: `Thưởng nhiệm vụ${who}`, amount: 10, status: 'done', txHash: MOCK_TX_HASH, explorerUrl: `https://testnet.snowtrace.io/tx/${MOCK_TX_HASH}`, createdAt: new Date(Date.now() - 3600_000).toISOString() },
+  { id: 'tx-1', op: 'mintToken', label: `Số dư mở đầu${who}`, amount: 1000, status: 'done', txHash: MOCK_TX_HASH, explorerUrl: `https://testnet.snowtrace.io/tx/${MOCK_TX_HASH}`, createdAt: new Date(Date.now() - 86400_000).toISOString() },
+];
+
+export function mockMyWallet() {
+  const u = getCurrentUser();
+  const address = u?.walletAddress ?? '0x0000000000000000000000000000000000000000';
+  return {
+    address,
+    explorerUrl: `https://testnet.snowtrace.io/address/${address}`,
+    chain: 'fake',
+    tokenBalance: u && 'tokenBalance' in u ? u.tokenBalance : 0,
+    transactions: mockTxs(''),
+  };
+}
+
+export function mockChainTxs() {
+  return mockTxs(' · Trần Minh');
+}

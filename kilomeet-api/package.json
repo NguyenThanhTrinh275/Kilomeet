@@ -19,7 +19,8 @@
     "demo:reset": "prisma migrate reset --force",
     "demo": "tsx scripts/demo.ts",
     "demo:replay": "tsx scripts/demo.ts replay",
-    "chain:check": "tsx scripts/chain-check.ts"
+    "chain:check": "tsx scripts/chain-check.ts",
+    "chain:set-fee": "tsx scripts/set-redeem-fee.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -1,175 +1,177 @@
-import { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { colors } from '../../src/theme/colors';
+import { useCallback, useState } from 'react';
+import { RefreshControl, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Calendar, Check, Hourglass, Link2, LogOut, RefreshCcw, Shield, Store as StoreIcon } from 'lucide-react-native';
 import { api } from '../../src/api/client';
 import { useAuthStore } from '../../src/stores/auth';
 import type { PendingStore, SeasonInfo } from '../../src/api/types';
+import { C, DEPTH, NIGHT_GRADIENT } from '../../src/theme/game';
+import { fmtDate } from '../../src/lib/format';
+import { Body, Card, GameDialog, GButton, GText, IconTile, Loading, MenuRow, Pill, Row, Screen, SectionHeader, XPBar } from '../../src/components/game';
+
+type AdminStore = PendingStore & { status: 'pending' | 'approved' | 'rejected' };
 
 function daysUntil(dateStr: string) {
   if (!dateStr) return 0;
-  const diff = new Date(dateStr).getTime() - Date.now();
-  return Math.max(0, Math.ceil(diff / 86_400_000));
+  // endDate (YYYY-MM-DD) là ngày cuối mùa, tính hết 23:59:59 giờ VN — khớp `daysLeft` của BE ở màn người chạy.
+  return Math.max(0, Math.ceil((Date.parse(`${dateStr.slice(0, 10)}T23:59:59+07:00`) - Date.now()) / 86_400_000));
 }
 
 export default function AdminDashboard() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const [pendingStores, setPendingStores] = useState<PendingStore[]>([]);
+  const [pending, setPending] = useState<PendingStore[]>([]);
+  const [stores, setStores] = useState<AdminStore[]>([]);
   const [seasons, setSeasons] = useState<SeasonInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const [stores, seasonList] = await Promise.all([
+      const [p, s, all] = await Promise.all([
         api.get<PendingStore[]>('/admin/pending-stores'),
         api.get<SeasonInfo[]>('/admin/seasons'),
+        api.get<AdminStore[]>('/admin/stores').catch(() => [] as AdminStore[]),
       ]);
-      setPendingStores(stores);
-      setSeasons(seasonList);
+      setPending(p);
+      setSeasons(s);
+      setStores(all);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { void fetchData(); }, [fetchData]);
+  // Tải lại mỗi lần quay về (sau khi duyệt quán / đóng mùa).
+  useFocusEffect(
+    useCallback(() => {
+      void fetchData();
+    }, [fetchData]),
+  );
 
-  const activeSeason = seasons.find((s) => s.isActive);
-  const daysLeft = activeSeason ? daysUntil(activeSeason.endDate) : 0;
-
-  function handleLogout() {
-    logout();
-    router.replace('/(auth)/login');
-  }
-
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 bg-km-bg items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </SafeAreaView>
-    );
-  }
+  if (loading) return <Loading />;
+  const active = seasons.find((s) => s.isActive);
+  const daysLeft = active ? daysUntil(active.endDate) : 0;
+  const pct = active ? Math.min(1, (Date.now() - Date.parse(active.startDate)) / (Date.parse(active.endDate) - Date.parse(active.startDate))) : 0;
+  const approved = stores.filter((s) => s.status === 'approved').length;
 
   return (
-    <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
-      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>
-        {/* Greeting */}
-        <View className="flex-row items-center mb-6">
-          <View className="flex-1">
-            <Text className="text-foreground text-2xl font-bold">Xin chào, {user?.name ?? 'Admin'}</Text>
-            <Text className="text-slate-500 text-sm mt-1">Bảng điều khiển quản trị</Text>
+    <Screen>
+      <Body
+        padTop={4}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              await fetchData();
+              setRefreshing(false);
+            }}
+            tintColor={C.green700}
+          />
+        }>
+        <Row gap={12}>
+          <IconTile icon={Shield} size={52} iconSize={28} fill={C.sky500} radius={16} sw={2.5} depth="small" />
+          <View style={{ flex: 1, gap: 2 }}>
+            <GText v="titleL">Bảng điều khiển</GText>
+            <Pill tone="ink" label={`Game master · ${user?.name ?? 'Admin'}`} />
           </View>
-          <View className="bg-km-accent/20 px-3 py-1.5 rounded-full">
-            <Text className="text-km-accent text-xs font-bold">ADMIN</Text>
-          </View>
-        </View>
+        </Row>
 
-        {/* Stats Row */}
-        <View className="flex-row mb-4 gap-3">
-          <View className="flex-1 bg-km-bg-secondary border border-border rounded-2xl p-4">
-            <View className="flex-row items-center mb-2">
-              <Ionicons name="hourglass-outline" size={20} color={colors.warning} />
-              <Text className="text-slate-500 text-xs ml-2">Chờ duyệt</Text>
-            </View>
-            <Text className="text-foreground text-3xl font-bold">{pendingStores.length}</Text>
-            <Text className="text-slate-500 text-xs mt-1">cửa hàng</Text>
-          </View>
-          <View className="flex-1 bg-km-bg-secondary border border-border rounded-2xl p-4">
-            <View className="flex-row items-center mb-2">
-              <Ionicons name="storefront-outline" size={20} color={colors.primary} />
-              <Text className="text-slate-500 text-xs ml-2">Mùa đang chạy</Text>
-            </View>
-            <Text className="text-foreground text-3xl font-bold">{seasons.filter((s) => s.isActive).length}</Text>
-            <Text className="text-slate-500 text-xs mt-1">mùa</Text>
-          </View>
-        </View>
-
-        {/* Season Info */}
-        {activeSeason && (
-          <View className="bg-km-bg-secondary border border-border rounded-2xl p-4 mb-4">
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="calendar-outline" size={20} color={colors.accent} />
-              <Text className="text-foreground text-base font-semibold ml-2">Mùa hiện tại</Text>
-              <View className="ml-auto">
-                <View className="bg-km-primary/20 px-2 py-1 rounded-md">
-                  <Text className="text-km-primary text-xs font-semibold">Đang diễn ra</Text>
-                </View>
-              </View>
-            </View>
-            <Text className="text-foreground text-lg font-bold">{activeSeason.name}</Text>
-            {activeSeason.endDate ? (
-              <Text className="text-slate-500 text-sm mt-1">
-                Kết thúc: {new Date(activeSeason.endDate).toLocaleDateString('vi-VN')}
-              </Text>
+        <View style={[{ borderRadius: 22, borderWidth: 2.5, borderColor: C.ink900, overflow: 'hidden' }, DEPTH.chunky]}>
+          <LinearGradient colors={NIGHT_GRADIENT} style={{ padding: 18, gap: 10 }}>
+            <Row between>
+              <Pill tone={active ? 'green' : 'red'} label={active ? 'Đang diễn ra' : 'Chưa mở mùa'} />
+              {active ? (
+                <GText v="bodyS" color={C.ink300}>
+                  {fmtDate(active.startDate).slice(0, 5)} – {fmtDate(active.endDate).slice(0, 5)}
+                </GText>
+              ) : null}
+            </Row>
+            <GText v="titleL" color={C.white}>
+              {active?.name ?? 'Chưa có mùa đang chạy'}
+            </GText>
+            {active ? (
+              <>
+                <Row gap={8} center={false} style={{ alignItems: 'baseline' }}>
+                  <GText v="numXL" color={C.coin500}>
+                    {daysLeft}
+                  </GText>
+                  <GText v="titleS" color={C.ink300}>
+                    ngày còn lại
+                  </GText>
+                </Row>
+                <XPBar pct={pct} tone="coin" height={16} />
+              </>
             ) : null}
-          </View>
-        )}
+          </LinearGradient>
+        </View>
 
-        {/* Season Countdown */}
-        {activeSeason && activeSeason.endDate ? (
-          <View className="bg-km-accent/10 border border-km-accent/30 rounded-2xl p-4 mb-6">
-            <View className="flex-row items-center">
-              <Ionicons name="timer-outline" size={24} color={colors.accent} />
-              <View className="ml-3 flex-1">
-                <Text className="text-km-accent text-sm font-semibold">Đếm ngược mùa</Text>
-                <Text className="text-foreground text-2xl font-bold mt-1">{daysLeft} ngày còn lại</Text>
-              </View>
-            </View>
-          </View>
-        ) : null}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          {[
+            [String(pending.length), 'cửa hàng chờ duyệt', Hourglass, C.orange300],
+            [String(approved), 'cửa hàng đối tác', Check, C.green300],
+            [String(seasons.length), 'mùa đã tạo', Calendar, C.sky300],
+            [active ? String(daysLeft) : '—', 'ngày tới reset', RefreshCcw, C.coin300],
+          ].map(([v, l, I, tile]) => (
+            <Card key={l as string} gap={4} pad={14} style={{ width: '47.8%' }}>
+              <IconTile icon={I as typeof Check} size={36} iconSize={18} fill={tile as string} radius={10} />
+              <GText v="numL">{v as string}</GText>
+              <GText v="bodyS" color={C.ink500}>
+                {l as string}
+              </GText>
+            </Card>
+          ))}
+        </View>
 
-        {/* Quick Links */}
-        <Text className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-3">
-          Truy cập nhanh
-        </Text>
+        <SectionHeader title="Điều hành" />
+        <Card pad={[4, 0]} gap={0} style={{ overflow: 'hidden' }}>
+          <MenuRow
+            icon={StoreIcon}
+            tile={C.orange300}
+            title="Duyệt cửa hàng"
+            subtitle={`${pending.length} quán đang chờ duyệt`}
+            onPress={() => router.push('/(admin)/stores')}
+            right={
+              pending.length ? (
+                <View style={{ minWidth: 24, height: 24, paddingHorizontal: 6, borderRadius: 24, backgroundColor: C.red500, borderWidth: 2, borderColor: C.ink900, alignItems: 'center', justifyContent: 'center' }}>
+                  <GText v="numS" color={C.white}>
+                    {pending.length}
+                  </GText>
+                </View>
+              ) : undefined
+            }
+          />
+          <MenuRow icon={RefreshCcw} tile={C.grape300} title="Quản lý mùa" subtitle="Mở / đóng mùa, chạy reset" onPress={() => router.push('/(admin)/season')} />
+          <MenuRow icon={Link2} tile={C.green300} title="Chuỗi Avalanche Fuji" subtitle="Token, voucher, huy hiệu ghi on-chain" onPress={() => router.push('/(admin)/chain')} last />
+        </Card>
 
-        <TouchableOpacity
-          className="bg-km-bg-secondary border border-border rounded-2xl p-4 mb-3 flex-row items-center"
-          activeOpacity={0.7}
-          onPress={() => router.push('/(admin)/stores')}
-        >
-          <View className="w-10 h-10 rounded-full bg-km-primary/20 items-center justify-center">
-            <Ionicons name="storefront" size={20} color={colors.primary} />
-          </View>
-          <View className="ml-3 flex-1">
-            <Text className="text-foreground text-base font-semibold">Duyệt cửa hàng</Text>
-            <Text className="text-slate-500 text-xs mt-0.5">
-              {pendingStores.length} đang chờ duyệt
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          className="bg-km-bg-secondary border border-border rounded-2xl p-4 mb-3 flex-row items-center"
-          activeOpacity={0.7}
-          onPress={() => router.push('/(admin)/season')}
-        >
-          <View className="w-10 h-10 rounded-full bg-km-accent/20 items-center justify-center">
-            <Ionicons name="trophy" size={20} color={colors.accent} />
-          </View>
-          <View className="ml-3 flex-1">
-            <Text className="text-foreground text-base font-semibold">Quản lý mùa</Text>
-            <Text className="text-slate-500 text-xs mt-0.5">
-              {activeSeason?.name ?? 'Chưa có mùa'}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        {/* Logout */}
-        <TouchableOpacity
-          className="bg-red-500/20 border border-red-500/30 rounded-2xl p-4 mt-4 flex-row items-center justify-center"
-          activeOpacity={0.7}
-          onPress={handleLogout}
-        >
-          <Ionicons name="log-out-outline" size={20} color={colors.error} />
-          <Text className="text-red-600 text-base font-semibold ml-2">Đăng xuất</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+        <GButton label="Đăng xuất" type="secondary" icon={LogOut} onPress={() => setLogoutOpen(true)} block />
+      </Body>
+      <GameDialog
+        open={logoutOpen}
+        onClose={() => setLogoutOpen(false)}
+        icon={LogOut}
+        title="Đăng xuất?"
+        actions={
+          <>
+            <GButton label="Ở lại" onPress={() => setLogoutOpen(false)} block />
+            <GButton
+              label="Đăng xuất"
+              type="danger"
+              icon={LogOut}
+              onPress={() => {
+                setLogoutOpen(false);
+                logout();
+                router.replace('/(auth)/login');
+              }}
+              block
+            />
+          </>
+        }
+      />
+    </Screen>
   );
 }

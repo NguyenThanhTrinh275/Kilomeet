@@ -9,10 +9,10 @@
 
 | | |
 |---|---|
-| **Cập nhật lần cuối** | 12/11/2026 |
-| **Đang ở** | Code xong S1–S8 + contract + FE nối BE. 137 test BE + 10 test contract xanh, typecheck BE/FE sạch, FE đóng gói Android được |
-| **Việc tiếp theo** | (1) Bạn thử trên điện thoại thật theo kịch bản demo · (2) duyệt quyết định tạm chốt #17–27 · (3) `pnpm demo:reset` (bắt buộc sau migration chain 12/11) |
-| **Đang vướng** | Khoá ví operator của hợp đồng Fuji (`blockchain/`) nằm ở người phụ trách blockchain; `blockchain/sdk/kilomeet.ts` chưa được push |
+| **Cập nhật lần cuối** | 18/11/2026 |
+| **Đang ở** | Code xong S1–S8 + hồ sơ quán + màn Ví & giao dịch + **ví phí trả trước của quán (quyết định #28, phí 3.000đ)**. **Chain chạy thật trên Fuji** (hợp đồng mới, verify Snowtrace, `feePerRedeemVnd = 3000`). 188 test BE + 24 test contract xanh, typecheck BE/FE sạch, FE đóng gói Android được |
+| **Việc tiếp theo** | (1) **Thử 8 bước demo trên điện thoại thật** (chưa lần nào) · (2) quay video · (3) push + PR `feat/app-game-ui` → `main` · (4) báo người phụ trách blockchain địa chỉ hợp đồng mới · (5) duyệt quyết định #17–29 |
+| **Đang vướng** | Không. Chain chạy thật trên Fuji bằng ví operator mới (18/11) |
 | **Hạn MVP** | ~20/11/2026 |
 
 ---
@@ -91,16 +91,26 @@
 **Contract (`blockchain/`, nhánh blockchain-layer, merge 12/11)**
 - [x] `RunToken` (reward có khoá chống trùng, settleSeason theo hạng), `Voucher` (purchase đốt token, giftFor 1 lần, redeem + phí), `SeasonBadge` — 24 test qua
 - [x] Đã deploy Fuji (`blockchain/deployments/fuji.json`): mùa on-chain 2 đang mở, operator đủ quyền, còn ~0,4 AVAX
-- [ ] Thiếu file `blockchain/sdk/kilomeet.ts` (sdk/api.ts import nó) và 1 file test (README ghi 34 test, repo có 24) → nhờ người phụ trách blockchain push
+- [x] Thiếu `blockchain/sdk/kilomeet.ts` → tự viết lại theo `sdk/api.ts` (18/11), `scripts/demo-api.ts` chạy đúng trên node Hardhat. README sửa 34 → 24 test
 - [x] Đã xoá `contracts/` (bản Claude viết trước khi có `blockchain/`), 12/11
-- [ ] Lấy khoá ví operator từ người phụ trách blockchain → `CHAIN=fuji` chạy thật
+- [-] Lấy khoá ví operator cũ → thay bằng deploy lại với ví mới (18/11)
 
 **Tích hợp chain trong BE**
 - [x] `ChainGateway` + `FakeChain` + `FujiChain` gọi đúng hợp đồng `blockchain/` (12/11): reward/purchase/giftFor/redeem/createVoucherType/setMerchantApproved/start-end-settleSeason/recordBadge
 - [x] `chain_outbox` ghi chung transaction + job gửi theo `seq`, lỗi thì dừng lô (giữ thứ tự), retry 5 lần; mùa on-chain đóng thì chờ; `createVoucherType` lưu `chain_token_id`
 - [x] Đã thử với hợp đồng `blockchain/` trên node Hardhat local: 33 giao dịch done (seed → chạy → mua → tặng → quét → tạo voucher → duyệt quán → đóng/mở mùa), `pnpm chain:check` khớp
-- [ ] Lệch làm tròn: chain tính giá giảm làm tròn **xuống**, BE `Math.round` → lệch ≤ 1 token khi giá × % không chẵn (seed không bị)
+- [-] Lệch làm tròn chain (xuống) vs BE (`Math.round`) ≤ 1 token/lượt mua giảm giá: chấp nhận (chain luôn ≥ DB, không làm giao dịch lỗi); `chain:check` đánh dấu `~`
 - [x] `GET /me/wallet`, `GET /admin/chain-txs` (link Snowtrace)
+
+**Rà soát 18/11 (đọc trạng thái Fuji thật)**: hợp đồng sống, mùa on-chain 2 mở, operator `0xEF15…7598` đủ quyền, ~0,4 AVAX, tổng cung 550 RUN. **BE chưa từng gửi giao dịch nào lên Fuji.**
+- [x] **P0** Tự deploy lại 18/11 bằng ví operator mới `0x4132…1128` (khoá trong `blockchain/.env` + `kilomeet-api/.env`), mùa on-chain 1 mở ngay khi deploy. Bản cũ lưu ở `deployments/fuji-v1.json`
+- [x] **P0** `WALLET_MNEMONIC` mới trong `kilomeet-api/.env` (ví người dùng sạch)
+- [x] **P0** `CHAIN=fuji` + `demo:reset`: 15 giao dịch seed done. Thử trên Fuji bằng Bình: mua ×2, tặng, quét QR, chạy 3 km → mint, đều done, `chain:check` khớp
+- [x] **P1** Verify source 3 hợp đồng trên Snowtrace
+- [x] **P1** Màn Ví & giao dịch (runner `/(runner)/wallet`, cửa hàng `/(store)/wallet`, quản trị `/(admin)/chain`), BE thêm `label`/`amount`; nút "Xem giao dịch" sau chạy, tặng, quét, đóng mùa
+- [x] **P1** Mỗi lần seed dùng dải ví HD mới → số dư chain = DB sau `demo:reset`
+- [x] P2 Outbox lưu txHash ngay khi phát, dòng `sent` mồ côi tra receipt thay vì gửi lại. Sửa thêm lỗi nonce do cache 250 ms của ethers (lộ ra khi chạy trên node local)
+- [x] P2 Đóng mùa chốt từng người idempotent, bấm lại để chốt nốt; mở mùa tự chốt nốt mùa trước. Đóng mùa gửi theo lô: 4 giao dịch thay vì ~26
 
 **Chuẩn bị demo**
 - [x] Route mẫu 3 km (không qua quán) và 5 km qua đúng Fuji + Highlands (có test)
@@ -111,6 +121,18 @@
 - [ ] Quay video dự phòng
 
 ---
+
+## Giai đoạn 4 — Giao diện game "Arcade Light" (FE)
+
+Thiết kế: Figma `RGHjgkkUPxUKr7fHlcZ8jo` (38 màn). Code trên nhánh `feat/app-game-ui`.
+
+- [x] Token màu/font/bóng đổ `src/theme/game.ts`; font Baloo 2 · Nunito · Lilita One
+- [x] Thư viện component `src/components/game/` (nút chunky, thẻ, đồng xu, huy hiệu hạng, XP bar, tab bar nổi, dialog, sheet, ghim bản đồ, ảnh bìa quán)
+- [x] Viết lại toàn bộ màn Runner / Cửa hàng / Quản trị / Đăng nhập, giữ nguyên logic store + API
+- [x] Màn mới: Giới thiệu quán `/(runner)/store/[id]`, Hồ sơ quán `/(store)/profile`, Tổng kết mùa `/(runner)/season-result`
+- [x] Mock `/stores/profile`, `/store/profile` + hợp đồng Mục 8.2
+- [x] **BE**: module hồ sơ quán (Mục 8.2): migration `store_profile`, `GET /stores/profile`, `GET/POST /store/profile`, seed hồ sơ 6 quán, 14 test
+- [ ] Thử trên điện thoại thật, đặc biệt các màn có bản đồ (Chạy, Phòng chờ nhóm, Giới thiệu quán)
 
 ## Mốc kiểm tra theo ngày
 
@@ -144,7 +166,18 @@
 
 Mới nhất ghi ở trên. Mỗi dòng: ngày · đã làm gì · còn dở gì.
 
+- **18/11/2026 (hoàn thiện chain)** · Màn Ví & giao dịch (3 vai) + link Snowtrace ở các bước demo; outbox chống gửi trùng (lưu txHash, tra receipt) + sửa lỗi nonce; đóng mùa idempotent + theo lô (đã chạy trên node Hardhat, số dư khớp); seed dùng ví mới mỗi lần; viết `sdk/kilomeet.ts`; README gốc cho giám khảo. 174 test BE xanh. Còn: thử máy thật, video, PR.
+- **18/11/2026 (P0 chain)** · Deploy lại 3 hợp đồng lên Fuji (RunToken `0x49D4…8225`, Voucher `0x22aB…215c`, SeasonBadge `0xf9C9…E8B0`), verify Snowtrace, mnemonic ví mới, BE chạy `CHAIN=fuji`, seed + luồng mua/tặng/quét/chạy lên chain thật, khớp số dư. `deploy.ts` tự `startSeason()`. Còn: P1 màn giao dịch trên FE, thử máy thật, video.
+- **18/11/2026 (rà soát)** · Rà toàn dự án, tập trung chain. 161 test BE + 24 test contract xanh, typecheck BE/FE sạch. Đọc trạng thái Fuji thật: BE chưa gửi giao dịch nào, ví người dùng dùng mnemonic công khai, hợp đồng chưa verify, FE chưa hiện giao dịch. Ghi việc P0–P2 ở Giai đoạn 3.
+
+- **18/11/2026 (BE)** · Đối chiếu mọi endpoint FE gọi với BE: chỉ thiếu hồ sơ quán. Làm xong Mục 8.2 (migration + 3 endpoint + seed + 14 test). 161 test xanh, typecheck sạch, đã seed lại DB dev. Giờ FE và BE khớp hết endpoint. Còn: thử máy thật.
+- **18/11/2026** · Thiết kế lại giao diện kiểu game trên Figma (38 màn) và code toàn bộ FE theo thiết kế trên nhánh `feat/app-game-ui`. Thêm tính năng hồ sơ quán (FE + mock + hợp đồng 8.2). Typecheck sạch, bundle Android build được, đã xem trên web các màn chính. Còn: BE hồ sơ quán, thử máy thật.
+
 - **12/11/2026 (chiều)** · Làm hết S1–S8: 1 migration domain + 1 migration chỉnh, 7 module domain (68 test), API đủ mọi endpoint FE gọi + Mục 8 (137 test tổng, contract test). Contracts 3 hợp đồng (10 test), FujiChain thử với node local khớp số dư. FE: màn chạy (GPS thật, chọn quán, phát route mẫu), voucher (myPrice, tặng email), đăng ký cửa hàng, mùa/huy hiệu, nhóm (bản đồ, chia sẻ vị trí, huỷ, ghép tự động), mock cho endpoint mới. Còn: thử máy thật, deploy Fuji, duyệt #17–27. Chưa commit.
 - **12/11/2026 (sáng)** · Chốt stack + A–D (#15, #16). Dựng `kilomeet-api/`: envelope, clock, JWT, auth, ví HD, seed, FakeChain. FE nối BE (client + auth store).
 - **11/11/2026 (tối)** · Đối chiếu FE mới với hợp đồng API, viết `docs/backend-plan.md`. Phát hiện 4 chỗ FE đổi hợp đồng.
 - **11/11/2026** · Viết `CLAUDE.md` và `progress.md`. Hợp đồng API và quy trình đã có sẵn trong `docs/`. Chưa có code BE.
+- **18/11/2026 (ví phí trả trước)** · Quyết định #28: phí 3.000đ/lượt, quán nạp ví phí; mua → giữ phí (UPDATE có điều kiện, chịu mua đồng thời), quét → trừ, hết hạn → trả lại (cron mỗi giờ + `/admin/run-fee-release`); ví không đủ → `pausedForFee` "Tạm hết". API `/store/fee`, `/store/fee/topup` (idempotent theo `requestId`). Figma: màn 33 · Ví phí + 26b · Tổng quan (ví phí) + 3 component. FE: màn Ví phí, banner thiếu tiền ở Tổng quan và Tạo voucher, "Tạm hết" phía người chạy. Sửa lỗi Pressable mất style trên Android (`components/game/Press.tsx`), nút tab giữa lệch/che chữ. Đặt phí on-chain 3.000đ (`pnpm chain:set-fee`). 188 test BE xanh.
+- **18/11/2026 (quyết định #29 + font)** · Bỏ khoá tìm nhóm khi vắng 2 lần: vắng/trễ chỉ giảm độ đúng hẹn. Sửa lỗi font: kiểu số (Lilita One) không có dấu tiếng Việt → `GText` tự dùng Baloo 2 khi chuỗi có ộ/ủ/ơ/ư….
+- **18/11/2026 (test trên Samsung S23+ qua adb)** · Chạy kịch bản demo bước 2–8 trên máy thật. Sửa ~25 lỗi giao diện Android (cắt chữ có dấu/font đậm, Pressable mất style, thanh tab, bàn phím che sheet, hộp thoại tràn, bản đồ hoạt hình), 1 lỗi chain quan trọng (khoá thưởng trùng sau reset → mint bị bỏ qua; nay gắn ví), nạp ví phí gọi trùng song song, màn kết quả mùa tự hiện. 189 test BE xanh, chain:check khớp. Chi tiết: `docs/test-checklist.md`.
+- **19/11/2026 (test lần 2 trên S23+)** · Checklist 147/153 đạt, còn R-18→R-23 (GPS thật, người dùng tự đi). Sửa: hook đặt sau return sớm làm treo app (groups, voucher detail), toast bị che dưới Modal (`GameToaster`), voucher được tặng hiện sai trạng thái, ghép tự động không tự cập nhật/không đóng được, tìm kiếm không dấu, trang quán không thấy voucher mới, request treo khi mất mạng (timeout 12 s + toast), cùng nhiều lỗi chữ/bố cục. 189 test BE xanh, typecheck FE sạch, đóng gói Android được.

@@ -8,6 +8,7 @@ import { AppError, badRequest, conflict, notFound } from '../../lib/errors.js';
 import { applyTokenDelta } from '../../lib/ledger.js';
 import { enqueueChain } from '../../lib/outbox.js';
 import { prisma, type Tx } from '../../lib/prisma.js';
+import { holdFee } from '../store/fee.js';
 import { templateInclude, toApiOwned, toApiTemplate } from './present.js';
 
 export const newQrCode = (ownedId: string) => `KM-${ownedId}-${randomBytes(8).toString('hex')}`;
@@ -116,10 +117,13 @@ export async function buy(userId: string, templateId: string) {
     }
 
     const id = `ov-${randomBytes(6).toString('hex')}`;
+    // Ví phí trả trước (quyết định #28): giữ phí lượt dùng trong ví quán; ví không đủ → "Tạm hết", rollback cả lượt mua.
+    const feeHeldVnd = await holdFee(tx, t.storeId, id, now);
     const created = await tx.ownedVoucher.create({
       data: {
         id, templateId: t.id, ownerId: userId, buyerId: userId, status: 'owned', purchasedAt: now,
         questCompletedAt: claim?.claimedAt ?? null, paidTokens: price, discounted: !!claim, qrCode: newQrCode(id),
+        feeHeldVnd,
       },
       include: { template: { include: templateInclude } },
     });

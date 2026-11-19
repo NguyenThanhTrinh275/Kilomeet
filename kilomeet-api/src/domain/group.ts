@@ -11,8 +11,7 @@ export const GROUP_MIN_CONFIRMED = 2;
 export const AUTO_MATCH_MIN = 3;
 export const MATCH_RADIUS_KM = 3;
 export const ARRIVE_RADIUS_M = 50;
-export const NO_SHOW_BAN_THRESHOLD = 2;
-export const NO_SHOW_BAN_DAYS = 7;
+// Quyết định #29: vắng / trễ hẹn chỉ làm giảm độ đúng hẹn, KHÔNG khoá tìm nhóm.
 export const GROUP_DISTANCES = [3, 5, 7, 10] as const;
 
 const RANGE_DIFF: Record<RankRange, number> = { same: 0, within1: 1, within2: 2, any: Infinity };

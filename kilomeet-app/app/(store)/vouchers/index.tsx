@@ -1,131 +1,117 @@
-import { useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { colors } from '../../../src/theme/colors';
+import { useCallback, useEffect, useState } from 'react';
+import { RefreshControl, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { Plus, Route, ShoppingBag } from 'lucide-react-native';
 import { useVoucherStore } from '../../../src/stores/voucher';
 import { useAuthStore } from '../../../src/stores/auth';
-import type { Store } from '../../../src/api/types';
+import type { Store, VoucherTemplate } from '../../../src/api/types';
+import { C } from '../../../src/theme/game';
+import { discountLabel, fmtDate } from '../../../src/lib/format';
+import { Body, Card, Chip, EmptyState, GButton, GText, Pill, type PillTone, RankChip, Row, Screen, StoreNav, TAB_BAR_SPACE, XPBar, Coin } from '../../../src/components/game';
 
-const RANK_LABELS: Record<string, string> = {
-  đồng: 'Đồng', bạc: 'Bạc', vàng: 'Vàng',
-  bạch_kim: 'Bạch kim', kim_cương: 'Kim cương', cao_thủ: 'Cao thủ',
-};
+type Filter = 'all' | 'live' | 'ended';
+const STUBS = [C.orange500, C.coin500, C.sky500, C.grape500];
 
-function formatDate(iso: string) {
-  const d = new Date(iso);
-  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-}
-
-function VoucherStatus({ remaining, expiresAt }: { remaining: number; expiresAt: string }) {
-  const expired = new Date(expiresAt) < new Date();
-  if (expired) return <Text className="text-xs font-semibold" style={{ color: colors.error }}>Hết hạn</Text>;
-  if (remaining === 0) return <Text className="text-xs font-semibold" style={{ color: colors.textMuted }}>Hết lượt</Text>;
-  return <Text className="text-xs font-semibold" style={{ color: colors.success }}>Đang bán</Text>;
+function status(v: VoucherTemplate): [string, PillTone, boolean] {
+  if (Date.parse(v.expiresAt) < Date.now()) return ['Hết hạn', 'red', true];
+  if (v.remaining <= 0) return ['Hết lượt', 'coin', true];
+  return ['Đang bán', 'green', false];
 }
 
 export default function StoreVouchersScreen() {
-  const router = useRouter();
   const user = useAuthStore((s) => s.user) as Store | null;
-  const { templates, isLoading, fetchTemplates } = useVoucherStore();
+  const { templates, fetchTemplates } = useVoucherStore();
+  const [filter, setFilter] = useState<Filter>('all');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    if (user?.id) {
-      fetchTemplates(user.id);
-    }
+    if (user?.id) fetchTemplates(user.id).catch(() => undefined);
   }, [user?.id, fetchTemplates]);
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) fetchTemplates(user.id).catch(() => undefined);
+    }, [user?.id, fetchTemplates]),
+  );
+
+  const mine = templates.filter((t) => t.storeId === user?.id);
+  const live = mine.filter((t) => !status(t)[2]);
+  const shown = filter === 'live' ? live : filter === 'ended' ? mine.filter((t) => status(t)[2]) : mine;
 
   return (
-    <SafeAreaView className="flex-1 bg-km-bg" edges={['top']}>
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3">
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text className="text-foreground text-lg font-bold">Voucher của tôi</Text>
-        <TouchableOpacity onPress={() => router.push('/(store)/vouchers/create')}>
-          <Ionicons name="add-circle" size={28} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
-        <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
-          {templates.length === 0 && (
-            <View className="items-center justify-center py-16">
-              <Ionicons name="pricetags-outline" size={48} color={colors.textMuted} />
-              <Text className="text-slate-500 text-base mt-4">Chưa có voucher nào</Text>
-            </View>
-          )}
-          {templates.map((v) => {
+    <Screen>
+      <Body
+        padTop={4}
+        padBottom={TAB_BAR_SPACE + 16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              await fetchTemplates(user?.id).catch(() => undefined);
+              setRefreshing(false);
+            }}
+            tintColor={C.green700}
+          />
+        }>
+        <Row between>
+          <GText v="displayL">Voucher của tôi</GText>
+          <GButton label="Tạo" size="S" icon={Plus} onPress={() => router.push('/(store)/vouchers/create')} />
+        </Row>
+        <Row gap={8} style={{ flexWrap: 'wrap' }}>
+          <Chip label={`Tất cả · ${mine.length}`} selected={filter === 'all'} onPress={() => setFilter('all')} />
+          <Chip label={`Đang bán · ${live.length}`} selected={filter === 'live'} onPress={() => setFilter('live')} />
+          <Chip label={`Đã kết thúc · ${mine.length - live.length}`} selected={filter === 'ended'} onPress={() => setFilter('ended')} />
+        </Row>
+        {shown.length === 0 ? (
+          <EmptyState icon={ShoppingBag} title="Chưa có voucher nào" text="Tạo voucher đầu tiên và gắn nhiệm vụ chạy ngang quán để kéo khách!" tone={C.orange300} />
+        ) : (
+          shown.map((v, i) => {
+            const [label, tone, ended] = status(v);
             const sold = v.totalSupply - v.remaining;
+            const stub = STUBS[i % STUBS.length]!;
             return (
-              <View key={v.id} className="bg-km-bg-secondary border border-border rounded-xl overflow-hidden mb-3">
-                <View className="h-1 bg-km-accent" />
-                <View className="p-4">
-                  {/* Title row */}
-                  <View className="flex-row items-start justify-between mb-2">
-                    <View className="flex-1 mr-3">
-                      <Text className="text-foreground text-base font-semibold">{v.title}</Text>
-                      <Text className="text-slate-500 text-xs mt-0.5">{v.description}</Text>
-                    </View>
-                    <VoucherStatus remaining={v.remaining} expiresAt={v.expiresAt} />
+              <Card key={v.id} gap={10} pad={14} style={ended ? { opacity: 0.6 } : null}>
+                <Row gap={12}>
+                  <View style={{ width: 64, height: 64, borderRadius: 16, backgroundColor: stub, borderWidth: 2.5, borderColor: C.ink900, alignItems: 'center', justifyContent: 'center' }}>
+                    <GText v="numM" color={stub === C.grape500 ? C.white : C.ink900} numberOfLines={1} style={{ fontSize: 17 }}>
+                      {discountLabel(v.discountPercent)}
+                    </GText>
                   </View>
-
-                  {/* Stats row */}
-                  <View className="flex-row items-center flex-wrap gap-y-2 mt-1">
-                    {/* Price */}
-                    <View className="flex-row items-center mr-4">
-                      <Ionicons name="pricetag" size={14} color={colors.accent} />
-                      <Text className="text-foreground text-sm font-bold ml-1">{v.priceTokens}</Text>
-                      <Text className="text-slate-500 text-xs ml-0.5">token</Text>
-                    </View>
-
-                    {/* Discount */}
-                    <View className="flex-row items-center mr-4">
-                      <Ionicons name="trending-down" size={14} color={colors.primary} />
-                      <Text className="text-km-primary text-sm font-bold ml-1">-{v.discountPercent}%</Text>
-                    </View>
-
-                    {/* Sold / Total */}
-                    <View className="flex-row items-center mr-4">
-                      <Ionicons name="cart" size={14} color={colors.textMuted} />
-                      <Text className="text-slate-500 text-sm ml-1">{sold}/{v.totalSupply}</Text>
-                    </View>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Pill tone={tone} label={label} />
+                    <GText v="titleS" numberOfLines={2}>
+                      {v.title}
+                    </GText>
+                    <Row gap={6}>
+                      <Coin size={16} />
+                      <GText v="numS">{v.priceTokens}</GText>
+                      <RankChip rank={v.minRank} small />
+                    </Row>
                   </View>
-
-                  {/* Bottom row */}
-                  <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-border">
-                    {/* Min rank */}
-                    <View
-                      className="px-2 py-0.5 rounded-md"
-                      style={{ backgroundColor: (colors.rank[v.minRank as keyof typeof colors.rank] || colors.textMuted) + '20' }}
-                    >
-                      <Text
-                        className="text-xs font-semibold"
-                        style={{ color: colors.rank[v.minRank as keyof typeof colors.rank] || colors.textMuted }}
-                      >
-                        {RANK_LABELS[v.minRank] || v.minRank}+
-                      </Text>
-                    </View>
-
-                    {/* Expiry */}
-                    <View className="flex-row items-center">
-                      <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                      <Text className="text-slate-500 text-xs ml-1">HSD: {formatDate(v.expiresAt)}</Text>
-                    </View>
+                </Row>
+                {v.questDescription ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', maxWidth: '100%', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 10, backgroundColor: C.grape300, borderWidth: 1.5, borderColor: C.ink900 }}>
+                    <Route size={14} color={C.grape700} strokeWidth={2.5} />
+                    <GText v="bodyS" style={{ marginLeft: 6, flexShrink: 1 }}>
+                      Nhiệm vụ: -{v.questDiscountPercent}% khi {v.questDescription.toLowerCase()}
+                    </GText>
                   </View>
-                </View>
-              </View>
+                ) : null}
+                <XPBar pct={v.totalSupply ? sold / v.totalSupply : 0} tone="orange" height={14} />
+                <Row between>
+                  <GText v="bodyS" color={C.ink700}>
+                    Đã bán {sold}/{v.totalSupply}
+                  </GText>
+                  <GText v="bodyS" color={C.ink500}>
+                    HSD {fmtDate(v.expiresAt)}
+                  </GText>
+                </Row>
+              </Card>
             );
-          })}
-          <View className="h-8" />
-        </ScrollView>
-      )}
-    </SafeAreaView>
+          })
+        )}
+      </Body>
+      <StoreNav active="vouchers" />
+    </Screen>
   );
 }

@@ -82,7 +82,7 @@ App tự kiểm tra bằng GPS, cửa hàng không phải làm gì. **Mỗi bu�
 1. **Đang bán:** cửa hàng đặt giá gốc, nhiệm vụ và mức giảm (nếu có), số lượng, hạn dùng, hạng tối thiểu và khu vực.
 2. **Đã mua:** token bị đốt, voucher vào ví. Mỗi người được giảm giá một lần cho mỗi voucher, trong 7 ngày sau khi làm xong nhiệm vụ.
 3. **Được tặng (nếu muốn):** tặng một lần cho người chạy khác, giữ nguyên hạn dùng. Điều kiện hạng và khu vực chỉ xét lúc mua.
-4. **Đã dùng:** cửa hàng quét QR tại quầy, voucher bị đốt, phí 5.000 đồng được ghi nhận.
+4. **Đã dùng:** cửa hàng quét QR tại quầy, voucher bị đốt, 3.000 đồng phí đã tạm giữ lúc bán được trừ khỏi ví phí của quán.
 5. **Hết hạn:** người giữ voucher tự chịu, không hoàn token.
 
 ## Nhóm chạy cho Hội viên
@@ -108,7 +108,7 @@ Chỉ Hội viên được chạy nhóm. Giờ xuất phát luôn là mốc cố
 
 **Sau buổi chạy:** ai chạy hết vòng cùng nhóm nhận huy hiệu “chạy chung”. Vị trí ngừng chia sẻ ngay khi buổi chạy kết thúc.
 
-**Độ đúng hẹn:** hồ sơ mỗi hội viên hiện tỷ lệ đúng hẹn. Vắng 2 lần không báo trong một mùa thì bị khóa tìm nhóm 1 tuần. Người tự lập nhóm có thể chỉ nhận người đúng hẹn từ 80% trở lên.
+**Độ đúng hẹn:** hồ sơ mỗi hội viên hiện tỷ lệ đúng hẹn. Đến trễ hoặc vắng không báo chỉ làm giảm tỷ lệ này, không bị khóa tìm nhóm. Người tự lập nhóm có thể chỉ nhận người đúng hẹn từ 80% trở lên.
 
 ## Ai trả tiền
 
@@ -116,7 +116,9 @@ Cửa hàng là nguồn thu chính, Hội viên là nguồn phụ. Người ch�
 
 | Ai trả | Trả gì (giả định) | Vì sao chịu trả |
 | --- | --- | --- |
-| Cửa hàng | 5.000 đồng mỗi lượt voucher được dùng tại quầy; tự chịu phần giảm giá | Chỉ trả khi có khách thật; nhiệm vụ voucher kéo khách tới quán; voucher đến đúng hạng và khu vực họ chọn |
+| Cửa hàng | 3.000 đồng mỗi lượt voucher được dùng tại quầy, trừ từ **ví phí trả trước**; tự chịu phần giảm giá | Chỉ trả khi có khách thật; nhiệm vụ voucher kéo khách tới quán; voucher đến đúng hạng và khu vực họ chọn |
+
+**Ví phí trả trước.** Quán nạp tiền vào ví phí; phát hành voucher không tốn gì. Người chạy mua một voucher thì 3.000 đồng được tạm giữ trong ví quán; quán quét QR thì trừ thật; voucher hết hạn mà chưa dùng thì trả lại. Ví không đủ thì voucher của quán hiện "Tạm hết". Ví dụ: phát 100 voucher, nạp 30.000 đồng thì bán được 10 voucher; muốn bán hết cần 300.000 đồng. Nhờ vậy voucher nào đã bán cũng có sẵn phí đứng sau: nền tảng không bị nợ, quán không mất tiền cho voucher không ai dùng, và người chạy đã đốt token thì chắc chắn dùng được. Quán né quét cũng không lợi: voucher không bị đốt nên khách có thể quay lại dùng tiếp.
 | Hội viên | 39.000 đồng/tháng | Được ghép nhóm chạy chung gần nhà |
 
 Gói Hội viên chỉ mở thêm chức năng tìm nhóm và chạy theo nhóm; token, hạng, voucher và luật cuối mùa giống hệt người dùng miễn phí. Voucher đã mua mà không dùng thì cửa hàng không phải trả phí.
@@ -140,7 +142,7 @@ Có 4 vai trò và phần hệ thống tự làm. Cột MVP cho biết việc n�
 | Cửa hàng | Đăng ký và chờ duyệt | Bắt buộc |
 | Cửa hàng | Tạo voucher: giá gốc, nhiệm vụ và mức giảm (nếu có), điều kiện | Bắt buộc |
 | Cửa hàng | Quét QR voucher của khách tại quầy | Bắt buộc |
-| Cửa hàng | Xem số lượt dùng, phí phải trả | Nên có |
+| Cửa hàng | Xem số lượt dùng, ví phí: nạp tiền, tạm giữ, lịch sử | Nên có |
 | Quản trị | Duyệt cửa hàng; mở, đóng mùa và chạy reset | Bắt buộc |
 | Quản trị | Cấu hình mức nhiệm vụ và mốc hạng | Nên có |
 | Tự động | Giao, chấm nhiệm vụ, phát token | Bắt buộc |
@@ -170,7 +172,7 @@ Demo đi hết một mùa thu nhỏ. Bước nào có giao dịch thì mở Snow
 3. Mở tài khoản Cao thủ dựng sẵn để khoe hạng và số km còn thiếu để giữ hạng.
 4. Mở voucher của một quán gần HCMUT, giá gốc 500 token. Phát buổi chạy 5 km đi ngang qua hai quán; kết thúc, chọn quán này: voucher còn 250 token.
 5. Mua voucher rồi tặng cho tài khoản thứ hai.
-6. Web cửa hàng quét QR của tài khoản thứ hai: voucher bị đốt, phí 5.000 đồng được ghi nhận.
+6. Web cửa hàng quét QR của tài khoản thứ hai: voucher bị đốt, ví phí trừ 3.000 đồng đã tạm giữ.
 7. Bật gói Hội viên, ghép nhóm: 3 tài khoản gần nhau, bản đồ hiện từng người đang tới điểm hội tụ.
 8. Quản trị bấm “đóng mùa”: tài khoản Cao thủ 1.000 token còn 500 token, hạng Bạch kim.
 
