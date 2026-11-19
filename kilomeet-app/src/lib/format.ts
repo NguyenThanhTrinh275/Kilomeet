@@ -85,3 +85,21 @@ export function avatarColor(seed: string): string {
 export function discountLabel(p: number): string {
   return p >= 100 ? 'FREE' : `-${p}%`;
 }
+
+/** Bảng bỏ dấu tiếng Việt (Hermes trên Android không tách dấu bằng normalize('NFD')). */
+const VI_GROUPS: [string, string][] = [
+  ['a', 'àáạảãâầấậẩẫăằắặẳẵ'],
+  ['e', 'èéẹẻẽêềếệểễ'],
+  ['i', 'ìíịỉĩ'],
+  ['o', 'òóọỏõôồốộổỗơờớợởỡ'],
+  ['u', 'ùúụủũưừứựửữ'],
+  ['y', 'ỳýỵỷỹ'],
+  ['d', 'đ'],
+];
+const VI_MAP: Record<string, string> = {};
+for (const [base, chars] of VI_GROUPS) for (const ch of chars) VI_MAP[ch] = base;
+
+/** Chuẩn hoá để tìm kiếm không dấu: "Bánh Mì Đặc Biệt" → "banh mi dac biet". */
+export function foldVi(s: string): string {
+  return Array.from(s.toLowerCase().trim(), (ch) => VI_MAP[ch] ?? ch).join('');
+}

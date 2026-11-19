@@ -41,7 +41,8 @@ function textOf(children: React.ReactNode): string {
  * "NHIỆM VỤ T…" / xuống dòng. Viết hoa sẵn trong JS rồi bỏ textTransform để đo đúng.
  */
 function upper(children: React.ReactNode): React.ReactNode {
-  return React.Children.map(children, (c) => (typeof c === 'string' ? c.toUpperCase() : c));
+  // Giữ ký hiệu tiền 'đ' sau con số ở dạng thường: "-3.000đ", không phải "-3.000Đ".
+  return React.Children.map(children, (c) => (typeof c === 'string' ? c.toUpperCase().replace(/(\d)Đ/g, '$1đ') : c));
 }
 
 /**

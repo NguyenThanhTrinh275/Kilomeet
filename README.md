@@ -98,7 +98,7 @@ Bước nào có giao dịch đều có nút **Xem giao dịch**, mở danh sác
 ## Kiểm thử
 
 ```bash
-cd kilomeet-api && pnpm typecheck && pnpm test   # 174 test: domain, API, contract với FE, outbox
+cd kilomeet-api && pnpm typecheck && pnpm test   # 189 test: domain, API, contract với FE, outbox, ví phí
 cd blockchain && npm test                        # 24 test hợp đồng
 cd kilomeet-app && pnpm exec tsc --noEmit
 ```

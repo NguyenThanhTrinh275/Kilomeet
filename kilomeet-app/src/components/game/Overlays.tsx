@@ -3,7 +3,9 @@ import * as React from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { LucideIcon } from 'lucide-react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { C, DEPTH } from '../../theme/game';
+import { GameToaster } from './GameToaster';
 import { GText, IconTile } from './primitives';
 
 export function GameDialog({
@@ -30,6 +32,7 @@ export function GameDialog({
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <GestureHandlerRootView style={{ flex: 1 }}>
       {/* Chừa thanh trạng thái + phím điều hướng; nội dung dài (vd. đóng mùa) thì cuộn trong hộp thoại. */}
       <Pressable
         onPress={onClose}
@@ -62,6 +65,8 @@ export function GameDialog({
           </ScrollView>
         </View>
       </Pressable>
+      <GameToaster />
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -70,6 +75,7 @@ export function GameSheet({ open, onClose, children }: { open: boolean; onClose:
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+      <GestureHandlerRootView style={{ flex: 1 }}>
       {/* Android edge-to-edge: cửa sổ không tự co khi bật bàn phím → phải dùng 'padding' cả trên Android,
           nếu không ô nhập (mã QR, email người nhận) bị bàn phím che mất. */}
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(27,26,58,0.6)' }}>
@@ -93,6 +99,8 @@ export function GameSheet({ open, onClose, children }: { open: boolean; onClose:
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
+      <GameToaster />
+      </GestureHandlerRootView>
     </Modal>
   );
 }

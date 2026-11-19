@@ -2,9 +2,20 @@
 // EXPO_PUBLIC_API_URL rỗng → dùng mock. Có giá trị (vd. http://192.168.1.26:3000) → gọi BE thật.
 
 import type { ApiResponse } from './types';
+import { toast } from 'sonner-native';
 import { mockGet, mockPost, mockPut, mockDelete } from './mock/router';
 
 const OFFLINE_MESSAGE = 'Không kết nối được máy chủ';
+/** Mất Wi-Fi mà còn 4G thì request tới IP LAN treo vài phút → tự huỷ sau 12 giây để không quay mãi. */
+const REQUEST_TIMEOUT_MS = 12_000;
+let lastOfflineToast = 0;
+/** Báo mất kết nối dùng chung (nhiều màn tải nền bỏ qua lỗi), tối đa 1 lần / 10 giây. */
+function notifyOffline() {
+  const now = Date.now();
+  if (now - lastOfflineToast < 10_000) return;
+  lastOfflineToast = now;
+  toast.error(OFFLINE_MESSAGE, { description: 'Kiểm tra Wi-Fi hoặc 4G rồi thử lại.' });
+}
 
 let baseUrl = (process.env.EXPO_PUBLIC_API_URL ?? '').trim().replace(/\/+$/, '');
 let authToken: string | null = null;
@@ -20,16 +31,22 @@ async function realFetch<T>(method: string, endpoint: string, body?: unknown): P
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
 
   let json: ApiResponse<T>;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
   try {
     const res = await fetch(`${baseUrl}${endpoint}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+      signal: ctrl.signal,
     });
     json = (await res.json()) as ApiResponse<T>;
   } catch {
-    // Mất mạng, sai IP, hoặc server trả về thứ không phải JSON.
+    // Mất mạng, sai IP, quá thời gian chờ, hoặc server trả về thứ không phải JSON.
+    notifyOffline();
     throw new Error(OFFLINE_MESSAGE);
+  } finally {
+    clearTimeout(timer);
   }
   if (!json.success) throw new Error(json.message ?? 'Có lỗi xảy ra');
   return json.data;

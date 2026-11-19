@@ -162,7 +162,7 @@ function GroupLobby({ group, userId }: { group: GroupRun; userId: string }) {
     if (arrived || loc?.arrived) return ['Đã tới', 'green', 'Đã tới điểm hẹn'];
     if (loc) return ['Đang tới', 'coin', `Còn ~${loc.etaMinutes} phút`];
     if (confirmedM) return ['Đã xác nhận', 'sky', 'Chờ tới giờ chia sẻ vị trí'];
-    return ['Chưa xác nhận', 'red', 'Chưa xác nhận tham gia'];
+    return ['Chưa xác nhận', 'red', 'Cần xác nhận trước giờ chạy 2 tiếng'];
   };
   const confirmedCount = group.members.filter((m) => m.confirmed).length;
 
@@ -253,19 +253,20 @@ function GroupLobby({ group, userId }: { group: GroupRun; userId: string }) {
               return (
                 <Row key={m.userId} gap={10} style={{ paddingVertical: 10, borderBottomWidth: i < group.members.length - 1 ? 1.5 : 0, borderBottomColor: C.ink300 }}>
                   <Avatar initials={initials(m.userName)} fill={avatarColor(m.userName)} size={40} />
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Row gap={6}>
+                  {/* Nhãn trạng thái nằm dưới tên (không chung hàng) để tên và mô tả không bị ép hẹp. */}
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <GText v="bodyMStrong" numberOfLines={1} style={{ flexShrink: 1 }}>
                         {m.userName}
                         {m.userId === userId ? ' (bạn)' : ''}
                       </GText>
-                      <RankEmblem rank={m.rank} size={18} />
-                    </Row>
+                      <RankEmblem rank={m.rank} size={18} style={{ marginLeft: 6 }} />
+                    </View>
+                    <Pill tone={tone} label={label} />
                     <GText v="bodyS" color={C.ink500}>
                       {sub} · đúng hẹn {m.punctuality}%
                     </GText>
                   </View>
-                  <Pill tone={tone} label={label} />
                 </Row>
               );
             })}
@@ -276,7 +277,7 @@ function GroupLobby({ group, userId }: { group: GroupRun; userId: string }) {
               <GButton label={me ? 'Xác nhận tham gia' : 'Tham gia & xác nhận'} icon={Users} loading={busy} onPress={() => void handleJoin()} block />
             ) : (
               <>
-                <GButton label={me?.arrived ? 'Đã check-in ✓' : 'Đã xác nhận · chờ tới điểm hẹn'} icon={PinIcon} disabled block />
+                <GButton label={me?.arrived ? 'Đã check-in ✓' : 'Đã xác nhận ✓'} icon={PinIcon} disabled block />
                 <Row gap={8} style={{ justifyContent: 'center' }}>
                   <Info size={14} color={C.ink500} strokeWidth={2.5} />
                   <GText v="bodyS" color={C.ink500}>

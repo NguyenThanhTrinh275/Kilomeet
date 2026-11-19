@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Modal, RefreshControl, StyleSheet, View } from 'react-native';
+import { Modal, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,7 +11,7 @@ import { useGroupStore } from '../../../src/stores/group';
 import { useAuthStore } from '../../../src/stores/auth';
 import type { GroupRun, Runner } from '../../../src/api/types';
 import { C, DEPTH, NIGHT_DEEP_GRADIENT, TONE, type Tone } from '../../../src/theme/game';
-import { avatarColor, fmtDayMonth, initials } from '../../../src/lib/format';
+import { avatarColor, fmtDayMonth, initials, foldVi } from '../../../src/lib/format';
 import { MEMBER_BENEFITS, MEMBERSHIP_PRICE, subscribeMember } from '../../../src/lib/membership';
 import {
   Avatar,
@@ -96,13 +96,15 @@ function GroupCard({ g, mine, onPress }: { g: GroupRun; mine?: boolean; onPress:
   );
 }
 
-type MatchState = { phase: 'searching' | 'matched' | 'pending'; groupId?: string | null };
+type MatchState = { phase: 'searching' | 'matched' | 'pending'; groupId?: string | null; date?: string; known?: string[] };
 
 function Matchmaking({ state, onClose, myName }: { state: MatchState | null; onClose: () => void; myName: string }) {
   const searching = state?.phase === 'searching';
+  const matched = state?.phase === 'matched';
+  // Avatar trang trí: chỉ tick "đã tìm thấy" khi BE đã ghép thật.
   const blips: [string, string, number, number, boolean][] = [
-    ['HA', C.sky300, 230, 70, !searching],
-    ['QT', C.orange300, 50, 200, !searching],
+    ['HA', C.sky300, 230, 70, matched],
+    ['QT', C.orange300, 50, 200, matched],
     ['LN', C.green300, 220, 240, false],
     ['TA', C.grape300, 70, 50, false],
   ];
@@ -111,7 +113,9 @@ function Matchmaking({ state, onClose, myName }: { state: MatchState | null; onC
       <View style={{ flex: 1, backgroundColor: C.night }}>
         <LinearGradient colors={NIGHT_DEEP_GRADIENT} style={StyleSheet.absoluteFill} />
         <StarField count={20} seed={31} height={700} />
-        <SafeAreaView style={{ flex: 1, paddingHorizontal: 24, gap: 18 }}>
+        <SafeAreaView style={{ flex: 1 }}>
+          {/* Cuộn được: màn cao hơn 1 trang trên S23+ thì nút "Đóng" vẫn với tới. */}
+          <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, gap: 18 }}>
           <View style={{ alignItems: 'center', gap: 6, paddingTop: 16 }}>
             <Pill tone="coin" label="Ghép tự động" />
             <GText v="displayL" color={C.white} align="center">
@@ -155,12 +159,12 @@ function Matchmaking({ state, onClose, myName }: { state: MatchState | null; onC
           </Row>
           <Card gap={8}>
             <Row between>
-              <GText v="bodyMStrong">{searching ? 'Đang quét hội viên gần bạn' : 'Đã tìm thấy'}</GText>
+              <GText v="bodyMStrong">{searching ? 'Đang quét hội viên gần bạn' : matched ? 'Đã tìm thấy' : 'Đã gửi yêu cầu'}</GText>
               <GText v="numS" color={C.green700}>
-                {searching ? '…' : state?.phase === 'matched' ? '3 / 3 tối thiểu' : 'Đang chờ thêm'}
+                {searching ? '…' : matched ? '3 / 3 tối thiểu' : 'Chờ hội viên khác'}
               </GText>
             </Row>
-            <XPBar pct={searching ? 0.45 : state?.phase === 'matched' ? 1 : 0.66} tone="green" height={16} />
+            <XPBar pct={searching ? 0.45 : matched ? 1 : 0.33} tone="green" height={16} />
           </Card>
           <View style={{ flex: 1 }} />
           {state?.phase === 'matched' && state.groupId ? (
@@ -176,6 +180,7 @@ function Matchmaking({ state, onClose, myName }: { state: MatchState | null; onC
             />
           ) : null}
           <GButton label={searching ? 'Huỷ tìm' : 'Đóng'} type="secondary" icon={X} onPress={onClose} block style={{ marginBottom: 16 }} />
+          </ScrollView>
         </SafeAreaView>
       </View>
     </Modal>
@@ -289,10 +294,23 @@ export default function GroupsScreen() {
     setRefreshing(false);
   }, [fetchGroups]);
 
+  // (Hook phải nằm TRƯỚC mọi return sớm.) Chưa đủ người: cứ 5 giây tải lại nhóm, thấy nhóm mới (ngày đó, có mình) thì chuyển sang "đã ghép".
+  useEffect(() => {
+    if (match?.phase !== 'pending' || !user?.id) return;
+    const t = setInterval(async () => {
+      await fetchGroups().catch(() => undefined);
+      const g = useGroupStore
+        .getState()
+        .groups.find((x) => x.date === match.date && !match.known?.includes(x.id) && x.members.some((m) => m.userId === user.id));
+      if (g) setMatch({ phase: 'matched', groupId: g.id });
+    }, 5000);
+    return () => clearInterval(t);
+  }, [match, user?.id, fetchGroups]);
+
   if (!isMember) return <VipPass />;
 
-  const q = search.trim().toLowerCase();
-  const filtered = groups.filter((g) => !q || g.meetingPoint.name.toLowerCase().includes(q) || g.timeSlot.includes(q));
+  const q = foldVi(search); // tìm không dấu
+  const filtered = groups.filter((g) => !q || foldVi(g.meetingPoint.name).includes(q) || g.timeSlot.includes(q));
   const mine = filtered.filter((g) => g.members.some((m) => m.userId === user?.id));
   const nearby = filtered.filter((g) => !g.members.some((m) => m.userId === user?.id) && g.status !== 'cancelled' && g.status !== 'completed');
 
@@ -301,6 +319,7 @@ export default function GroupsScreen() {
    * Đủ 3 người gần nhau cùng khung giờ thì BE lập nhóm ngay; chưa đủ thì chờ người khác đăng ký.
    */
   const handleAutoMatch = async () => {
+    const known = useGroupStore.getState().groups.map((g) => g.id);
     setMatch({ phase: 'searching' });
     try {
       let pos = { latitude: 10.7722, longitude: 106.6596 };
@@ -315,7 +334,7 @@ export default function GroupsScreen() {
         new Promise((res) => setTimeout(res, 1800)),
       ]);
       await fetchGroups().catch(() => undefined);
-      setMatch(r.status === 'matched' && r.groupId ? { phase: 'matched', groupId: r.groupId } : { phase: 'pending' });
+      setMatch(r.status === 'matched' && r.groupId ? { phase: 'matched', groupId: r.groupId } : { phase: 'pending', date: tomorrow, known });
     } catch (e) {
       setMatch(null);
       toast.error('Không thể ghép nhóm lúc này', { description: (e as Error).message });

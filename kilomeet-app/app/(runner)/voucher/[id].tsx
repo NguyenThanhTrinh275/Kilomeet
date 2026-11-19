@@ -70,6 +70,7 @@ function QrCard({ voucher, storeName }: { voucher: OwnedVoucher; storeName: stri
 
 export default function VoucherDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const [giftError, setGiftError] = useState<string | null>(null); // khai báo TRƯỚC mọi return sớm (luật hooks)
   const templates = useVoucherStore((s) => s.templates);
   const myVouchers = useVoucherStore((s) => s.myVouchers);
   const buyVoucher = useVoucherStore((s) => s.buyVoucher);
@@ -147,9 +148,10 @@ export default function VoucherDetailScreen() {
     if (!target) return;
     const trimmed = recipient.trim();
     if (!trimmed) {
-      toast.warning('Thiếu thông tin', { description: 'Vui lòng nhập email người nhận.' });
+      setGiftError('Vui lòng nhập email người nhận.');
       return;
     }
+    setGiftError(null);
     setGifting(true);
     try {
       await giftVoucher(target.id, trimmed);
@@ -162,7 +164,8 @@ export default function VoucherDetailScreen() {
       });
       router.back();
     } catch (e) {
-      toast.error('Lỗi tặng voucher', { description: e instanceof Error ? e.message : 'Không thể tặng voucher' });
+      // Toast nằm dưới Modal (sheet tặng) nên không thấy → báo lỗi ngay trong sheet.
+      setGiftError(e instanceof Error ? e.message : 'Không thể tặng voucher');
     } finally {
       setGifting(false);
     }
@@ -387,11 +390,11 @@ export default function VoucherDetailScreen() {
               </Row>
             </ScrollView>
           </SafeAreaView>
-          <GiftSheet open={giftOpen && !!unlocked} onClose={() => setGiftOpen(false)} template={template} recipient={recipient} setRecipient={setRecipient} onConfirm={() => void confirmGift()} busy={gifting} />
+          <GiftSheet open={giftOpen && !!unlocked} onClose={() => (setGiftOpen(false), setGiftError(null))} template={template} recipient={recipient} setRecipient={(v: string) => (setRecipient(v), setGiftError(null))} onConfirm={() => void confirmGift()} busy={gifting} error={giftError} />
         </View>
       </Modal>
 
-      <GiftSheet open={giftOpen && !unlocked} onClose={() => setGiftOpen(false)} template={template} recipient={recipient} setRecipient={setRecipient} onConfirm={() => void confirmGift()} busy={gifting} />
+      <GiftSheet open={giftOpen && !unlocked} onClose={() => (setGiftOpen(false), setGiftError(null))} template={template} recipient={recipient} setRecipient={(v: string) => (setRecipient(v), setGiftError(null))} onConfirm={() => void confirmGift()} busy={gifting} error={giftError} />
     </Screen>
   );
 }
@@ -403,6 +406,7 @@ function GiftSheet({
   recipient,
   setRecipient,
   onConfirm,
+  error,
   busy,
 }: {
   open: boolean;
@@ -411,6 +415,7 @@ function GiftSheet({
   recipient: string;
   setRecipient: (s: string) => void;
   onConfirm: () => void;
+  error?: string | null;
   busy: boolean;
 }) {
   const me = useAuthStore((s) => s.user);
@@ -454,9 +459,10 @@ function GiftSheet({
       })}
       <GInput label="Hoặc nhập email người nhận" icon={Mail} placeholder="VD: lan@demo.com" value={recipient} onChangeText={setRecipient} autoCapitalize="none" keyboardType="email-address" />
       <Banner icon={Info} tone="coin" iconColor={C.ink900} text="Điều kiện hạng và khu vực chỉ xét lúc mua — người nhận dùng được ngay." />
+      {error ? <Banner icon={Info} tone="red" iconColor={C.red700} title="Không tặng được" text={error} /> : null}
       <Row gap={12}>
         <GButton label="Huỷ" type="secondary" onPress={onClose} flex disabled={busy} />
-        <GButton label="Tặng ngay" type="accent" icon={Gift} loading={busy} onPress={onConfirm} flex />
+        <GButton label="Tặng" type="accent" icon={Gift} loading={busy} onPress={onConfirm} flex />
       </Row>
     </GameSheet>
   );

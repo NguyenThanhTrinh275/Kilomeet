@@ -46,7 +46,7 @@ export default function StoreProfileScreen() {
 
   useEffect(() => {
     if (!id) return;
-    (templates.length ? Promise.resolve() : fetchTemplates().catch(() => undefined))
+    fetchTemplates().catch(() => undefined) // luôn tải mới: voucher quán vừa tạo phải hiện ngay
       .then(() => loadStoreProfile(id, useVoucherStore.getState().templates))
       .then(setProfile)
       .catch((e) => setError((e as Error).message));

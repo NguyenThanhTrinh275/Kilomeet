@@ -7,7 +7,7 @@ import { useVoucherStore } from '../../../src/stores/voucher';
 import { useRunnerStore } from '../../../src/stores/runner';
 import { RANK_INDEX, RANK_TOKEN_RETENTION, type OwnedVoucher, type VoucherTemplate } from '../../../src/api/types';
 import { C, DEPTH, RANK_LABEL, TONE, type Tone } from '../../../src/theme/game';
-import { discountLabel, fmtDayMonth, fmtInt } from '../../../src/lib/format';
+import { discountLabel, fmtDayMonth, fmtInt, foldVi } from '../../../src/lib/format';
 import {
   Body,
   Card,
@@ -40,9 +40,9 @@ function ownedStatus(v: OwnedVoucher): { label: string; tone: Tone | 'ink'; dim:
   const expired = v.status === 'expired' || Date.parse(v.template.expiresAt) < Date.now();
   if (v.status === 'used') return { label: 'Đã dùng', tone: 'ink', dim: true };
   if (expired) return { label: 'Hết hạn', tone: 'red', dim: true };
-  if (v.status === 'gifted') return { label: 'Đã tặng', tone: 'sky', dim: true };
-  if (v.giftedFrom) return { label: 'Được tặng', tone: 'grape', dim: false };
-  return { label: 'Có thể dùng', tone: 'green', dim: false };
+  // `gifted` trong kho của MÌNH = voucher người khác tặng mình (người tặng không còn giữ nó) → dùng được.
+  if (v.status === 'gifted' || v.giftedFrom) return { label: 'Được tặng', tone: 'grape', dim: false };
+  return { label: 'Dùng được', tone: 'green', dim: false };
 }
 
 export default function VouchersScreen() {
@@ -67,8 +67,8 @@ export default function VouchersScreen() {
     setRefreshing(false);
   }, [fetchTemplates, fetchMyVouchers]);
 
-  const q = search.trim().toLowerCase();
-  const match = (t: VoucherTemplate) => !q || t.storeName.toLowerCase().includes(q) || t.title.toLowerCase().includes(q);
+  const q = foldVi(search); // tìm không dấu
+  const match = (t: VoucherTemplate) => !q || foldVi(t.storeName).includes(q) || foldVi(t.title).includes(q);
   const eligible = (t: VoucherTemplate) => t.myQuestEligible ?? passedStoreIds.has(t.storeId);
 
   const shop = templates

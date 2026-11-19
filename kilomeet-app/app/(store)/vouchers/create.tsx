@@ -17,7 +17,7 @@ const QUEST = 'Chạy ngang qua quán';
 const QUEST_STEPS = [20, 30, 40, 50];
 
 const positiveInt = (label: string) =>
-  z.string().trim().min(1, `Nhập ${label}`).refine((v) => /^\d+$/.test(v) && Number(v) > 0, `${label} phải > 0`);
+  z.string().trim().min(1, `Nhập ${label}`).refine((v) => /^\d+$/.test(v) && Number(v) > 0, `${label[0]!.toUpperCase()}${label.slice(1)} phải là số nguyên dương`);
 
 const schema = z.object({
   title: z.string().trim().min(2, 'Nhập tiêu đề voucher'),

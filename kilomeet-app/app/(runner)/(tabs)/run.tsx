@@ -50,6 +50,7 @@ export default function RunScreen() {
   const [elapsed, setElapsed] = useState(0);
   const [currentPos, setCurrentPos] = useState<LatLng | null>(null);
   const [questReward, setQuestReward] = useState<number | null>(null);
+  const [dailyDoneBefore, setDailyDoneBefore] = useState(false);
   const [passedStores, setPassedStores] = useState<PassedStore[]>([]);
   const [claimedStoreId, setClaimedStoreId] = useState<string | null>(null);
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
@@ -183,6 +184,8 @@ export default function RunScreen() {
           .filter((q) => q.status === 'completed' && before.find((b) => b.id === q.id)?.status !== 'completed')
           .reduce((sum, q) => sum + q.rewardTokens, 0);
         setQuestReward(reward > 0 ? reward : null);
+        // Nhiệm vụ ngày đã nhận từ buổi trước → nói rõ thay vì "Chưa đạt nhiệm vụ".
+        setDailyDoneBefore(before.some((b) => b.type === 'daily' && b.status === 'completed'));
         if (run.passedStoreIds.length > 0) {
           const ps = await fetchPassedStores(run.id);
           setPassedStores(ps);
@@ -272,6 +275,8 @@ export default function RunScreen() {
         <GameMap
           ref={mapRef}
           style={StyleSheet.absoluteFill}
+          // Bảng nhiệm vụ che nửa dưới: đệm đáy để tâm bản đồ (vị trí của bạn) nằm ở phần còn thấy.
+          mapPadding={{ top: 120, right: 0, bottom: 300, left: 0 }}
           initialRegion={{ ...center, latitudeDelta: 0.012, longitudeDelta: 0.012 }}
           showsUserLocation={!currentPos}
           showsMyLocationButton={false}>
@@ -324,12 +329,12 @@ export default function RunScreen() {
           <Row gap={12} center={false}>
             {[daily, weekly].map((q, i) =>
               q ? (
-                <Card key={q.id} pad={12} gap={6} depth="small" style={{ flex: 1 }}>
+                <Card key={q.id} pad={[12, 10]} gap={6} depth="small" style={{ flex: 1 }}>
                   <Row between>
                     <Pill tone={i === 0 ? 'orange' : 'sky'} label={i === 0 ? 'Ngày' : 'Tuần'} />
                     <Row gap={2}>
-                      <Coin size={14} />
-                      <GText v="numS" numberOfLines={1}>
+                      <Coin size={13} />
+                      <GText v="numS" numberOfLines={1} style={{ fontSize: 13 }}>
                         +{q.rewardTokens}
                       </GText>
                     </Row>
@@ -421,7 +426,7 @@ export default function RunScreen() {
                     <Coin size={52} />
                     <GText v="numL">+{questReward ?? 0}</GText>
                     <GText v="bodyS" color={C.ink700}>
-                      {questReward ? 'Nhiệm vụ hoàn thành' : 'Chưa đạt nhiệm vụ'}
+                      {questReward ? 'Nhiệm vụ hoàn thành' : dailyDoneBefore ? 'Hôm nay đã nhận thưởng' : 'Chưa đạt nhiệm vụ'}
                     </GText>
                   </Card>
                   <Card fill={C.sky300} pad={14} gap={6} center style={{ flex: 1 }}>

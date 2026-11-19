@@ -56,9 +56,9 @@ Số liệu trong bảng là **số của dữ liệu demo ngay sau `pnpm demo:r
 | UI-06 | Thanh tab cửa hàng | Nút Quét QR tròn màu cam ở giữa, không che chữ "QUÉT QR" | [x] |
 | UI-07 | Bản đồ hoạt hình | Đường trắng viền đậm, công viên xanh, không có tên đường. Đúng kiểu này ở **mọi** bản đồ, kể cả lúc đang chạy | [x] |
 | UI-08 | Thông báo lỗi | Lỗi hiện bằng toast hoặc hộp thoại **tiếng Việt**, không hiện tên lỗi kỹ thuật | [x] |
-| UI-09 | Kéo để làm mới | Kéo xuống ở Sảnh, Cửa hàng, Ví và Tổng quan quán: dữ liệu tải lại | [ ] |
+| UI-09 | Kéo để làm mới | Kéo xuống ở Sảnh, Cửa hàng, Ví và Tổng quan quán: dữ liệu tải lại | [x] kéo ở Ví phí gọi lại API |
 | UI-10 | Màn nhỏ | Không có chữ bị cắt hay tràn ngang. Nội dung cuối trang không bị thanh tab che | [x] |
-| UI-11 | Mất mạng | Tắt Wi-Fi rồi thao tác: app báo lỗi và không bị treo | [ ] |
+| UI-11 | Mất mạng | Tắt Wi-Fi rồi thao tác: app báo lỗi và không bị treo | [x] sau sửa: tự dừng sau 12 giây + "Không kết nối được máy chủ" |
 
 ---
 
@@ -66,14 +66,14 @@ Số liệu trong bảng là **số của dữ liệu demo ngay sau `pnpm demo:r
 
 | Mã | Cách làm | Kết quả đúng | Đạt |
 |---|---|---|---|
-| A-01 | Mở app lần đầu, chưa đăng nhập | Vào màn giới thiệu (onboarding), lướt qua các trang, cuối cùng tới màn Đăng nhập | [ ] |
+| A-01 | Mở app lần đầu, chưa đăng nhập | Vào màn giới thiệu (onboarding), lướt qua các trang, cuối cùng tới màn Đăng nhập | [x] 3 trang rồi tới Đăng nhập |
 | A-02 | Đăng nhập `lan@demo.com` | Vào Sảnh của người chạy | [x] |
 | A-03 | Đăng nhập sai mật khẩu | Báo "Email hoặc mật khẩu không đúng" | [x] |
-| A-04 | Gõ email có chữ hoa hoặc dấu cách thừa, ví dụ ` LAN@demo.com ` | Vẫn đăng nhập được | [ ] |
-| A-05 | Đăng ký **người chạy** mới bằng email mới | Tạo được tài khoản: hạng Đồng, 0 token, có địa chỉ ví Avalanche | [ ] |
-| A-06 | Đăng ký bằng email đã có | Báo "Email đã được sử dụng" | [ ] |
-| A-07 | Đăng ký mà bỏ trống hoặc nhập sai trường | Báo lỗi tiếng Việt ngay dưới trường đó | [ ] |
-| A-08 | Đăng ký **đối tác**: tên quán, địa chỉ, bấm "Lấy vị trí quán" | Bản đồ hiện ghim tại vị trí. Tạo xong thì vào màn **Đang chờ duyệt** | [ ] |
+| A-04 | Gõ email có chữ hoa hoặc dấu cách thừa, ví dụ ` LAN@demo.com ` | Vẫn đăng nhập được | [x] " LAN@Demo.com " vào đúng Lan |
+| A-05 | Đăng ký **người chạy** mới bằng email mới | Tạo được tài khoản: hạng Đồng, 0 token, có địa chỉ ví Avalanche | [x] Đồng, 0 token, có ví |
+| A-06 | Đăng ký bằng email đã có | Báo "Email đã được sử dụng" | [x] |
+| A-07 | Đăng ký mà bỏ trống hoặc nhập sai trường | Báo lỗi tiếng Việt ngay dưới trường đó | [x] |
+| A-08 | Đăng ký **đối tác**: tên quán, địa chỉ, bấm "Lấy vị trí quán" | Bản đồ hiện ghim tại vị trí. Tạo xong thì vào màn **Đang chờ duyệt** | [x] Tiem Banh Test, chờ duyệt, có toạ độ |
 | A-09 | Tắt app rồi mở lại | Vẫn đăng nhập, vào đúng trang chủ của vai đó | [x] |
 | A-10 | Đăng xuất ở từng vai | Có hộp xác nhận, sau đó quay về màn Đăng nhập | [x] |
 
@@ -87,31 +87,31 @@ Số liệu trong bảng là **số của dữ liệu demo ngay sau `pnpm demo:r
 |---|---|---|---|
 | R-01 | Mở Sảnh bằng Minh | Hiện hạng Cao thủ, 1.000 token, 42 km tuần này, 24 buổi chạy, số ngày còn lại của mùa | [x] |
 | R-02 | Xem thẻ Nhiệm vụ | Nhiệm vụ ngày (2 km, +10) và nhiệm vụ tuần (mục tiêu km, thưởng 7 token mỗi km mục tiêu) có thanh tiến độ | [x] |
-| R-03 | Bấm "BẮT ĐẦU CHẠY" | Chuyển sang tab Chạy | [ ] |
-| R-04 | Bấm ô "buổi chạy" | Mở Lịch sử chạy | [ ] |
+| R-03 | Bấm "BẮT ĐẦU CHẠY" | Chuyển sang tab Chạy | [x] |
+| R-04 | Bấm ô "buổi chạy" | Mở Lịch sử chạy | [x] |
 | R-05 | Minh có token nhiều hơn mức giữ được khi hết mùa (1.000 > 500) | Có nhắc "Tiêu token trước khi hết mùa!" | [x] |
-| R-06 | Bấm chuông | Hiện danh sách thông báo, hoặc báo "Chưa có thông báo mới" | [ ] |
+| R-06 | Bấm chuông | Hiện danh sách thông báo, hoặc báo "Chưa có thông báo mới" | [x] |
 
 ### 3.2 Chạy (lõi của demo)
 
 | Mã | Cách làm | Kết quả đúng | Đạt |
 |---|---|---|---|
 | R-10 | Mở tab Chạy, cho phép quyền vị trí | Bản đồ hoạt hình, **ghim xanh** ở vị trí của bạn, ghim cam cho các quán. Thẻ trên cùng báo "Sẵn sàng xuất phát" | [x] |
-| R-11 | Bấm ghim quán | Hiện tên quán và mức giảm khi chạy ngang quán | [ ] |
-| R-12 | Bấm nút định vị | Bản đồ quay về vị trí của bạn | [ ] |
+| R-11 | Bấm ghim quán | Hiện tên quán và mức giảm khi chạy ngang quán | [x] |
+| R-12 | Bấm nút định vị | Bản đồ quay về vị trí của bạn | [x] sau sửa: ghim không bị bảng che |
 | R-13 | **Demo:** bấm "3 km (không qua quán)" bằng Lan | Lưu buổi chạy, màn chiến thắng hiện khoảng 3 km. Nhiệm vụ ngày đạt: **+10 RUN**, có dòng "ghi lên Avalanche · xem giao dịch" | [x] |
 | R-14 | Bấm "xem giao dịch" ở màn kết quả | Mở Ví & giao dịch, có dòng "Thưởng nhiệm vụ +10", trạng thái *Đang gửi lên chain*, sau ít giây đổi thành *Đã xác nhận* | [x] |
-| R-15 | Chạy demo lần 2 trong cùng ngày | Không được thêm 10 token, vì nhiệm vụ ngày chỉ nhận 1 lần mỗi ngày | [ ] |
+| R-15 | Chạy demo lần 2 trong cùng ngày | Không được thêm 10 token, vì nhiệm vụ ngày chỉ nhận 1 lần mỗi ngày | [x] lần 2: +0, "Hôm nay đã nhận thưởng" |
 | R-16 | **Demo:** bấm "5 km ngang Fuji + Highlands" bằng Minh | Màn kết quả liệt kê 2 quán đã chạy ngang và cho **chọn 1 quán** để nhận giảm giá | [x] |
 | R-17 | Chọn Fuji rồi bấm "Nhận giảm giá" | Báo "Đã nhận giảm giá". Nút chuyển thành "Đã nhận" | [x] |
-| R-18 | **GPS thật:** bấm XUẤT PHÁT rồi đi bộ ngoài trời 200–300 m | Màn đang chạy nền tối: số km tăng dần, thời gian, tốc độ, kcal. Thẻ bản đồ **vẫn là bản đồ hoạt hình**, có đường chạy cam viền đậm và ghim xanh di chuyển theo bạn | [ ] |
-| R-19 | Đi ngang một quán, trong vòng 50 m | Thẻ bản đồ hiện nhãn "Đã qua <quán> · N m" | [ ] |
-| R-20 | Đạt 2 km trong lúc chạy | Hiện băng vàng "Nhiệm vụ ngày hoàn thành!" kèm +10 | [ ] |
-| R-21 | Bấm Tạm dừng, rồi Tiếp tục | Đồng hồ dừng rồi chạy tiếp. Lúc tạm dừng không ghi thêm điểm GPS | [ ] |
-| R-22 | Bấm nút Dừng (vuông đỏ) | Hộp xác nhận hiện số km và thời gian. "Dừng & lưu" lưu buổi chạy, "Tiếp tục chạy" quay lại | [ ] |
-| R-23 | Bấm X trong lúc chạy | Hỏi trước khi thoát, không mất dữ liệu nếu bấm nhầm | [ ] |
-| R-24 | Kiểm tra trên máy tính rằng backend tự tính km | Chạy lệnh xem bảng `runs` (xem [Mục 8](#8-kiểm-tra-dữ-liệu-backend)): cột `km` do backend tính từ GPS, `so_diem_gps` > 0 | [ ] |
-| R-25 | Mở Lịch sử chạy | Buổi vừa chạy nằm đầu danh sách. Buổi dưới 2 km có nhãn "Chưa đủ 2 km", buổi đủ có nhãn "NV ngày" | [ ] |
+| R-18 | **GPS thật:** bấm XUẤT PHÁT rồi đi bộ ngoài trời 200–300 m | Màn đang chạy nền tối: số km tăng dần, thời gian, tốc độ, kcal. Thẻ bản đồ **vẫn là bản đồ hoạt hình**, có đường chạy cam viền đậm và ghim xanh di chuyển theo bạn | — bỏ qua: không test GPS ngoài trời; logic chạy/km/quán đi ngang đã kiểm bằng buổi chạy mẫu (R-13, R-16, R-24) và test tự động |
+| R-19 | Đi ngang một quán, trong vòng 50 m | Thẻ bản đồ hiện nhãn "Đã qua <quán> · N m" | — bỏ qua: không test GPS ngoài trời; logic chạy/km/quán đi ngang đã kiểm bằng buổi chạy mẫu (R-13, R-16, R-24) và test tự động |
+| R-20 | Đạt 2 km trong lúc chạy | Hiện băng vàng "Nhiệm vụ ngày hoàn thành!" kèm +10 | — bỏ qua: không test GPS ngoài trời; logic chạy/km/quán đi ngang đã kiểm bằng buổi chạy mẫu (R-13, R-16, R-24) và test tự động |
+| R-21 | Bấm Tạm dừng, rồi Tiếp tục | Đồng hồ dừng rồi chạy tiếp. Lúc tạm dừng không ghi thêm điểm GPS | — bỏ qua: không test GPS ngoài trời; logic chạy/km/quán đi ngang đã kiểm bằng buổi chạy mẫu (R-13, R-16, R-24) và test tự động |
+| R-22 | Bấm nút Dừng (vuông đỏ) | Hộp xác nhận hiện số km và thời gian. "Dừng & lưu" lưu buổi chạy, "Tiếp tục chạy" quay lại | — bỏ qua: không test GPS ngoài trời; logic chạy/km/quán đi ngang đã kiểm bằng buổi chạy mẫu (R-13, R-16, R-24) và test tự động |
+| R-23 | Bấm X trong lúc chạy | Hỏi trước khi thoát, không mất dữ liệu nếu bấm nhầm | — bỏ qua: không test GPS ngoài trời; logic chạy/km/quán đi ngang đã kiểm bằng buổi chạy mẫu (R-13, R-16, R-24) và test tự động |
+| R-24 | Kiểm tra trên máy tính rằng backend tự tính km | Chạy lệnh xem bảng `runs` (xem [Mục 8](#8-kiểm-tra-dữ-liệu-backend)): cột `km` do backend tính từ GPS, `so_diem_gps` > 0 | [x] 3,10 km, 155 điểm GPS |
+| R-25 | Mở Lịch sử chạy | Buổi vừa chạy nằm đầu danh sách. Buổi dưới 2 km có nhãn "Chưa đủ 2 km", buổi đủ có nhãn "NV ngày" | [x] |
 
 ### 3.3 Cửa hàng voucher và mua voucher
 
@@ -119,16 +119,16 @@ Số liệu trong bảng là **số của dữ liệu demo ngay sau `pnpm demo:r
 |---|---|---|---|
 | R-30 | Mở tab Cửa hàng | Danh sách voucher gần bạn dạng vé, mỗi vé có số "Còn N" | [x] |
 | R-31 | Bấm các bộ lọc: Tất cả / Có nhiệm vụ / Đã mở giảm giá | Danh sách lọc đúng | [x] |
-| R-32 | Gõ vào ô tìm kiếm | Lọc theo tên voucher hoặc tên quán. Không có kết quả thì hiện "Không tìm thấy voucher" | [ ] |
-| R-33 | Tìm voucher Juice Factory (vt-6) | Vé mờ, nhãn **"TẠM HẾT"**, xếp cuối danh sách | [ ] |
-| R-34 | Lan (hạng Đồng) xem vt-2 (cần Bạc) | Nhãn "Cần Bạc". Bấm mua thì báo "Chưa đủ hạng" | [ ] |
+| R-32 | Gõ vào ô tìm kiếm | Lọc theo tên voucher hoặc tên quán. Không có kết quả thì hiện "Không tìm thấy voucher" | [x] sau sửa: tìm không dấu ("banh mi") |
+| R-33 | Tìm voucher Juice Factory (vt-6) | Vé mờ, nhãn **"TẠM HẾT"**, xếp cuối danh sách | [x] |
+| R-34 | Lan (hạng Đồng) xem vt-2 (cần Bạc) | Nhãn "Cần Bạc". Bấm mua thì báo "Chưa đủ hạng" | [x] |
 | R-35 | Minh đã nhận giảm giá Fuji ở R-17, mở vt-1 | Giá gạch **500**, giá mới **250**, nhãn "Đã chạy ngang quán · -50%" | [x] |
 | R-36 | Bấm "Mua · 250" | Token giảm 250 (1.000 → 750, cộng thêm token buổi chạy nếu có). Số "Còn" giảm 1. Voucher vào Kho đồ, có QR | [x] |
-| R-37 | Mua vt-1 lần 2 | Giá quay về **500**, vì mỗi mẫu voucher chỉ được giảm 1 lần | [ ] |
-| R-38 | Mua khi không đủ token, ví dụ Lan có 10 token | Báo "Không đủ token" và không bị trừ gì | [ ] |
-| R-39 | Mở chi tiết vt-6 (Juice Factory) | Nút mua ghi **"Tạm hết"** và không bấm được | [ ] |
-| R-40 | Bấm "Về quán" trong chi tiết voucher | Mở trang quán: ảnh bìa, giới thiệu, giờ mở cửa, món nổi bật, bản đồ, danh sách voucher của quán | [ ] |
-| R-41 | Bấm "Chỉ đường" hoặc "Chia sẻ" ở trang quán | Mở ứng dụng bản đồ hoặc bảng chia sẻ của máy | [ ] |
+| R-37 | Mua vt-1 lần 2 | Giá quay về **500**, vì mỗi mẫu voucher chỉ được giảm 1 lần | [x] |
+| R-38 | Mua khi không đủ token, ví dụ Lan có 10 token | Báo "Không đủ token" và không bị trừ gì | [x] |
+| R-39 | Mở chi tiết vt-6 (Juice Factory) | Nút mua ghi **"Tạm hết"** và không bấm được | [x] |
+| R-40 | Bấm "Về quán" trong chi tiết voucher | Mở trang quán: ảnh bìa, giới thiệu, giờ mở cửa, món nổi bật, bản đồ, danh sách voucher của quán | [x] |
+| R-41 | Bấm "Chỉ đường" hoặc "Chia sẻ" ở trang quán | Mở ứng dụng bản đồ hoặc bảng chia sẻ của máy | [x] Chia sẻ + Google Maps |
 | R-42 | Mở tab Kho đồ | Có voucher vừa mua, trạng thái "Có thể dùng" và QR | [x] |
 
 ### 3.4 Tặng voucher
@@ -137,19 +137,19 @@ Số liệu trong bảng là **số của dữ liệu demo ngay sau `pnpm demo:r
 |---|---|---|---|
 | R-50 | Minh mở voucher đã mua, bấm "Tặng bạn bè", nhập `lan@demo.com` | Báo "Đã tặng thành công" và có nút "Xem giao dịch". Voucher biến khỏi Kho đồ của Minh | [x] |
 | R-51 | Lan mở Kho đồ | Có voucher được tặng, QR **khác** mã QR cũ của Minh | [x] QR mới khác mã cũ |
-| R-52 | Lan tặng tiếp voucher đó | Báo "Voucher đã được tặng một lần rồi" | [ ] |
-| R-53 | Tặng cho chính mình, hoặc cho email không tồn tại | Báo "Không thể tự tặng voucher cho mình", hoặc "Không tìm thấy người nhận" | [ ] |
+| R-52 | Lan tặng tiếp voucher đó | Báo "Voucher đã được tặng một lần rồi" | [x] nút tặng bị ẩn + test tự động |
+| R-53 | Tặng cho chính mình, hoặc cho email không tồn tại | Báo "Không thể tự tặng voucher cho mình", hoặc "Không tìm thấy người nhận" | [x] lỗi hiện trong sheet |
 
 ### 3.5 Hồ sơ, hội viên, ví, huy hiệu
 
 | Mã | Cách làm | Kết quả đúng | Đạt |
 |---|---|---|---|
 | R-60 | Lan mở Hồ sơ | Tên, hạng, token, các mục: Lịch sử chạy, Huy hiệu mùa, Ví & giao dịch, Thông báo nhắc chạy | [x] |
-| R-61 | Lan bấm "Đăng ký Hội viên" (39.000đ/tháng, thanh toán giả lập), rồi xác nhận | Báo "Bạn đã là Hội viên KILOMeet!". Hồ sơ có nhãn hội viên. Tab Nhóm mở khoá | [ ] |
+| R-61 | Lan bấm "Đăng ký Hội viên" (39.000đ/tháng, thanh toán giả lập), rồi xác nhận | Báo "Bạn đã là Hội viên KILOMeet!". Hồ sơ có nhãn hội viên. Tab Nhóm mở khoá | [x] VIP, hạn 19/11/2027 |
 | R-62 | Mở Ví & giao dịch | Địa chỉ ví và link Snowtrace, số dư token. Mỗi dòng giao dịch có nhãn tiếng Việt, số tiền +/−, trạng thái và link Snowtrace | [x] |
-| R-63 | Bấm link Snowtrace của một giao dịch | Mở trang giao dịch trên `testnet.snowtrace.io` | [ ] |
-| R-64 | Mở Huy hiệu mùa | Thẻ "Mùa hiện tại", kệ cúp các mùa đã qua, các ô Thành tích. Chữ "Đội", "Cao Thủ" **đúng font** | [ ] |
-| R-65 | Bấm "Cài đặt" | Báo "Cài đặt sẽ có trong bản sau" | [ ] |
+| R-63 | Bấm link Snowtrace của một giao dịch | Mở trang giao dịch trên `testnet.snowtrace.io` | [x] mở Snowtrace, Success |
+| R-64 | Mở Huy hiệu mùa | Thẻ "Mùa hiện tại", kệ cúp các mùa đã qua, các ô Thành tích. Chữ "Đội", "Cao Thủ" **đúng font** | [x] cúp Cao Thủ Mùa 3/2026 |
+| R-65 | Bấm "Cài đặt" | Báo "Cài đặt sẽ có trong bản sau" | [x] |
 
 ---
 
@@ -162,15 +162,15 @@ Số liệu trong bảng là **số của dữ liệu demo ngay sau `pnpm demo:r
 | G-03 | Đọc dòng dưới Độ đúng hẹn | "Đến trễ hoặc vắng không báo sẽ làm giảm độ đúng hẹn…", **không** còn nói bị khoá | [x] |
 | G-04 | Bấm Tự lập nhóm: chọn ngày, giờ (mỗi 30 phút một mốc), điểm hẹn trên bản đồ, quãng đường, phạm vi hạng, mức đúng hẹn tối thiểu | Báo "Đã tạo nhóm chạy mới". Nhóm hiện trong "Nhóm của tôi" | [x] |
 | G-05 | Đăng nhập An rồi Bình, tìm nhóm của Minh trong "Nhóm gần bạn", bấm tham gia và xác nhận | Báo "Đã xác nhận tham gia nhóm". Danh sách Đồng đội tăng lên | [x] |
-| G-06 | Người hạng lệch quá phạm vi xin vào | Báo "Hạng của bạn không phù hợp" | [ ] |
-| G-07 | Nhóm có đặt mức đúng hẹn tối thiểu 80%, người dưới 80% xin vào | Báo "Nhóm chỉ nhận người đúng hẹn từ 80%" | [ ] |
-| G-08 | Thêm người khi nhóm đã đủ 6 | Báo "Nhóm đã đầy" | [ ] |
-| G-09 | Bấm "Huỷ tham gia", rồi xác nhận | Báo "Đã huỷ tham gia nhóm". Huỷ sát giờ (dưới 2 giờ) thì bị tính là vắng | [ ] |
-| G-10 | Ghép tự động: Minh, An, Bình cùng gửi yêu cầu cùng ngày, khung giờ và quãng đường | Hệ thống gom 3 người thành 1 nhóm, điểm hẹn là địa điểm có sẵn | [ ] |
+| G-06 | Người hạng lệch quá phạm vi xin vào | Báo "Hạng của bạn không phù hợp" | [x] test tự động `groups.test.ts` |
+| G-07 | Nhóm có đặt mức đúng hẹn tối thiểu 80%, người dưới 80% xin vào | Báo "Nhóm chỉ nhận người đúng hẹn từ 80%" | [x] qua API |
+| G-08 | Thêm người khi nhóm đã đủ 6 | Báo "Nhóm đã đầy" | [x] test tự động `groups.test.ts` |
+| G-09 | Bấm "Huỷ tham gia", rồi xác nhận | Báo "Đã huỷ tham gia nhóm". Huỷ sát giờ (dưới 2 giờ) thì bị tính là vắng | [x] không bị tính vắng |
+| G-10 | Ghép tự động: Minh, An, Bình cùng gửi yêu cầu cùng ngày, khung giờ và quãng đường | Hệ thống gom 3 người thành 1 nhóm, điểm hẹn là địa điểm có sẵn | [x] sau sửa: màn chờ tự chuyển "Đã ghép" |
 | G-11 | Vào phòng chờ nhóm từ 30 phút trước giờ xuất phát | Bản đồ hiện từng thành viên đang tới điểm hẹn, cập nhật khoảng 8 giây một lần | [x] |
 | G-12 | Tới trong vòng 50 m quanh điểm hẹn | Báo "Đã check-in tại điểm hội tụ ✓" | [x] |
-| G-13 | Trước giờ chạy 2 tiếng mà chưa đủ 2 người xác nhận | Nhóm tự huỷ | [ ] |
-| G-14 | Vắng mặt nhóm (cần tua giờ, xem [Mục 8](#8-kiểm-tra-dữ-liệu-backend)) | Độ đúng hẹn giảm, nhưng **vẫn lập và tham gia nhóm được** | [ ] |
+| G-13 | Trước giờ chạy 2 tiếng mà chưa đủ 2 người xác nhận | Nhóm tự huỷ | [x] test tự động `groups.test.ts` |
+| G-14 | Vắng mặt nhóm (cần tua giờ, xem [Mục 8](#8-kiểm-tra-dữ-liệu-backend)) | Độ đúng hẹn giảm, nhưng **vẫn lập và tham gia nhóm được** | [x] Minh 95% → 90%, vẫn vào nhóm được |
 
 > Test nhóm theo thời gian thực cần 2–3 điện thoại, hoặc tua giờ bằng `POST /admin/clock`. Khi chỉ cần quay demo, thường chỉ cần G-02, G-04, G-05 và G-11.
 
@@ -185,9 +185,9 @@ Số liệu trong bảng là **số của dữ liệu demo ngay sau `pnpm demo:r
 | S-01 | Đăng nhập Fuji | Đầu màn: tên quán và nhãn "Đã duyệt". 3 ô: **100** voucher tạo, **47** lượt đã dùng, **150K** "ví phí khả dụng" | [x] |
 | S-02 | Banner cam dưới 3 ô | "Còn 23 voucher chưa bán được · Ví phí đủ cho 50 / 73 voucher. Nạp thêm 69.000đ…", có dòng "Nạp ngay ›" | [x] |
 | S-03 | Bấm banner hoặc ô ví phí | Mở màn Ví phí | [x] |
-| S-04 | Thẻ "Hồ sơ quán · N%" | Hiện phần trăm hoàn thiện và gợi ý phần còn thiếu. Bấm vào mở Hồ sơ quán | [ ] |
-| S-05 | Thẻ "Lượt dùng 7 ngày qua" | Biểu đồ cột 7 ngày. Dòng chú thích ghi phí **3.000đ**, trừ từ ví phí trả trước | [ ] |
-| S-06 | "Đổi gần đây" | Mỗi dòng có tên voucher, tên khách, giờ và nhãn **-3.000đ** | [ ] |
+| S-04 | Thẻ "Hồ sơ quán · N%" | Hiện phần trăm hoàn thiện và gợi ý phần còn thiếu. Bấm vào mở Hồ sơ quán | [x] |
+| S-05 | Thẻ "Lượt dùng 7 ngày qua" | Biểu đồ cột 7 ngày. Dòng chú thích ghi phí **3.000đ**, trừ từ ví phí trả trước | [x] |
+| S-06 | "Đổi gần đây" | Mỗi dòng có tên voucher, tên khách, giờ và nhãn **-3.000đ** | [x] |
 | S-07 | Bấm nút bánh răng (menu) | Các dòng Hồ sơ quán / Ví phí / Voucher của tôi / Giao dịch on-chain / Đăng xuất **nằm ngang, có lề** | [x] |
 
 ### 5.2 Ví phí trả trước (quyết định #28)
@@ -202,19 +202,19 @@ Số liệu trong bảng là **số của dữ liệu demo ngay sau `pnpm demo:r
 | F-06 | Bấm "Xác nhận nạp" thật nhanh 2 lần | Chỉ nạp **1 lần** | [x] |
 | F-07 | Minh mua 1 voucher Fuji (vt-1), rồi quán mở lại Ví phí | Tạm giữ **3.000đ**, Khả dụng giảm 3.000đ. Lịch sử có dòng "Tạm giữ phí" | [x] |
 | F-08 | Quán quét QR voucher đó | Số dư giảm 3.000đ, Tạm giữ về 0. Lịch sử có dòng "Trừ phí lượt quét −3.000đ" | [x] |
-| F-09 | Đăng nhập `juice@demo.com` (ví 0đ) | Ô ví phí màu đỏ, banner "Voucher đang tạm ngừng bán". Nạp 30.000đ thì người chạy mua được vt-6 trở lại | [ ] |
+| F-09 | Đăng nhập `juice@demo.com` (ví 0đ) | Ô ví phí màu đỏ, banner "Voucher đang tạm ngừng bán". Nạp 30.000đ thì người chạy mua được vt-6 trở lại | [x] nạp 30.000đ → vt-6 hết "Tạm hết" |
 | F-10 | Voucher hết hạn chưa dùng, test bằng backend | Phí đang giữ được **trả lại**, lịch sử có dòng "Trả lại phí" (xem [Mục 8](#8-kiểm-tra-dữ-liệu-backend)) | [x] test tự động `store-fee.test.ts` |
-| F-11 | Bấm icon (i) trên thanh tiêu đề | Hiện giải thích: giữ phí khi bán, trừ khi quét, trả lại khi hết hạn | [ ] |
+| F-11 | Bấm icon (i) trên thanh tiêu đề | Hiện giải thích: giữ phí khi bán, trừ khi quét, trả lại khi hết hạn | [x] |
 
 ### 5.3 Voucher của quán
 
 | Mã | Cách làm | Kết quả đúng | Đạt |
 |---|---|---|---|
 | S-20 | Mở "Voucher của tôi" | Danh sách voucher của quán: đã bán / đã dùng / còn, nhãn trạng thái ("Hết lượt" nếu bán hết) | [x] |
-| S-21 | Bấm "Tạo" để mở màn Tạo voucher | Form có: Tiêu đề, Mô tả, Giá token, % giảm, Số lượng, Hạn (dd/mm/yyyy), Khu vực, nhiệm vụ "Chạy ngang quán" kèm % giảm, Hạng tối thiểu. Vé xem trước đổi theo từng thay đổi | [ ] |
-| S-22 | Banner ví phí trong form | "Ví phí đủ cho N voucher bán ra". Nhập số lượng lớn hơn mức ví đủ thì banner chuyển cam: "Nạp thêm Xđ…" kèm "Nạp ›" | [ ] |
-| S-23 | Bỏ trống tiêu đề, giá âm, hoặc hạn sai định dạng | Báo lỗi tiếng Việt. Hạn ở quá khứ thì báo "Hạn sử dụng phải ở tương lai" | [ ] |
-| S-24 | Tạo voucher hợp lệ | Báo "Đã tạo voucher thành công". Người chạy thấy voucher mới ở tab Cửa hàng. Giao dịch on-chain có dòng "Tạo voucher" | [ ] |
+| S-21 | Bấm "Tạo" để mở màn Tạo voucher | Form có: Tiêu đề, Mô tả, Giá token, % giảm, Số lượng, Hạn (dd/mm/yyyy), Khu vực, nhiệm vụ "Chạy ngang quán" kèm % giảm, Hạng tối thiểu. Vé xem trước đổi theo từng thay đổi | [x] |
+| S-22 | Banner ví phí trong form | "Ví phí đủ cho N voucher bán ra". Nhập số lượng lớn hơn mức ví đủ thì banner chuyển cam: "Nạp thêm Xđ…" kèm "Nạp ›" | [x] cam khi vượt: "Nạp thêm 300.000đ" |
+| S-23 | Bỏ trống tiêu đề, giá âm, hoặc hạn sai định dạng | Báo lỗi tiếng Việt. Hạn ở quá khứ thì báo "Hạn sử dụng phải ở tương lai" | [x] |
+| S-24 | Tạo voucher hợp lệ | Báo "Đã tạo voucher thành công". Người chạy thấy voucher mới ở tab Cửa hàng. Giao dịch on-chain có dòng "Tạo voucher" | [x] lên chain (typeId 13), người chạy thấy |
 
 ### 5.4 Quét QR
 
@@ -223,8 +223,8 @@ Số liệu trong bảng là **số của dữ liệu demo ngay sau `pnpm demo:r
 | S-30 | Bấm nút Quét QR, cho phép camera | Camera mở, có khung quét | [x] camera mở được |
 | S-31 | Quét QR voucher Lan được tặng (sau R-51) | Sheet "Voucher hợp lệ · chưa sử dụng", phí nền tảng **3.000đ**. Bấm "Xác nhận dùng" thì hiện màn THÀNH CÔNG, dòng "Trừ từ ví phí −3.000đ" và nút Xem giao dịch | [x] |
 | S-32 | Quét lại đúng mã đó | Báo "Voucher đã được sử dụng" | [x] |
-| S-33 | Quét mã cũ của Minh (trước khi tặng) | Báo "QR không hợp lệ" | [ ] |
-| S-34 | Quét voucher của quán khác | Báo "Voucher không thuộc cửa hàng này" | [ ] |
+| S-33 | Quét mã cũ của Minh (trước khi tặng) | Báo "QR không hợp lệ" | [x] |
+| S-34 | Quét voucher của quán khác | Báo "Voucher không thuộc cửa hàng này" | [x] |
 | S-35 | Bấm "Nhập mã thủ công", dán mã | Hoạt động giống quét camera | [x] |
 | S-36 | Lan mở Kho đồ sau khi bị quét | Voucher có trạng thái "Đã sử dụng" | [x] |
 
@@ -232,11 +232,11 @@ Số liệu trong bảng là **số của dữ liệu demo ngay sau `pnpm demo:r
 
 | Mã | Cách làm | Kết quả đúng | Đạt |
 |---|---|---|---|
-| S-40 | Mở Hồ sơ quán | Sửa được: tên, câu giới thiệu, giới thiệu chi tiết, giờ mở cửa, thẻ tag, món nổi bật (thêm và xoá), số điện thoại, ảnh bìa theo chủ đề, vị trí trên bản đồ | [ ] |
-| S-41 | Bấm "Xem trước" | Thấy trang quán đúng như người chạy sẽ thấy | [ ] |
-| S-42 | Bấm "Lưu hồ sơ" | Báo "Đã lưu hồ sơ quán". Người chạy mở trang quán thấy nội dung mới. Phần trăm hoàn thiện tăng | [ ] |
-| S-43 | Mở Giao dịch on-chain | Có các dòng "Quét voucher «…» của …", "Tạo voucher", "Duyệt quán", mỗi dòng có link Snowtrace | [ ] |
-| S-44 | Đăng nhập `newcafe@demo.com` (chưa duyệt) | Màn "Đang chờ duyệt" với 4 bước, nút "Kiểm tra lại" và "Hoàn thiện hồ sơ quán". Chưa tạo voucher được | [ ] |
+| S-40 | Mở Hồ sơ quán | Sửa được: tên, câu giới thiệu, giới thiệu chi tiết, giờ mở cửa, thẻ tag, món nổi bật (thêm và xoá), số điện thoại, ảnh bìa theo chủ đề, vị trí trên bản đồ | [x] |
+| S-41 | Bấm "Xem trước" | Thấy trang quán đúng như người chạy sẽ thấy | [x] |
+| S-42 | Bấm "Lưu hồ sơ" | Báo "Đã lưu hồ sơ quán". Người chạy mở trang quán thấy nội dung mới. Phần trăm hoàn thiện tăng | [x] 80% → thêm món thứ 3 |
+| S-43 | Mở Giao dịch on-chain | Có các dòng "Quét voucher «…» của …", "Tạo voucher", "Duyệt quán", mỗi dòng có link Snowtrace | [x] |
+| S-44 | Đăng nhập `newcafe@demo.com` (chưa duyệt) | Màn "Đang chờ duyệt" với 4 bước, nút "Kiểm tra lại" và "Hoàn thiện hồ sơ quán". Chưa tạo voucher được | [x] |
 
 ---
 
@@ -247,7 +247,7 @@ Số liệu trong bảng là **số của dữ liệu demo ngay sau `pnpm demo:r
 | AD-01 | Đăng nhập admin | Màn Điều hành có 3 mục: Duyệt cửa hàng, Quản lý mùa, Chuỗi Avalanche Fuji | [x] |
 | AD-02 | Mở Duyệt cửa hàng | Danh sách quán chờ duyệt (New Café, Fresh Juice), có bản đồ vị trí quán | [x] |
 | AD-03 | Bấm "Duyệt" New Café | Quán biến khỏi danh sách. `newcafe@demo.com` bấm "Kiểm tra lại" thì vào Tổng quan. Có giao dịch "Duyệt quán" trên chain | [x] |
-| AD-04 | Bấm "Từ chối" một quán | Có hộp xác nhận, quán bị từ chối | [ ] |
+| AD-04 | Bấm "Từ chối" một quán | Có hộp xác nhận, quán bị từ chối | [x] "Đã từ chối", trạng thái rejected |
 | AD-05 | Mở Quản lý mùa | Mùa hiện tại, bậc thang hạng, phần thưởng nhiệm vụ, danh sách mùa trước | [x] |
 | AD-06 | **Bước 8 của demo:** bấm "Đóng mùa & chạy reset", rồi xác nhận | Báo thành công, kèm nút Xem giao dịch. Mùa chuyển sang trạng thái đã đóng | [x] |
 | AD-07 | Minh đăng nhập lại sau khi đóng mùa | 1.000 token còn **500**. Hạng Cao thủ xuống **Bạch kim** (tụt 2 bậc). Có màn kết quả mùa, bấm "Vào mùa mới". Huy hiệu mùa thêm 1 cúp | [x] |
@@ -265,10 +265,10 @@ Số liệu trong bảng là **số của dữ liệu demo ngay sau `pnpm demo:r
 | B-01 | Mở 3 hợp đồng trên Snowtrace (link trong `README.md`) | Có dấu tick xanh "Contract Source Code Verified" | [x] kiểm qua API Routescan lúc deploy |
 | B-02 | Giao dịch thưởng nhiệm vụ (R-14) | Snowtrace hiện lời gọi `reward`, token RUN được mint vào ví người chạy | [x] giao dịch mint đã xác nhận, chain:check khớp |
 | B-03 | Giao dịch mua voucher (R-36) | Lời gọi `purchase`: token RUN bị đốt, voucher ERC-1155 vào ví | [x] giao dịch mua đã xác nhận |
-| B-04 | Giao dịch quét voucher (S-31) | Sự kiện `VoucherRedeemed` có `feeVnd = 3000` | [ ] |
+| B-04 | Giao dịch quét voucher (S-31) | Sự kiện `VoucherRedeemed` có `feeVnd = 3000` | [x] feeVnd = 3000 |
 | B-05 | Đóng mùa (AD-06) | Một giao dịch `settleSeason` cho nhiều ví, và một giao dịch `recordBadges` | [x] chốt mùa 1 lô + huy hiệu 1 lô |
 | B-06 | `pnpm chain:check` sau khi test xong | ✓ hoặc ~ (lệch nhiều nhất 1 token do làm tròn giá giảm). Không có ✗ | [x] |
-| B-07 | Thử chuyển token RUN giữa hai ví (nếu muốn) | Bị từ chối, vì token không chuyển được | [ ] |
+| B-07 | Thử chuyển token RUN giữa hai ví (nếu muốn) | Bị từ chối, vì token không chuyển được | [x] transfer bị revert |
 
 ---
 
@@ -320,7 +320,7 @@ Chạy `pnpm demo:reset`, chờ 1 phút, rồi đi một lượt liền mạch. 
 
 | Bước | Tài khoản | Thao tác | Điều cần thấy trên màn hình | Đạt |
 |---|---|---|---|---|
-| 1 | Lan | Đăng nhập, mở Hồ sơ → Ví & giao dịch | Có ví Avalanche và link Snowtrace | [ ] |
+| 1 | Lan | Đăng nhập, mở Hồ sơ → Ví & giao dịch | Có ví Avalanche và link Snowtrace | [x] |
 | 2 | Lan | Chạy → demo "3 km (không qua quán)" | Nhiệm vụ ngày đạt, **+10 RUN**, xem giao dịch | [x] |
 | 3 | Minh | Đăng nhập, Sảnh | Hạng Cao thủ, km còn thiếu để giữ hạng | [x] |
 | 4 | Minh | Chạy demo "5 km ngang Fuji + Highlands", chọn Fuji, mở vt-1 | Giá 500 thành **250** | [x] |
@@ -352,6 +352,23 @@ Claude điều khiển máy qua `adb` (chụp màn hình, bấm, gõ). Các mụ
 | — | Nhiều chỗ tràn/cắt chữ: thẻ ví phí, bảng hạng admin, vé voucher quán, nút "Xác nhậ…", "Đăng ký ngay", số ngày còn lại lệch 43/44 | sửa từng màn |
 
 Chưa test trên máy: đăng ký tài khoản mới (A-05–A-08), tạo voucher (S-21–S-24), hồ sơ quán (S-40–S-42), ghép tự động (G-10), huỷ nhóm (G-09), hết hạn voucher trả phí (F-10, đã có test tự động), GPS thật ngoài đường (R-18–R-23).
+
+## Kết quả test lần 2 trên Samsung S23+ (19/11/2026)
+
+Đã chạy tiếp các mục còn lại. Lỗi tìm thấy và đã sửa:
+
+| Mã | Lỗi | Sửa |
+|---|---|---|
+| — | **App treo ở màn khởi động khi đăng xuất / sau khi tặng voucher**: hook React đặt sau lệnh `return` sớm (lỗi do bản sửa trước) | chuyển hook lên đầu (`groups.tsx`, `voucher/[id].tsx`); đã quét toàn bộ app, không còn chỗ nào |
+| R-53 | Lỗi khi đang mở sheet/hộp thoại bị che (toast nằm dưới Modal) | `GameToaster` gắn cả trong sheet và hộp thoại; lỗi tặng hiện ngay trong sheet |
+| R-51 | Voucher được tặng hiện "Đã tặng", bị mờ trong kho người nhận | hiện "Được tặng", dùng được |
+| G-10 | Ghép tự động: màn chờ không tự cập nhật, nút "Đóng" ngoài màn hình, avatar giả có tick | cuộn được, 5 giây kiểm tra lại, tick chỉ khi đã ghép |
+| R-32 | Tìm kiếm phải gõ có dấu | tìm không dấu (`foldVi`) ở Cửa hàng và Nhóm |
+| R-40 | Trang quán không hiện voucher mới tạo | luôn tải lại khi mở |
+| UI-11 | Mất mạng: vòng làm mới quay mãi, không báo gì | request tự huỷ sau 12 giây + toast "Không kết nối được máy chủ" |
+| — | Lần chạy 2 trong ngày báo "Chưa đạt nhiệm vụ"; ghim vị trí bị bảng che; "K.CƯƠNG" gãy dòng; "-3.000Đ"; danh sách đồng đội vỡ bố cục; lỗi đăng ký cũ không ẩn; nhiều nhãn nút bị cắt | sửa từng màn |
+
+**Bỏ qua:** R-18 → R-23 (GPS thật ngoài trời) — quyết định không test trước hạn nộp. Phần tính km, lọc tốc độ, quán đi ngang và chấm nhiệm vụ đã được kiểm bằng buổi chạy mẫu và test tự động.
 
 ## Sổ lỗi
 

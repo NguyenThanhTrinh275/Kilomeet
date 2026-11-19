@@ -157,7 +157,8 @@ export function RankLadder({ rank }: { rank: Rank }) {
               <View style={{ height: 44, justifyContent: 'center' }}>
                 <RankEmblem rank={r} size={cur ? 40 : 30} />
               </View>
-              <GText v="caps" color={cur ? C.ink900 : C.ink500} style={{ fontSize: 9, letterSpacing: 0.4 }}>
+              {/* Rộng hơn ô 48 để "K.CƯƠNG" không gãy dòng (lấn sang khoảng trống hai bên). */}
+              <GText v="caps" color={cur ? C.ink900 : C.ink500} numberOfLines={1} align="center" style={{ fontSize: 9, letterSpacing: 0.2, width: 64, marginHorizontal: -8 }}>
                 {RANK_SHORT[r]}
               </GText>
             </View>

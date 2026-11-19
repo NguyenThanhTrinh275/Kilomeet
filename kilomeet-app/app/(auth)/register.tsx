@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { router } from 'expo-router';
 import { useForm } from 'react-hook-form';
@@ -65,10 +65,18 @@ export default function RegisterScreen() {
   const isLoading = useAuthStore((s) => s.isLoading);
   const error = useAuthStore((s) => s.error);
 
-  const { control, handleSubmit } = useForm<RegisterForm>({
+  const { control, handleSubmit, watch } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
     defaultValues: { name: '', email: '', password: '', storeName: '', storeAddress: '' },
   });
+  // Sửa form (vd. đổi email sau khi báo "Email đã được sử dụng") → ẩn lỗi cũ.
+  useEffect(() => {
+    const sub = watch(() => {
+      setLocalError(null);
+      if (useAuthStore.getState().error) useAuthStore.setState({ error: null });
+    });
+    return () => sub.unsubscribe();
+  }, [watch]);
 
   const pickStoreLocation = async () => {
     setLocating(true);
@@ -154,7 +162,7 @@ export default function RegisterScreen() {
                     {storePos ? `${storePos.latitude.toFixed(4)}, ${storePos.longitude.toFixed(4)}` : 'Chưa có vị trí quán'}
                   </GText>
                 </Row>
-                <GButton label="Lấy vị trí quán (đứng tại quán)" type="secondary" size="M" icon={Crosshair} loading={locating} onPress={() => void pickStoreLocation()} block />
+                <GButton label="Lấy vị trí hiện tại" type="secondary" size="M" icon={Crosshair} loading={locating} onPress={() => void pickStoreLocation()} block />
               </Card>
               <Banner icon={Clock} tone="coin" iconColor={C.ink900} text="Sau khi đăng ký, quán sẽ chờ quản trị duyệt trước khi tạo voucher." />
             </>
