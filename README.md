@@ -1,6 +1,6 @@
 # KILOMeet
 
-App chạy bộ theo mùa trên Avalanche Fuji (UniHack 2026). README này chỉ hướng dẫn cách chạy hệ thống để thử.
+App chạy bộ theo mùa trên Avalanche Fuji (UniHack 2026)
 
 ## Giao diện
 
